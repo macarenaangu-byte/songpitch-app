@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "songpitch-dev",
+      "runtimeExecutable": "/usr/local/bin/node",
+      "runtimeArgs": ["/Users/macarena.nadeau/Desktop/songpitch-app/node_modules/.bin/react-scripts", "start"],
+      "port": 3000
+    }
+  ]
+}

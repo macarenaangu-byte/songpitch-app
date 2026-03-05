@@ -6,8 +6,30 @@
 let essentiaInstance = null;
 
 // ─── ML LABEL MAPS ──────────────────────────────────────────────────────────
-// Map the ML model's label format to the app's display labels
+// Map the ML model's clean labels (lowercased) to the app's display labels
+// ML server returns labels like "HIP-HOP", "FILM SCORE" — we lowercase for lookup
+
 const GENRE_LABEL_MAP = {
+    'alternative': 'Alternative',
+    'ambient': 'Ambient',
+    'afrobeats': 'Afrobeats',
+    'blues': 'Blues',
+    'country': 'Country',
+    'edm': 'EDM',
+    'electronic': 'Electronic',
+    'film score': 'Film Score',
+    'folk': 'Folk',
+    'hip-hop': 'Hip-Hop',
+    'indie': 'Indie',
+    'jazz': 'Jazz',
+    'latin': 'Latin',
+    'orchestral': 'Classical',
+    'pop': 'Pop',
+    'r&b': 'R&B',
+    'reggae': 'Reggae',
+    'rock': 'Rock',
+    'world music': 'World Music',
+    // Backward compat with old model format
     'genre_orchestral': 'Classical',
     'genre_film_score': 'Film Score',
     'genre_electronic': 'Electronic',
@@ -21,6 +43,21 @@ const GENRE_LABEL_MAP = {
 };
 
 const MOOD_LABEL_MAP = {
+    'aggressive': 'Aggressive',
+    'atmospheric': 'Dreamy',
+    'calm': 'Calm',
+    'dark': 'Dark',
+    'energetic': 'Energetic',
+    'epic': 'Epic',
+    'happy': 'Uplifting',
+    'melancholic': 'Melancholic',
+    'mysterious': 'Mysterious',
+    'nostalgic': 'Nostalgic',
+    'playful': 'Playful',
+    'romantic': 'Romantic',
+    'suspense': 'Tense',
+    'triumphant': 'Triumphant',
+    // Backward compat with old model format
     'mood_happy': 'Uplifting',
     'mood_melancholic': 'Melancholic',
     'mood_energetic': 'Energetic',
@@ -56,23 +93,28 @@ async function predictGenreMood(file) {
 
         const data = await response.json();
 
-        if (data.status !== 'success') {
-            console.warn('⚠️ ML prediction failed:', data);
+        // Check for error response
+        if (data.error) {
+            console.warn('⚠️ ML prediction error:', data.error);
             return null;
         }
 
         let genre = null;
         let mood = null;
+        let secondaryGenre = null;
 
-        // New dual-model response: { genre: "genre_latin", mood: "mood_happy", ... }
+        // Parse genre from new response format: { genre: "HIP-HOP", secondary_genre: "R&B", mood: "HAPPY", ... }
         if (data.genre) {
-            genre = GENRE_LABEL_MAP[data.genre.toLowerCase()] || null;
+            genre = GENRE_LABEL_MAP[data.genre.toLowerCase()] || data.genre;
         }
         if (data.mood) {
-            mood = MOOD_LABEL_MAP[data.mood.toLowerCase()] || null;
+            mood = MOOD_LABEL_MAP[data.mood.toLowerCase()] || data.mood;
+        }
+        if (data.secondary_genre) {
+            secondaryGenre = GENRE_LABEL_MAP[data.secondary_genre.toLowerCase()] || data.secondary_genre;
         }
 
-        // Fallback: check predictions array (backward compat)
+        // Fallback: check predictions array (backward compat with old server)
         if (!genre && data.predictions) {
             for (const pred of data.predictions) {
                 const clean = pred.toLowerCase();
@@ -81,10 +123,41 @@ async function predictGenreMood(file) {
             }
         }
 
-        console.log(`🤖 ML prediction: genre=${data.genre} (${(data.genre_confidence * 100).toFixed(1)}%) → ${genre}, mood=${data.mood} → ${mood}`);
-        return { genre, mood, confidence: data.genre_confidence };
+        const conf = data.genre_confidence ? (data.genre_confidence * 100).toFixed(1) : '?';
+        console.log(`🤖 ML prediction: genre=${genre} (${conf}%), secondary=${secondaryGenre}, mood=${mood}`);
+        return { genre, mood, secondaryGenre, confidence: data.genre_confidence || 0 };
     } catch (err) {
         console.log('🔌 ML server unreachable, using rule-based fallback');
+        return null;
+    }
+}
+
+// ─── LYRICS TRANSCRIPTION ──────────────────────────────────────────────────
+// Sends audio file to the FastAPI server for Whisper-powered lyrics transcription
+
+async function transcribeLyrics(file) {
+    const apiUrl = process.env.REACT_APP_AI_API_URL;
+    if (!apiUrl) return null;
+
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch(`${apiUrl}/transcribe`, {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (!response.ok) return null;
+
+        const data = await response.json();
+        if (data.status === 'success' && data.lyrics) {
+            console.log(`🎤 Lyrics transcribed: ${data.lyrics.substring(0, 80)}...`);
+            return data.lyrics;
+        }
+        return null;
+    } catch (err) {
+        console.log('🎤 Lyrics transcription unavailable');
         return null;
     }
 }
@@ -316,24 +389,43 @@ export async function analyzeAudioFile(file) {
 
     let genre;
     let mood;
+    let secondaryGenre = null;
     let genreSource = 'rule-based';
+    let moodSource = 'rule-based';
 
-    // Try ML prediction for genre (mood always uses rule-based — more reliable)
+    // Try ML prediction for genre AND mood (retrained models are more accurate)
     const mlResult = await predictGenreMood(file);
-    if (mlResult && mlResult.genre) {
-        genre = mlResult.genre;
-        genreSource = 'ML';
-    } else {
-        genre = classifyGenre(featureBundle);
+    if (mlResult) {
+        if (mlResult.genre) {
+            genre = mlResult.genre;
+            genreSource = 'ML';
+        }
+        if (mlResult.secondaryGenre) {
+            secondaryGenre = mlResult.secondaryGenre;
+        }
+        if (mlResult.mood) {
+            mood = mlResult.mood;
+            moodSource = 'ML';
+        }
     }
 
-    // Always use rule-based for mood (ML mood model only 33% accuracy)
-    mood = classifyMood(featureBundle);
+    // Fallback to rule-based if ML didn't provide results
+    if (!genre) genre = classifyGenre(featureBundle);
+    if (!mood) mood = classifyMood(featureBundle);
+
+    // Try lyrics transcription (runs in parallel conceptually, but sequentially here)
+    let lyrics = null;
+    try {
+        lyrics = await transcribeLyrics(file);
+    } catch (err) {
+        console.log('🎤 Lyrics transcription skipped');
+    }
 
     console.log(`🎵 Analysis complete:
   Duration: ${duration.toFixed(1)}s | BPM: ${bpm} | Key: ${key}
   Energy: ${energy.toFixed(4)} | Danceability: ${danceability.toFixed(3)} | Complexity: ${dynamicComplexity.toFixed(2)}
-  → Genre: ${genre} (${genreSource}) | Mood: ${mood} (rule-based)`);
+  → Genre: ${genre} (${genreSource}) | Secondary: ${secondaryGenre}
+  → Mood: ${mood} (${moodSource}) | Lyrics: ${lyrics ? 'Yes' : 'No'}`);
 
-    return { duration, bpm, key, genre, mood };
+    return { duration, bpm, key, genre, mood, secondaryGenre, lyrics };
 }
