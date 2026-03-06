@@ -718,6 +718,12 @@ export default function SongPitch() {
   // needsOnboarding is no longer used — profile is created during signup.
   // If somehow triggered, just show auth page.
 
+  // Intercept new users and show them the role selection screen
+  if (needsOnboarding) {
+    return <OnboardingPage onSelectRole={handleCompleteOnboarding} savingRole={savingRole} />;
+  }
+
+  // Fallback for incomplete profiles
   if (!userProfile) {
     return <AccountSetupPage user={session.user} onComplete={() => loadUserProfile(session.user)} />;
   }
