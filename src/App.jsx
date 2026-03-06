@@ -707,7 +707,12 @@ export default function SongPitch() {
   }
 
   if (!session) {
-    return <AuthPage onAuthComplete={(user, profileData) => { if (profileData) { skipProfileLoadRef.current = true; setShowLanding(false); setUserProfile(profileData); setNeedsOnboarding(false); setPage(profileData.account_type === 'music_executive' ? 'roster' : 'portfolio'); } }} onBackToLanding={() => setShowLanding(true)} />;
+    return (
+      <>
+        <AuthPage onAuthComplete={(user, profileData) => { if (profileData) { skipProfileLoadRef.current = true; setShowLanding(false); setUserProfile(profileData); setNeedsOnboarding(false); setPage(profileData.account_type === 'music_executive' ? 'roster' : 'portfolio'); } }} onBackToLanding={() => setShowLanding(true)} />
+        <ToastContainer />
+      </>
+    );
   }
 
   // needsOnboarding is no longer used — profile is created during signup.
