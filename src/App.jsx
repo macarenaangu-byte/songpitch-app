@@ -410,15 +410,15 @@ export default function SongPitch() {
 
        if (error) {
         if (error.code === 'PGRST116') {
-          stayOnAuthRef.current = false;
+          stayOnAuthRef.current = true;
           // No profile found — this is a NEW user! 
           // Keep them logged in, but flag them for onboarding
           setUserProfile(null);
-          setNeedsOnboarding(true);
+          setNeedsOnboarding(false);
           await supabase.auth.signOut(); // Force them through the auth flow again to create their profile
-          showToast('Welcome to SongPitch! Please choose your role.', 'success');
+          showToast('No account found for this email. Please create an account first.', 'error');
         } else if (error.code === '42501' || String(error.message).toLowerCase().includes('403') || String(error.message).toLowerCase().includes('jwt')) {
-          // Session expired or RLS failure, sign out cleanly
+          // 403 / RLS / JWT not ready — session expired or not yet set, sign out cleanly
           setUserProfile(null);
           setNeedsOnboarding(false);
           await supabase.auth.signOut();
@@ -718,12 +718,6 @@ export default function SongPitch() {
   // needsOnboarding is no longer used — profile is created during signup.
   // If somehow triggered, just show auth page.
 
-  // Intercept new users and show them the role selection screen
-  if (needsOnboarding) {
-    return <OnboardingPage onSelectRole={handleCompleteOnboarding} savingRole={savingRole} />;
-  }
-
-  // Fallback for incomplete profiles
   if (!userProfile) {
     return <AccountSetupPage user={session.user} onComplete={() => loadUserProfile(session.user)} />;
   }
