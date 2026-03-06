@@ -133,7 +133,12 @@ export default function SongPitch() {
   // This avoids getting "stuck" on Auth view after refresh/hot-reload state retention.
   useEffect(() => {
     if (!session) {
-      setShowLanding(true);
+      if (stayOnAuthRef.current) {
+        stayOnAuthRef.current = false; // consume the flag
+        setShowLanding(false); // stay on auth page
+      } else {
+        setShowLanding(true);
+      }
     }
   }, [session]);
 
@@ -404,6 +409,7 @@ export default function SongPitch() {
 
        {
         if (error.code === 'PGRST116') {
+          stayOnAuthRef.current = true;
           // No profile found — this is a NEW user! 
           // Keep them logged in, but flag them for onboarding
           setUserProfile(null);
