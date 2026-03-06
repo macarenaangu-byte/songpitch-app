@@ -9,7 +9,7 @@ const GENRE_LIST = [
   'Film Score', 'Ambient', 'R&B', 'Afrobeats', 'World Music'
 ];
 
-export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn }) {
+export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, initialError = "" }) {
   const [authView, setAuthView] = useState('login'); // 'login' | 'signup' | 'forgot'
   const [signupStep, setSignupStep] = useState(1);   // 1 = credentials, 2 = profile info
 
@@ -26,7 +26,7 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn }) {
   const [genres, setGenres] = useState([]);
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(initialError);
 
   const switchView = (view) => {
     setAuthView(view);
@@ -60,7 +60,16 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn }) {
         const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
         if (signUpError) throw signUpError;
 
-        // 2. Create profile record
+        // 2. If email confirmation is required, no session/JWT exists yet — skip profile insert
+        //    (RLS would block it). A flag is stored so App.jsx routes to AccountSetupPage on first login.
+        if (!data.session) {
+          localStorage.setItem('sp_pending_signup_email', email.toLowerCase().trim());
+          showToast('Account created! Please verify your email then log in.', 'success');
+          switchView('login');
+          return;
+        }
+
+        // 3. Session available — create profile record immediately
         const accountType = role === 'executive' ? 'music_executive' : 'composer';
         const profileRow = {
           user_id: data.user.id,
@@ -80,7 +89,7 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn }) {
           .single();
         if (profileError) throw profileError;
 
-        // 3. Composer genres (optional)
+        // 4. Composer genres (optional)
         if (role === 'composer' && genres.length > 0) {
           await supabase.from('composers').insert([{
             user_profile_id: profileData.id,
@@ -88,13 +97,8 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn }) {
           }]);
         }
 
-        if (data.session) {
-          showToast('Account created! Welcome to SongPitch.', 'success');
-          onAuthComplete(data.user, profileData);
-        } else {
-          showToast('Account created! Please verify your email then log in.', 'success');
-          switchView('login');
-        }
+        showToast('Account created! Welcome to SongPitch.', 'success');
+        onAuthComplete(data.user, profileData);
 
       } else if (authView === 'forgot') {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {

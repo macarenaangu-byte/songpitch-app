@@ -105,6 +105,8 @@ export default function SongPitch() {
   const pageRef = useRef(page);
   const activeConversationRef = useRef(activeMessageConversationId);
   const skipProfileLoadRef = useRef(false); // prevent race condition after signup
+  const stayOnAuthRef = useRef(false); // prevent !session effect from redirecting to landing after a forced signOut
+  const [authError, setAuthError] = useState(null);
 
   // Global audio player - shared across all pages
   const audioPlayer = useAudioPlayer();
@@ -130,9 +132,13 @@ export default function SongPitch() {
   }, []);
 
   // Safety reset: when unauthenticated, default back to Landing first.
-  // This avoids getting "stuck" on Auth view after refresh/hot-reload state retention.
+  // Skip when stayOnAuthRef is set — we intentionally signed out to show an error on AuthPage.
   useEffect(() => {
     if (!session) {
+      if (stayOnAuthRef.current) {
+        stayOnAuthRef.current = false;
+        return;
+      }
       setShowLanding(true);
     }
   }, [session]);
@@ -404,13 +410,24 @@ export default function SongPitch() {
 
       if (error) {
         if (error.code === 'PGRST116') {
-          // 🚦 RACE CONDITION FIX: No profile exists yet. Do NOT kick them out.
-          console.log("New user detected (PGRST116): Bypassing Landing Page kick.");
+          // Check if this is a newly email-confirmed user whose profile hasn't been created yet
+          const pendingEmail = localStorage.getItem('sp_pending_signup_email');
+          if (pendingEmail) {
+            localStorage.removeItem('sp_pending_signup_email');
+            setUserProfile(null);
+            setShowLanding(false); // Route to AccountSetupPage
+            return;
+          }
+          // Auth account exists but no profile row — sign out and show error on AuthPage
+          setAuthError("No account found for this email. Please create an account first.");
+          stayOnAuthRef.current = true;
           setUserProfile(null);
-          setShowLanding(false); // Keep them in the app so they can be routed to Onboarding
+          await supabase.auth.signOut();
           return;
         } else if (error.code === '42501' || String(error.message).toLowerCase().includes('403') || String(error.message).toLowerCase().includes('jwt')) {
           // 403 / RLS / JWT not ready — session expired or not yet set, sign out cleanly
+          stayOnAuthRef.current = true;
+          setAuthError("Session error. Please sign in again.");
           setUserProfile(null);
           setNeedsOnboarding(false);
           await supabase.auth.signOut();
@@ -699,7 +716,7 @@ export default function SongPitch() {
   }
 
   if (!session) {
-    return <AuthPage onAuthComplete={(user, profileData) => { if (profileData) { skipProfileLoadRef.current = true; setShowLanding(false); setUserProfile(profileData); setNeedsOnboarding(false); setPage(profileData.account_type === 'music_executive' ? 'roster' : 'portfolio'); } }} onBackToLanding={() => setShowLanding(true)} />;
+    return <AuthPage onAuthComplete={(user, profileData) => { if (profileData) { skipProfileLoadRef.current = true; setShowLanding(false); setUserProfile(profileData); setNeedsOnboarding(false); setPage(profileData.account_type === 'music_executive' ? 'roster' : 'portfolio'); } }} onBackToLanding={() => { setShowLanding(true); setAuthError(null); }} initialError={authError} />;
   }
 
   // needsOnboarding is no longer used — profile is created during signup.
