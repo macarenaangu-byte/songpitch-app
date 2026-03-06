@@ -410,15 +410,15 @@ export default function SongPitch() {
 
        if (error) {
         if (error.code === 'PGRST116') {
-          stayOnAuthRef.current = true;
+          stayOnAuthRef.current = false;
           // No profile found — this is a NEW user! 
           // Keep them logged in, but flag them for onboarding
           setUserProfile(null);
-          setNeedsOnboarding(false);
+          setNeedsOnboarding(true);
           await supabase.auth.signOut(); // Force them through the auth flow again to create their profile
-          showToast('No account found for this email. Please create an account first.', 'error');
+          showToast('Welcome to SongPitch! Please choose your role.', 'success');
         } else if (error.code === '42501' || String(error.message).toLowerCase().includes('403') || String(error.message).toLowerCase().includes('jwt')) {
-          // 403 / RLS / JWT not ready — session expired or not yet set, sign out cleanly
+          // Session expired or RLS failure, sign out cleanly
           setUserProfile(null);
           setNeedsOnboarding(false);
           await supabase.auth.signOut();
