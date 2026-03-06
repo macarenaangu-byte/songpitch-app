@@ -82,7 +82,6 @@ export default function SongPitch() {
   const [savingRole, setSavingRole] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showLanding, setShowLanding] = useState(true);  // NEW: Show landing page first
-  const stayOnAuthRef = useRef(false); // NEW: Flag to control whether to stay on auth page after logout
   const [legalPage, setLegalPage] = useState(null); // 'terms' or 'privacy'
   const [page, setPage] = useState("dashboard");
   const [activeMessageConversationId, setActiveMessageConversationId] = useState(null);
@@ -134,12 +133,7 @@ export default function SongPitch() {
   // This avoids getting "stuck" on Auth view after refresh/hot-reload state retention.
   useEffect(() => {
     if (!session) {
-      if (stayOnAuthRef.current) {
-        stayOnAuthRef.current = false; // consume the flag
-        setShowLanding(false); // stay on auth page
-      } else {
-        setShowLanding(true);
-      }
+      setShowLanding(true);
     }
   }, [session]);
 
@@ -408,15 +402,13 @@ export default function SongPitch() {
         .or('is_deleted.is.null,is_deleted.eq.false')
         .single();
 
-       if (error) {
+      if (error) {
         if (error.code === 'PGRST116') {
-          stayOnAuthRef.current = true;
-          // No profile found — this is a NEW user! 
-          // Keep them logged in, but flag them for onboarding
+          // 🚦 RACE CONDITION FIX: No profile exists yet. Do NOT kick them out.
+          console.log("New user detected (PGRST116): Bypassing Landing Page kick.");
           setUserProfile(null);
-          setNeedsOnboarding(false);
-          await supabase.auth.signOut(); // Force them through the auth flow again to create their profile
-          showToast('No account found for this email. Please create an account first.', 'error');
+          setShowLanding(false); // Keep them in the app so they can be routed to Onboarding
+          return;
         } else if (error.code === '42501' || String(error.message).toLowerCase().includes('403') || String(error.message).toLowerCase().includes('jwt')) {
           // 403 / RLS / JWT not ready — session expired or not yet set, sign out cleanly
           setUserProfile(null);
@@ -426,8 +418,8 @@ export default function SongPitch() {
           throw error;
         }
       } else {
-        // ✅ Success path — was incorrectly inside the error block before
         const hasValidRole = !!(data?.account_type || data?.role);
+
         setUserProfile(data);
         if (hasValidRole) {
           setNeedsOnboarding(false);
@@ -707,12 +699,7 @@ export default function SongPitch() {
   }
 
   if (!session) {
-    return (
-      <>
-        <AuthPage onAuthComplete={(user, profileData) => { if (profileData) { skipProfileLoadRef.current = true; setShowLanding(false); setUserProfile(profileData); setNeedsOnboarding(false); setPage(profileData.account_type === 'music_executive' ? 'roster' : 'portfolio'); } }} onBackToLanding={() => setShowLanding(true)} />
-        <ToastContainer />
-      </>
-    );
+    return <AuthPage onAuthComplete={(user, profileData) => { if (profileData) { skipProfileLoadRef.current = true; setShowLanding(false); setUserProfile(profileData); setNeedsOnboarding(false); setPage(profileData.account_type === 'music_executive' ? 'roster' : 'portfolio'); } }} onBackToLanding={() => setShowLanding(true)} />;
   }
 
   // needsOnboarding is no longer used — profile is created during signup.
