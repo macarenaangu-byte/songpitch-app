@@ -82,6 +82,7 @@ export default function SongPitch() {
   const [savingRole, setSavingRole] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showLanding, setShowLanding] = useState(true);  // NEW: Show landing page first
+  const stayOnAuthRef = useRef(false); // NEW: Flag to control whether to stay on auth page after logout
   const [legalPage, setLegalPage] = useState(null); // 'terms' or 'privacy'
   const [page, setPage] = useState("dashboard");
   const [activeMessageConversationId, setActiveMessageConversationId] = useState(null);
@@ -407,14 +408,15 @@ export default function SongPitch() {
         .or('is_deleted.is.null,is_deleted.eq.false')
         .single();
 
-       {
+       if (error) {
         if (error.code === 'PGRST116') {
           stayOnAuthRef.current = true;
           // No profile found — this is a NEW user! 
           // Keep them logged in, but flag them for onboarding
           setUserProfile(null);
-          setNeedsOnboarding(true);
-          showToast('Welcome to SongPitch! Lets set up your profile.', 'success' );
+          setNeedsOnboarding(false);
+          await supabase.auth.signOut(); // Force them through the auth flow again to create their profile
+          showToast('No account found for this email. Please create an account first.', 'error');
         } else if (error.code === '42501' || String(error.message).toLowerCase().includes('403') || String(error.message).toLowerCase().includes('jwt')) {
           // 403 / RLS / JWT not ready — session expired or not yet set, sign out cleanly
           setUserProfile(null);
@@ -423,9 +425,9 @@ export default function SongPitch() {
         } else {
           throw error;
         }
-      
+      } else {
+        // ✅ Success path — was incorrectly inside the error block before
         const hasValidRole = !!(data?.account_type || data?.role);
-
         setUserProfile(data);
         if (hasValidRole) {
           setNeedsOnboarding(false);
