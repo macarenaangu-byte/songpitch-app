@@ -402,13 +402,13 @@ export default function SongPitch() {
         .or('is_deleted.is.null,is_deleted.eq.false')
         .single();
 
-      if (error) {
+       {
         if (error.code === 'PGRST116') {
-          // No profile found — this email has no account, sign them out and tell them to sign up
+          // No profile found — this is a NEW user! 
+          // Keep them logged in, but flag them for onboarding
           setUserProfile(null);
-          setNeedsOnboarding(false);
-          await supabase.auth.signOut();
-          showToast('No account found for this email. Please sign up to create one.', 'error');
+          setNeedsOnboarding(true);
+          showToast('Welcome to SongPitch! Lets set up your profile.', 'success' );
         } else if (error.code === '42501' || String(error.message).toLowerCase().includes('403') || String(error.message).toLowerCase().includes('jwt')) {
           // 403 / RLS / JWT not ready — session expired or not yet set, sign out cleanly
           setUserProfile(null);
@@ -417,7 +417,7 @@ export default function SongPitch() {
         } else {
           throw error;
         }
-      } else {
+      
         const hasValidRole = !!(data?.account_type || data?.role);
 
         setUserProfile(data);
