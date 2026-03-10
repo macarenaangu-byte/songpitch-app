@@ -15,6 +15,7 @@ export function Avatar({ name, color, size = 40, avatarUrl }) {
       <img
         src={avatarUrl}
         alt={name || "Avatar"}
+        loading="lazy"
         onError={() => setImgError(true)}
         style={{
           width: size,

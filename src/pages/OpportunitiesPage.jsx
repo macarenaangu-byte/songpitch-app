@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Plus, X, Edit, Trash2, Calendar, DollarSign, CheckCircle, XCircle, Bookmark, Users, Briefcase, Check } from "lucide-react";
+import { Search, Plus, X, Edit, Trash2, Calendar, DollarSign, CheckCircle, XCircle, Bookmark, Users, Briefcase, Check, ChevronDown } from "lucide-react";
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { GENRE_OPTIONS } from '../constants/genres';
 import { supabase } from '../lib/supabase';
@@ -9,10 +9,15 @@ import { Avatar } from '../components/Avatar';
 import { Badge } from '../components/Badge';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { LoadingOpportunityCard } from '../components/LoadingCards';
+import { FilterChips } from '../components/FilterChips';
 
-export function OpportunitiesPage({ userProfile, onBadgeRefresh }) {
+export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = false }) {
   const [opportunities, setOpportunities] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const OPP_PAGE_SIZE = 20;
   const [showForm, setShowForm] = useState(false);
   const [editingOpp, setEditingOpp] = useState(null);
   const [search, setSearch] = useState("");
@@ -108,40 +113,45 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh }) {
     }
   };
 
+  const buildOppQuery = (from, to) => {
+    let query = supabase
+      .from('opportunities')
+      .select(`
+        *,
+        creator:user_profiles!opportunities_creator_id_fkey (
+          first_name,
+          last_name,
+          avatar_color,
+          avatar_url
+        ),
+        responses (id)
+      `, { count: 'exact' })
+      .order('created_at', { ascending: false });
+
+    if (userProfile.account_type === 'music_executive' || userProfile.account_type === 'admin') {
+      query = query.eq('creator_id', userProfile.id);
+    } else {
+      query = query.eq('status', 'Open');
+    }
+
+    return query.range(from, to);
+  };
+
+  const formatOpps = (data) => (data || []).map(opp => ({
+    ...opp,
+    response_count: opp.responses ? opp.responses.length : 0,
+  }));
+
   const loadOpportunities = async () => {
+    setLoading(true);
     try {
-      let query = supabase
-        .from('opportunities')
-        .select(`
-          *,
-          creator:user_profiles!opportunities_creator_id_fkey (
-            first_name,
-            last_name,
-            avatar_color,
-            avatar_url
-          ),
-          responses (id)
-        `)
-        .order('created_at', { ascending: false });
-
-      // If composer, show all open opportunities
-      // If executive, show only their own opportunities
-      // Admin sees their own opportunities (like executive)
-      if (userProfile.account_type === 'music_executive' || userProfile.account_type === 'admin') {
-        query = query.eq('creator_id', userProfile.id);
-      } else {
-        query = query.eq('status', 'Open');
-      }
-
-      const { data, error } = await query;
+      const { data, error, count } = await buildOppQuery(0, OPP_PAGE_SIZE - 1);
       if (error) throw error;
 
-      // Add response_count to each opportunity
-      const withCounts = (data || []).map(opp => ({
-        ...opp,
-        response_count: opp.responses ? opp.responses.length : 0,
-      }));
+      const withCounts = formatOpps(data);
       setOpportunities(withCounts);
+      setTotalCount(count || 0);
+      setHasMore(withCounts.length >= OPP_PAGE_SIZE);
 
       // Mark open opportunities as viewed for composers
       if (userProfile.account_type === 'composer' && withCounts.length > 0) {
@@ -161,6 +171,23 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh }) {
       console.error("Error loading opportunities:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMoreOpps = async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const from = opportunities.length;
+      const { data, error } = await buildOppQuery(from, from + OPP_PAGE_SIZE - 1);
+      if (error) throw error;
+      const withCounts = formatOpps(data);
+      setOpportunities(prev => [...prev, ...withCounts]);
+      setHasMore(withCounts.length >= OPP_PAGE_SIZE);
+    } catch (err) {
+      console.error("Error loading more opportunities:", err);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -536,10 +563,10 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh }) {
     });
 
   return (
-    <div style={{ padding: "32px 36px", minHeight: "100%", overflowY: "auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+    <div style={{ padding: isMobile ? '16px' : "32px 36px", minHeight: "100%", overflowY: "auto" }}>
+      <div style={{ display: "flex", flexDirection: isMobile ? 'column' : 'row', justifyContent: "space-between", alignItems: isMobile ? 'flex-start' : "center", marginBottom: 24, gap: isMobile ? 12 : 0 }}>
         <div>
-          <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 28, fontWeight: 800, fontFamily: "'Outfit', sans-serif" }}>
+          <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: isMobile ? 24 : 28, fontWeight: 800, fontFamily: "'Outfit', sans-serif" }}>
             {(userProfile.account_type === 'music_executive' || userProfile.account_type === 'admin') ? 'My Opportunities' : 'Browse Opportunities'}
           </h1>
           <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 14, marginTop: 4 }}>
@@ -554,7 +581,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh }) {
       </div>
 
       {/* Search and Filter */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
+      <div style={{ display: "flex", flexDirection: isMobile ? 'column' : 'row', gap: 12, marginBottom: 20 }}>
         <div style={{ position: "relative", flex: 1 }}>
           <Search size={16} color={DESIGN_SYSTEM.colors.text.muted} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }} />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search opportunities..." style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.card, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 10, padding: "10px 16px 10px 40px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "'Outfit', sans-serif" }} />
@@ -592,6 +619,15 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh }) {
           </div>
         )}
       </div>
+
+      {/* Active Filter Chips */}
+      {filterGenre && (
+        <div style={{ marginBottom: 14 }}>
+          <FilterChips
+            filters={[{ label: filterGenre, onRemove: () => setFilterGenre('') }]}
+          />
+        </div>
+      )}
 
       {/* Opportunity Form (Executives only) */}
       {showForm && (userProfile.account_type === 'music_executive' || userProfile.account_type === 'admin') && (
@@ -631,7 +667,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh }) {
                 AI Assist
               </button>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
               <select value={projectType} onChange={e => setProjectType(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: projectType ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif" }}>
                 <option value="">Project Type</option>
                 {projectTypeOptions.map(p => <option key={p} value={p}>{p}</option>)}
@@ -856,6 +892,35 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh }) {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Load More */}
+      {!loading && hasMore && filtered.length > 0 && (
+        <div style={{ textAlign: 'center', padding: '24px 0' }}>
+          <button
+            onClick={loadMoreOpps}
+            disabled={loadingMore}
+            style={{
+              background: DESIGN_SYSTEM.colors.bg.card,
+              color: loadingMore ? DESIGN_SYSTEM.colors.text.muted : DESIGN_SYSTEM.colors.text.secondary,
+              border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
+              borderRadius: DESIGN_SYSTEM.radius.md,
+              padding: '12px 32px',
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: loadingMore ? 'default' : 'pointer',
+              fontFamily: "'Outfit', sans-serif",
+              transition: `all ${DESIGN_SYSTEM.transition.fast}`,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+            onMouseEnter={e => { if (!loadingMore) { e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.brand.primary; e.currentTarget.style.color = DESIGN_SYSTEM.colors.brand.primary; } }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.border.light; e.currentTarget.style.color = loadingMore ? DESIGN_SYSTEM.colors.text.muted : DESIGN_SYSTEM.colors.text.secondary; }}
+          >
+            {loadingMore ? 'Loading...' : <><ChevronDown size={16} /> Load More ({opportunities.length} of {totalCount})</>}
+          </button>
         </div>
       )}
 

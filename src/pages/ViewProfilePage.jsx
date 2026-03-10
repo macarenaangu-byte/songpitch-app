@@ -9,10 +9,19 @@ import { Badge } from '../components/Badge';
 import { ProfileBadges } from '../components/ProfileBadges';
 import { SongCard } from '../components/SongCard';
 import { LoadingSongCard } from '../components/LoadingCards';
+import { VerifiedRightsModal } from '../components/VerifiedRightsModal';
 
 export function ViewProfilePage({ profileUser, currentUser, onBack, onOpenMessages, audioPlayer }) {
   const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [rightsModalSong, setRightsModalSong] = useState(null);
+
+  // Compute profile completion for ring indicator
+  const isComposerProfile = profileUser.account_type === 'composer' || profileUser.account_type === 'admin';
+  const completionFields = isComposerProfile
+    ? [profileUser.bio, profileUser.location, profileUser.avatar_url, profileUser.pro_name || profileUser.pro, profileUser.role, Array.isArray(profileUser.genres) && profileUser.genres.length > 0, profileUser.instruments]
+    : [profileUser.bio, profileUser.location, profileUser.avatar_url, profileUser.company, profileUser.job_title, Array.isArray(profileUser.genres) && profileUser.genres.length > 0];
+  const profileCompletionPct = Math.round((completionFields.filter(Boolean).length / completionFields.length) * 100);
 
   // Use shared audio player from parent
   const { playingSong, isPlaying, play: playAudio } = audioPlayer;
@@ -111,7 +120,25 @@ export function ViewProfilePage({ profileUser, currentUser, onBack, onOpenMessag
       {/* Profile Header */}
       <div style={{ background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 20, padding: 32, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, marginBottom: 24 }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 24 }}>
-          <Avatar name={`${profileUser.first_name} ${profileUser.last_name}`} color={profileUser.avatar_color} avatarUrl={profileUser.avatar_url} size={100} />
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <Avatar name={`${profileUser.first_name} ${profileUser.last_name}`} color={profileUser.avatar_color} avatarUrl={profileUser.avatar_url} size={100} />
+            {/* Completion ring */}
+            <svg width="112" height="112" viewBox="0 0 112 112" style={{ position: 'absolute', top: -6, left: -6, pointerEvents: 'none' }}>
+              <circle cx="56" cy="56" r="53" fill="none" stroke={`${DESIGN_SYSTEM.colors.border.light}`} strokeWidth="3" />
+              <circle cx="56" cy="56" r="53" fill="none"
+                stroke={profileCompletionPct >= 100 ? DESIGN_SYSTEM.colors.brand.primary : profileCompletionPct >= 50 ? DESIGN_SYSTEM.colors.accent.amber : DESIGN_SYSTEM.colors.text.muted}
+                strokeWidth="3" strokeLinecap="round"
+                strokeDasharray={`${2 * Math.PI * 53}`}
+                strokeDashoffset={`${2 * Math.PI * 53 * (1 - profileCompletionPct / 100)}`}
+                transform="rotate(-90 56 56)"
+                style={{ transition: 'stroke-dashoffset 0.6s ease' }} />
+            </svg>
+            {profileCompletionPct >= 100 && (
+              <div style={{ position: 'absolute', bottom: -2, right: -2, width: 24, height: 24, borderRadius: '50%', background: DESIGN_SYSTEM.colors.brand.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `2px solid ${DESIGN_SYSTEM.colors.bg.card}` }}>
+                <span style={{ color: '#fff', fontSize: 13, fontWeight: 700 }}>✓</span>
+              </div>
+            )}
+          </div>
 
           <div style={{ flex: 1 }}>
             <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 28, fontWeight: 800, fontFamily: "'Outfit', sans-serif", marginBottom: 8 }}>
@@ -216,12 +243,18 @@ export function ViewProfilePage({ profileUser, currentUser, onBack, onOpenMessag
                   isPlaying={playingSong?.id === song.id && isPlaying}
                   onPlay={playAudio}
                   showActions={false}
+                  onViewRights={(song) => setRightsModalSong(song)}
                 />
               ))}
             </div>
           )}
         </div>
       )}
+      <VerifiedRightsModal
+        open={!!rightsModalSong}
+        onClose={() => setRightsModalSong(null)}
+        song={rightsModalSong}
+      />
     </div>
   );
 }

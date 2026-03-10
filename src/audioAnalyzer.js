@@ -1,6 +1,7 @@
 // audioAnalyzer.js
 // Browser-based audio analysis using Essentia.js WASM + ML prediction server
 // Extracts: duration, BPM, key, genre (ML), and mood (rule-based) from uploaded audio files
+import { logger } from './lib/logger';
 
 // Cache the Essentia instance so we only initialize once
 let essentiaInstance = null;
@@ -73,7 +74,7 @@ const MOOD_LABEL_MAP = {
 async function predictGenreMood(file) {
     const apiUrl = process.env.REACT_APP_AI_API_URL;
     if (!apiUrl) {
-        console.log('🔌 No AI API URL configured, skipping ML prediction');
+        logger.debug('No AI API URL configured, skipping ML prediction');
         return null;
     }
 
@@ -87,7 +88,7 @@ async function predictGenreMood(file) {
         });
 
         if (!response.ok) {
-            console.warn(`⚠️ ML server returned ${response.status}`);
+            logger.warn(`ML server returned ${response.status}`);
             return null;
         }
 
@@ -95,7 +96,7 @@ async function predictGenreMood(file) {
 
         // Check for error response
         if (data.error) {
-            console.warn('⚠️ ML prediction error:', data.error);
+            logger.warn('ML prediction error:', data.error);
             return null;
         }
 
@@ -124,10 +125,10 @@ async function predictGenreMood(file) {
         }
 
         const conf = data.genre_confidence ? (data.genre_confidence * 100).toFixed(1) : '?';
-        console.log(`🤖 ML prediction: genre=${genre} (${conf}%), secondary=${secondaryGenre}, mood=${mood}`);
+        logger.debug(`ML prediction: genre=${genre} (${conf}%), secondary=${secondaryGenre}, mood=${mood}`);
         return { genre, mood, secondaryGenre, confidence: data.genre_confidence || 0 };
     } catch (err) {
-        console.log('🔌 ML server unreachable, using rule-based fallback');
+        logger.debug('ML server unreachable, using rule-based fallback');
         return null;
     }
 }
@@ -152,12 +153,12 @@ async function transcribeLyrics(file) {
 
         const data = await response.json();
         if (data.status === 'success' && data.lyrics) {
-            console.log(`🎤 Lyrics transcribed: ${data.lyrics.substring(0, 80)}...`);
+            logger.debug(`Lyrics transcribed: ${data.lyrics.substring(0, 80)}...`);
             return data.lyrics;
         }
         return null;
     } catch (err) {
-        console.log('🎤 Lyrics transcription unavailable');
+        logger.debug('Lyrics transcription unavailable');
         return null;
     }
 }
@@ -201,7 +202,7 @@ async function loadEssentia() {
 
     // Step 4: Create Essentia instance with the WASM module
     essentiaInstance = new window.Essentia(wasmModule, false);
-    console.log('✅ Essentia.js initialized — version:', essentiaInstance.version);
+    logger.debug('Essentia.js initialized — version:', essentiaInstance.version);
 
     return essentiaInstance;
 }
@@ -341,7 +342,7 @@ export async function analyzeAudioFile(file) {
         bpm = Math.round(rhythm.bpm);
         if (bpm <= 0 || bpm > 300) bpm = null;
     } catch (err) {
-        console.warn('⚠️ BPM extraction failed:', err.message);
+        logger.warn('BPM extraction failed:', err.message);
     }
 
     // ── Key & Scale ──
@@ -354,7 +355,7 @@ export async function analyzeAudioFile(file) {
             key = scale ? `${keyData.key} ${scale}` : keyData.key;
         }
     } catch (err) {
-        console.warn('⚠️ Key extraction failed:', err.message);
+        logger.warn('Key extraction failed:', err.message);
     }
 
     // ── Energy ──
@@ -363,7 +364,7 @@ export async function analyzeAudioFile(file) {
         const result = essentia.Energy(vectorSignal);
         energy = result.energy || 0;
     } catch (err) {
-        console.warn('⚠️ Energy extraction failed:', err.message);
+        logger.warn('Energy extraction failed:', err.message);
     }
 
     // ── Danceability ──
@@ -372,7 +373,7 @@ export async function analyzeAudioFile(file) {
         const result = essentia.Danceability(vectorSignal);
         danceability = result.danceability || 0;
     } catch (err) {
-        console.warn('⚠️ Danceability extraction failed:', err.message);
+        logger.warn('Danceability extraction failed:', err.message);
     }
 
     // ── Dynamic Complexity ──
@@ -381,7 +382,7 @@ export async function analyzeAudioFile(file) {
         const result = essentia.DynamicComplexity(vectorSignal);
         dynamicComplexity = result.dynamicComplexity || 0;
     } catch (err) {
-        console.warn('⚠️ Dynamic complexity extraction failed:', err.message);
+        logger.warn('Dynamic complexity extraction failed:', err.message);
     }
 
     // ── Classify genre and mood ──
@@ -418,14 +419,10 @@ export async function analyzeAudioFile(file) {
     try {
         lyrics = await transcribeLyrics(file);
     } catch (err) {
-        console.log('🎤 Lyrics transcription skipped');
+        logger.debug('Lyrics transcription skipped');
     }
 
-    console.log(`🎵 Analysis complete:
-  Duration: ${duration.toFixed(1)}s | BPM: ${bpm} | Key: ${key}
-  Energy: ${energy.toFixed(4)} | Danceability: ${danceability.toFixed(3)} | Complexity: ${dynamicComplexity.toFixed(2)}
-  → Genre: ${genre} (${genreSource}) | Secondary: ${secondaryGenre}
-  → Mood: ${mood} (${moodSource}) | Lyrics: ${lyrics ? 'Yes' : 'No'}`);
+    logger.debug(`Analysis complete: Duration=${duration.toFixed(1)}s BPM=${bpm} Key=${key} Genre=${genre}(${genreSource}) Mood=${mood}(${moodSource})`);
 
     return { duration, bpm, key, genre, mood, secondaryGenre, lyrics };
 }

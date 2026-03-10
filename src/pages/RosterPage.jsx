@@ -1,57 +1,105 @@
-import { useState, useEffect } from 'react';
-import { Search, ChevronRight } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Search, ChevronRight, ChevronDown, Users } from 'lucide-react';
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { GENRE_OPTIONS } from '../constants/genres';
 import { supabase } from '../lib/supabase';
 import { Avatar } from '../components/Avatar';
 import { Badge } from '../components/Badge';
+import { SortDropdown } from '../components/SortDropdown';
+import { FilterChips } from '../components/FilterChips';
 
 export function RosterPage({ accountType, onViewProfile, isMobile = false }) {
   const [composers, setComposers] = useState([]);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedPro, setSelectedPro] = useState("All");
   const [selectedGenre, setSelectedGenre] = useState("All");
   const [filterLocation, setFilterLocation] = useState("");
+  const [sortBy, setSortBy] = useState("newest");
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const PAGE_SIZE = 20;
   // Admin "god mode" toggle — lets admin switch between viewing composers and executives
   const isAdmin = accountType === 'admin';
   const [adminViewMode, setAdminViewMode] = useState('composer'); // 'composer' or 'music_executive'
 
+  // Debounce search
+  const debounceRef = useRef(null);
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(debounceRef.current);
+  }, [search]);
+
   useEffect(() => {
     loadComposers();
-  }, [accountType, selectedPro, selectedGenre, adminViewMode]);
+  }, [accountType, selectedPro, selectedGenre, adminViewMode, debouncedSearch, sortBy]);
+
+  const buildQuery = (from, to) => {
+    const targetType = isAdmin ? adminViewMode : (accountType === 'music_executive' ? 'composer' : 'music_executive');
+    let query = supabase
+      .from('user_profiles')
+      .select(`
+        *,
+        composers (
+          genres,
+          specialties
+        )
+      `, { count: 'exact' })
+      .in('account_type', [targetType, 'admin'])
+      .eq('is_deleted', false);
+
+    if (selectedPro !== 'All') {
+      query = query.eq('pro_name', selectedPro);
+    }
+
+    if (selectedGenre !== 'All') {
+      query = query.contains('genres', [selectedGenre]);
+    }
+
+    if (debouncedSearch.trim()) {
+      query = query.or(`first_name.ilike.%${debouncedSearch.trim()}%,last_name.ilike.%${debouncedSearch.trim()}%`);
+    }
+
+    // Sort
+    if (sortBy === 'oldest') query = query.order('created_at', { ascending: true });
+    else if (sortBy === 'name_az') query = query.order('first_name', { ascending: true });
+    else if (sortBy === 'name_za') query = query.order('first_name', { ascending: false });
+    else query = query.order('created_at', { ascending: false });
+
+    return query.range(from, to);
+  };
 
   const loadComposers = async () => {
+    setLoading(true);
     try {
-      const targetType = isAdmin ? adminViewMode : (accountType === 'music_executive' ? 'composer' : 'music_executive');
-      let query = supabase
-        .from('user_profiles')
-        .select(`
-          *,
-          composers (
-            genres,
-            specialties
-          )
-        `)
-        .in('account_type', [targetType, 'admin'])
-        .eq('is_deleted', false);
-
-      if (selectedPro !== 'All') {
-        query = query.eq('pro_name', selectedPro);
-      }
-
-      if (selectedGenre !== 'All') {
-        query = query.contains('genres', [selectedGenre]);
-      }
-
-      const { data, error } = await query;
-
+      const { data, error, count } = await buildQuery(0, PAGE_SIZE - 1);
       if (error) throw error;
       setComposers(data || []);
+      setTotalCount(count || 0);
+      setHasMore((data || []).length >= PAGE_SIZE);
     } catch (err) {
       console.error("Error loading composers:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMore = async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const from = composers.length;
+      const { data, error } = await buildQuery(from, from + PAGE_SIZE - 1);
+      if (error) throw error;
+      setComposers(prev => [...prev, ...(data || [])]);
+      setHasMore((data || []).length >= PAGE_SIZE);
+    } catch (err) {
+      console.error("Error loading more:", err);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -60,10 +108,9 @@ export function RosterPage({ accountType, onViewProfile, isMobile = false }) {
   const rosterLocations = [...new Set(composers.map(c => c.location).filter(Boolean))].sort();
 
   const filtered = composers.filter(c => {
-    const nameMatch = `${c.first_name} ${c.last_name}`.toLowerCase().includes(search.toLowerCase());
-    const genreMatch = selectedGenre === 'All' || (Array.isArray(c.genres) && c.genres.includes(selectedGenre));
+    // Name and genre are now server-side — only location remains client-side
     const locationMatch = !filterLocation || c.location === filterLocation;
-    return nameMatch && genreMatch && locationMatch;
+    return locationMatch;
   });
 
   return (
@@ -156,6 +203,33 @@ export function RosterPage({ accountType, onViewProfile, isMobile = false }) {
         </select>
       </div>
 
+      {/* Active Filter Chips + Sort */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
+          <span style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap' }}>
+            {filtered.length} {filtered.length === 1 ? 'user' : 'users'}
+          </span>
+          <FilterChips
+            filters={[
+              ...(selectedPro !== 'All' ? [{ label: `PRO: ${selectedPro}`, onRemove: () => setSelectedPro('All') }] : []),
+              ...(selectedGenre !== 'All' ? [{ label: selectedGenre, onRemove: () => setSelectedGenre('All') }] : []),
+              ...(filterLocation ? [{ label: filterLocation, onRemove: () => setFilterLocation('') }] : []),
+            ]}
+            onClearAll={() => { setSelectedPro('All'); setSelectedGenre('All'); setFilterLocation(''); }}
+          />
+        </div>
+        <SortDropdown
+          value={sortBy}
+          onChange={setSortBy}
+          options={[
+            { value: 'newest', label: 'Newest' },
+            { value: 'oldest', label: 'Oldest' },
+            { value: 'name_az', label: 'Name A-Z' },
+            { value: 'name_za', label: 'Name Z-A' },
+          ]}
+        />
+      </div>
+
       {loading ? (
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(240px,1fr))', gap: DESIGN_SYSTEM.spacing.md }}>
           {Array.from({ length: 6 }).map((_, i) => (
@@ -233,7 +307,75 @@ export function RosterPage({ accountType, onViewProfile, isMobile = false }) {
           ))}
         </div>
       )}
-      {!loading && filtered.length === 0 && <div style={{ textAlign: "center", color: DESIGN_SYSTEM.colors.text.muted, padding: 60, fontSize: 15 }}>No profiles found.</div>}
+      {/* Load More */}
+      {!loading && hasMore && filtered.length > 0 && (
+        <div style={{ textAlign: 'center', padding: '24px 0' }}>
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            style={{
+              background: DESIGN_SYSTEM.colors.bg.card,
+              color: loadingMore ? DESIGN_SYSTEM.colors.text.muted : DESIGN_SYSTEM.colors.text.secondary,
+              border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
+              borderRadius: DESIGN_SYSTEM.radius.md,
+              padding: '12px 32px',
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: loadingMore ? 'default' : 'pointer',
+              fontFamily: "'Outfit', sans-serif",
+              transition: `all ${DESIGN_SYSTEM.transition.fast}`,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+            onMouseEnter={e => { if (!loadingMore) { e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.brand.primary; e.currentTarget.style.color = DESIGN_SYSTEM.colors.brand.primary; } }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.border.light; e.currentTarget.style.color = loadingMore ? DESIGN_SYSTEM.colors.text.muted : DESIGN_SYSTEM.colors.text.secondary; }}
+          >
+            {loadingMore ? 'Loading...' : <><ChevronDown size={16} /> Load More ({composers.length} of {totalCount})</>}
+          </button>
+        </div>
+      )}
+      {!loading && filtered.length === 0 && (
+        <div style={{
+          textAlign: 'center',
+          padding: '60px 20px',
+          background: DESIGN_SYSTEM.colors.bg.card,
+          borderRadius: DESIGN_SYSTEM.radius.lg,
+          border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
+        }}>
+          <Users size={48} color={DESIGN_SYSTEM.colors.text.muted} style={{ margin: '0 auto 16px' }} />
+          <h3 style={{
+            color: DESIGN_SYSTEM.colors.text.primary,
+            fontSize: 18,
+            fontWeight: 700,
+            fontFamily: "'Outfit', sans-serif",
+            marginBottom: 8,
+          }}>No profiles found</h3>
+          <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 14, marginBottom: 16 }}>
+            {composers.length === 0
+              ? "No profiles are available yet. Check back soon!"
+              : "Try adjusting your search or filters"}
+          </p>
+          {(search || selectedPro !== 'All' || selectedGenre !== 'All' || filterLocation) && (
+            <button
+              onClick={() => { setSearch(''); setSelectedPro('All'); setSelectedGenre('All'); setFilterLocation(''); }}
+              style={{
+                background: DESIGN_SYSTEM.colors.brand.primary,
+                color: DESIGN_SYSTEM.colors.text.primary,
+                border: 'none',
+                borderRadius: 8,
+                padding: '10px 20px',
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: "'Outfit', sans-serif",
+              }}
+            >
+              Clear All Filters
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

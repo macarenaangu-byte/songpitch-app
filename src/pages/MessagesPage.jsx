@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Search, MessageCircle, Send, Pin } from "lucide-react";
+import { Search, MessageCircle, Send, Pin, ArrowLeft } from "lucide-react";
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { supabase } from '../lib/supabase';
 import { showToast } from '../lib/toast';
@@ -7,7 +7,7 @@ import { friendlyError, insertNotification } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
 import { LoadingMessageItem } from '../components/LoadingCards';
 
-export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToken, onBadgeRefresh, onActiveConversationChange }) {
+export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToken, onBadgeRefresh, onActiveConversationChange, isMobile = false }) {
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -369,8 +369,9 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
 
   return (
     <div style={{ display: "flex", height: "calc(100vh - 0px)", background: DESIGN_SYSTEM.colors.bg.secondary }}>
-      {/* Conversations List */}
-      <div style={{ width: 320, background: DESIGN_SYSTEM.colors.bg.secondary, borderRight: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, display: "flex", flexDirection: "column" }}>
+      {/* Conversations List — hidden on mobile when a conversation is selected */}
+      {!(isMobile && selectedConversation) && (
+      <div style={{ width: isMobile ? '100%' : 320, background: DESIGN_SYSTEM.colors.bg.secondary, borderRight: isMobile ? 'none' : `1px solid ${DESIGN_SYSTEM.colors.border.light}`, display: "flex", flexDirection: "column" }}>
         <div style={{ padding: "24px 20px 16px", borderBottom: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
           <h2 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 22, fontWeight: 800, fontFamily: "'Outfit', sans-serif" }}>Messages</h2>
           <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13, marginTop: 4, marginBottom: 12 }}>
@@ -515,13 +516,23 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
           )}
         </div>
       </div>
+      )}
 
-      {/* Chat Area */}
+      {/* Chat Area — full-width on mobile when conversation selected */}
       {selectedConversation ? (
-        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", width: isMobile ? '100%' : undefined }}>
           {/* Chat Header */}
-          <div style={{ padding: "20px 24px", borderBottom: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, background: DESIGN_SYSTEM.colors.bg.secondary }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{ padding: isMobile ? "14px 16px" : "20px 24px", borderBottom: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, background: DESIGN_SYSTEM.colors.bg.secondary }}>
+            <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 10 : 14 }}>
+              {isMobile && (
+                <button
+                  onClick={() => setSelectedConversation(null)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center', color: DESIGN_SYSTEM.colors.text.muted }}
+                  aria-label="Back to conversations"
+                >
+                  <ArrowLeft size={20} />
+                </button>
+              )}
               <Avatar
                 name={`${selectedConversation.otherUser.first_name} ${selectedConversation.otherUser.last_name}`}
                 color={selectedConversation.otherUser.avatar_color}
@@ -576,7 +587,7 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
                         size={32}
                       />
                     )}
-                    <div style={{ maxWidth: "60%" }}>
+                    <div style={{ maxWidth: isMobile ? "80%" : "60%" }}>
                       <div style={{
                         background: isMe ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.bg.card,
                         color: DESIGN_SYSTEM.colors.text.primary,
@@ -613,8 +624,8 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
           </div>
 
           {/* Message Input */}
-          <div style={{ padding: "20px 24px", borderTop: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, background: DESIGN_SYSTEM.colors.bg.secondary }}>
-            <form onSubmit={sendMessage} style={{ display: "flex", gap: 12 }}>
+          <div style={{ padding: isMobile ? "12px 16px" : "20px 24px", borderTop: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, background: DESIGN_SYSTEM.colors.bg.secondary }}>
+            <form onSubmit={sendMessage} style={{ display: "flex", gap: isMobile ? 8 : 12 }}>
               <input
                 type="text"
                 value={messageText}
@@ -641,7 +652,7 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
                   color: DESIGN_SYSTEM.colors.text.primary,
                   border: "none",
                   borderRadius: 10,
-                  padding: "12px 24px",
+                  padding: isMobile ? "12px 16px" : "12px 24px",
                   fontWeight: 600,
                   fontSize: 14,
                   cursor: (sending || !messageText.trim()) ? "not-allowed" : "pointer",
@@ -657,7 +668,7 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
             </form>
           </div>
         </div>
-      ) : (
+      ) : !isMobile ? (
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: DESIGN_SYSTEM.colors.text.muted }}>
           <div style={{ textAlign: "center" }}>
             <MessageCircle size={64} color={DESIGN_SYSTEM.colors.text.muted} style={{ margin: "0 auto 20px" }} />
@@ -665,7 +676,7 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
             <p style={{ fontSize: 14 }}>Choose a conversation from the left to start messaging</p>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

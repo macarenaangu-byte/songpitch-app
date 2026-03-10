@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Edit, LogOut, Upload, Trash2 } from 'lucide-react';
+import { Edit, LogOut, Upload, Trash2, Bell, BellOff } from 'lucide-react';
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { GENRE_OPTIONS } from '../constants/genres';
 import { supabase } from '../lib/supabase';
@@ -33,6 +33,38 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
   // Avatar upload state
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(user.avatar_url || null);
+
+  // Email notification preferences
+  const defaultEmailPrefs = { new_message: true, new_opportunity: true, submission_received: true, submission_shortlisted: true, submission_rejected: true };
+  const [emailPrefs, setEmailPrefs] = useState(user.email_preferences || defaultEmailPrefs);
+  const [savingEmailPrefs, setSavingEmailPrefs] = useState(false);
+
+  const emailPrefLabels = {
+    new_message: { label: 'New messages', desc: 'When someone sends you a message' },
+    new_opportunity: { label: 'New opportunities', desc: 'When an opportunity matches your genres' },
+    submission_received: { label: 'Submissions received', desc: 'When a composer applies to your opportunity' },
+    submission_shortlisted: { label: 'Submission shortlisted', desc: 'When your submission is shortlisted' },
+    submission_rejected: { label: 'Submission updates', desc: 'When your submission status changes' },
+  };
+
+  const toggleEmailPref = async (key) => {
+    const updated = { ...emailPrefs, [key]: !emailPrefs[key] };
+    setEmailPrefs(updated);
+    setSavingEmailPrefs(true);
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ email_preferences: updated })
+        .eq('id', user.id);
+      if (error) throw error;
+      if (onProfileUpdate) await onProfileUpdate();
+    } catch (err) {
+      setEmailPrefs(emailPrefs); // revert on error
+      showToast(friendlyError(err), 'error');
+    } finally {
+      setSavingEmailPrefs(false);
+    }
+  };
 
   const MAX_AVATAR_SIZE = 2 * 1024 * 1024; // 2MB
   const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -246,6 +278,53 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
                   )}
                 </>
               )}
+            </div>
+
+            {/* Email Notification Preferences */}
+            <div style={{ marginTop: 24, paddingTop: 20, borderTop: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                <Bell size={16} color={DESIGN_SYSTEM.colors.text.secondary} />
+                <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: "'Outfit', sans-serif", margin: 0 }}>Email Notifications</h3>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {Object.entries(emailPrefLabels)
+                  .filter(([key]) => {
+                    // Only show relevant prefs per account type
+                    if (user.account_type === 'composer') return !['submission_received'].includes(key);
+                    if (user.account_type === 'music_executive') return !['new_opportunity', 'submission_shortlisted', 'submission_rejected'].includes(key);
+                    return true; // admin sees all
+                  })
+                  .map(([key, { label, desc }]) => (
+                  <button
+                    key={key}
+                    onClick={() => toggleEmailPref(key)}
+                    disabled={savingEmailPrefs}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
+                      borderRadius: 10, padding: '12px 14px', cursor: 'pointer',
+                      fontFamily: "'Outfit', sans-serif", textAlign: 'left', width: '100%',
+                      opacity: savingEmailPrefs ? 0.7 : 1, transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <div>
+                      <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, fontWeight: 600 }}>{label}</div>
+                      <div style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 12, marginTop: 2 }}>{desc}</div>
+                    </div>
+                    <div style={{
+                      width: 40, height: 22, borderRadius: 11, position: 'relative',
+                      background: emailPrefs[key] ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.border.medium,
+                      transition: 'background 0.2s ease', flexShrink: 0, marginLeft: 12,
+                    }}>
+                      <div style={{
+                        width: 18, height: 18, borderRadius: '50%', background: '#fff',
+                        position: 'absolute', top: 2, left: emailPrefs[key] ? 20 : 2,
+                        transition: 'left 0.2s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                      }} />
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
 
             <button onClick={onSignOut} style={{ width: "100%", marginTop: 20, background: "transparent", color: DESIGN_SYSTEM.colors.accent.red, border: `1px solid ${DESIGN_SYSTEM.colors.accent.red}33`, borderRadius: 10, padding: "10px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Outfit', sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>

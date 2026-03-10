@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Play, Pause, Music, Edit, Trash2, Clock, Shield, Zap } from "lucide-react";
+import { Play, Pause, Music, Edit, Trash2, Clock, Shield, Zap, CheckCircle, AlertTriangle } from "lucide-react";
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { Badge } from './Badge';
 
-export function SongCard({ song, onPlay, isPlaying, showActions, onEdit, onDelete, hideComposerName }) {
+export function SongCard({ song, onPlay, isPlaying, showActions, onEdit, onDelete, hideComposerName, onViewRights, isMobile = false }) {
   const primaryGenre = song.primary_genre || song.genre;
-  const secondaryGenre = song.secondary_genre;
-  const instrumentType = song.instrument_type;
+  const secondaryGenre = isMobile ? null : song.secondary_genre;
+  const instrumentType = isMobile ? null : song.instrument_type;
   const licensingStatus = song.licensing_status;
   const isOneStopTrack = !!song.is_one_stop || (typeof licensingStatus === 'string' && licensingStatus.startsWith('One-Stop'));
 
@@ -73,7 +73,7 @@ export function SongCard({ song, onPlay, isPlaying, showActions, onEdit, onDelet
       </div>
 
       {/* Song Info - Clear hierarchy */}
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ flex: 1, minWidth: 140 }}>
         <div style={{
           color: DESIGN_SYSTEM.colors.text.primary,
           fontWeight: DESIGN_SYSTEM.fontWeight.semibold,
@@ -97,7 +97,7 @@ export function SongCard({ song, onPlay, isPlaying, showActions, onEdit, onDelet
       </div>
 
       {/* Metadata pills */}
-      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", flex: "1 1 auto", minWidth: 0, justifyContent: "flex-start" }}>
         {primaryGenre && <Badge color={DESIGN_SYSTEM.colors.brand.purple}>{primaryGenre}</Badge>}
         {secondaryGenre && <Badge color={DESIGN_SYSTEM.colors.brand.blue}>{secondaryGenre}</Badge>}
         {instrumentType && <Badge color={DESIGN_SYSTEM.colors.accent.amber}>{instrumentType}</Badge>}
@@ -121,10 +121,10 @@ export function SongCard({ song, onPlay, isPlaying, showActions, onEdit, onDelet
             {isOneStopTrack ? 'One-Stop \u2022 Priority' : licensingStatus}
           </span>
         )}
-        {licensingStatus === 'Pending/Negotiation' && (
+        {song.verification_status === 'verified' && (
           <span style={{
-            background: `${DESIGN_SYSTEM.colors.accent.red}15`,
-            color: DESIGN_SYSTEM.colors.accent.red,
+            background: `${DESIGN_SYSTEM.colors.brand.primary}15`,
+            color: DESIGN_SYSTEM.colors.brand.primary,
             fontSize: 10,
             fontWeight: 700,
             padding: "3px 8px",
@@ -133,9 +133,26 @@ export function SongCard({ song, onPlay, isPlaying, showActions, onEdit, onDelet
             alignItems: "center",
             gap: 3,
             whiteSpace: "nowrap",
-            border: `1px solid ${DESIGN_SYSTEM.colors.accent.red}30`,
-          }} title="Update licensing info to appear in executive One-Stop searches">
-            Action Required
+            border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}30`,
+          }} title="Rights have been verified">
+            <CheckCircle size={10} /> Verified
+          </span>
+        )}
+        {song.verification_status === 'pending_splits' && !isOneStopTrack && (
+          <span style={{
+            background: `${DESIGN_SYSTEM.colors.accent.amber}15`,
+            color: DESIGN_SYSTEM.colors.accent.amber,
+            fontSize: 10,
+            fontWeight: 700,
+            padding: "3px 8px",
+            borderRadius: 6,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 3,
+            whiteSpace: "nowrap",
+            border: `1px solid ${DESIGN_SYSTEM.colors.accent.amber}30`,
+          }} title="Ownership splits need verification">
+            <AlertTriangle size={10} /> Pending Verification
           </span>
         )}
         {song.bpm && (
@@ -170,6 +187,37 @@ export function SongCard({ song, onPlay, isPlaying, showActions, onEdit, onDelet
 
       {/* Actions */}
       <div style={{ display: "flex", alignItems: "center", gap: DESIGN_SYSTEM.spacing.md }}>
+        {onViewRights && song.verification_status === 'verified' && (
+          <button onClick={(e) => { e.stopPropagation(); onViewRights(song); }}
+            style={{
+              background: `${DESIGN_SYSTEM.colors.brand.primary}15`,
+              border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}30`,
+              borderRadius: DESIGN_SYSTEM.radius.sm,
+              padding: `${DESIGN_SYSTEM.spacing.xs} 12px`,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+              fontSize: 12,
+              fontWeight: 600,
+              color: DESIGN_SYSTEM.colors.brand.primary,
+              fontFamily: "'Outfit', sans-serif",
+              transition: DESIGN_SYSTEM.transition.fast,
+              whiteSpace: "nowrap",
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = `${DESIGN_SYSTEM.colors.brand.primary}25`;
+              e.currentTarget.style.borderColor = `${DESIGN_SYSTEM.colors.brand.primary}50`;
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = `${DESIGN_SYSTEM.colors.brand.primary}15`;
+              e.currentTarget.style.borderColor = `${DESIGN_SYSTEM.colors.brand.primary}30`;
+            }}
+            title="View ownership splits"
+          >
+            <Shield size={12} /> View Rights
+          </button>
+        )}
         {showActions && (
           <div style={{ display: "flex", gap: DESIGN_SYSTEM.spacing.xs }}>
             <button aria-label={`Edit ${song.title}`} className="song-action edit" onClick={() => onEdit(song)} style={{

@@ -19,9 +19,17 @@ export const friendlyError = (err) => {
 };
 
 // ─── NOTIFICATION HELPERS ───────────────────────────────────────────────────
+// Fire-and-forget email trigger — never blocks notification flow
+const triggerEmailNotification = (userId, type, title, body, metadata) => {
+  supabase.functions.invoke('send-notification-email', {
+    body: { userId, type, title, body, metadata },
+  }).catch(err => console.warn('Email notification skipped:', err?.message));
+};
+
 export const insertNotification = async (userId, type, title, body, metadata = {}) => {
   try {
     await supabase.from('notifications').insert([{ user_id: userId, type, title, body, metadata }]);
+    triggerEmailNotification(userId, type, title, body, metadata);
   } catch (err) {
     console.error('Notification insert failed:', err);
   }
@@ -32,6 +40,8 @@ export const insertNotificationBatch = async (userIds, type, title, body, metada
   try {
     const rows = userIds.map(uid => ({ user_id: uid, type, title, body, metadata }));
     await supabase.from('notifications').insert(rows);
+    // Trigger email for each user (fire-and-forget, non-blocking)
+    userIds.forEach(uid => triggerEmailNotification(uid, type, title, body, metadata));
   } catch (err) {
     console.error('Batch notification insert failed:', err);
   }

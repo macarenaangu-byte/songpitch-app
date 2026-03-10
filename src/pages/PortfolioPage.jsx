@@ -10,14 +10,50 @@ import { friendlyError } from '../lib/utils';
 import { SongCard } from '../components/SongCard';
 import { LoadingSongCard } from '../components/LoadingCards';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { UploadProgressBar } from '../components/UploadProgressBar';
 
-export function PortfolioPage({ userProfile, audioPlayer }) {
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const ACCEPTED_AUDIO_TYPES = ['audio/mpeg', 'audio/wav', 'audio/aac', 'audio/ogg', 'audio/flac', 'audio/mp4', 'audio/x-m4a', 'audio/x-wav', 'audio/webm'];
+
+const uploadWithProgress = (file, storagePath, onProgress) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return reject(new Error('Not authenticated'));
+
+      const xhr = new XMLHttpRequest();
+      const url = `${process.env.REACT_APP_SUPABASE_URL}/storage/v1/object/song-files/${storagePath}`;
+
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+          onProgress(Math.round((e.loaded / e.total) * 100));
+        }
+      });
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) resolve({ error: null });
+        else reject(new Error(`Upload failed with status ${xhr.status}`));
+      });
+      xhr.addEventListener('error', () => reject(new Error('Upload network error')));
+
+      xhr.open('POST', url);
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      xhr.setRequestHeader('apikey', process.env.REACT_APP_SUPABASE_ANON_KEY);
+      xhr.send(file);
+    } catch (err) {
+      reject(err);
+    }
+  });
+};
+
+export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
   const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showBulk, setShowBulk] = useState(false);
   const [bulkStep, setBulkStep] = useState(null); // null | 'definition' | 'metadata'
   const [editingSong, setEditingSong] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(null); // { progress, fileName, currentFile?, totalFiles? }
   const [isDragging, setIsDragging] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [bulkAnalyzing, setBulkAnalyzing] = useState(""); // e.g. "Analyzing song 2 of 5..."
@@ -43,11 +79,8 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
   const [secondaryGenre, setSecondaryGenre] = useState("");
   const [instrumentType, setInstrumentType] = useState("");
   const [licensingStatus, setLicensingStatus] = useState("");
-  const [ownershipPercentage, setOwnershipPercentage] = useState("");
-
   const ONE_STOP_LABEL = 'One-Stop (100% Master & Publishing)';
-  const ADMIN_CO_OWNED_LABEL = 'Admin/Co-Owned';
-  const PENDING_NEGOTIATION_LABEL = 'Pending/Negotiation';
+  const ADMIN_CO_OWNED_LABEL = 'Co-Owned (Multiple Rights Holders)';
 
   const handleLicensingStatusChange = (value) => {
     if (value === ONE_STOP_LABEL) {
@@ -57,7 +90,6 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
         message: 'By selecting One-Stop, you confirm you control 100% of both master and publishing rights for this track and can clear it quickly for sync. Proceed?',
         onConfirm: () => {
           setLicensingStatus(ONE_STOP_LABEL);
-          setOwnershipPercentage('');
           setConfirmModal(null);
           showToast('One-Stop track confirmed. One-Stop tracks are prioritized in executive sync searches.', 'success');
         },
@@ -67,7 +99,6 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
     }
 
     setLicensingStatus(value);
-    if (value !== ADMIN_CO_OWNED_LABEL) setOwnershipPercentage('');
   };
 
   const handleBulkLicensingStatusChange = (index, value) => {
@@ -79,7 +110,6 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
         onConfirm: () => {
           updateBulkField(index, 'licensing_status', ONE_STOP_LABEL);
           updateBulkField(index, 'is_one_stop', true);
-          updateBulkField(index, 'ownership_percentage', '');
           setConfirmModal(null);
         },
         onCancel: () => setConfirmModal(null),
@@ -89,7 +119,6 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
 
     updateBulkField(index, 'licensing_status', value);
     updateBulkField(index, 'is_one_stop', false);
-    if (value !== ADMIN_CO_OWNED_LABEL) updateBulkField(index, 'ownership_percentage', '');
   };
 
   // Bulk upload state
@@ -98,8 +127,16 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
 
   // Auto-analyze and fill fields when a file is selected
   const handleAudioFileChange = async (file) => {
-    setAudioFile(file);
     if (!file) return;
+    if (!file.type.startsWith('audio/') && !ACCEPTED_AUDIO_TYPES.includes(file.type)) {
+      showToast('Invalid file type. Please upload an audio file (MP3, WAV, AAC, FLAC, OGG, M4A).', 'error');
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      showToast(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 50MB.`, 'error');
+      return;
+    }
+    setAudioFile(file);
 
     // Auto-fill title from filename (strip extension), only if title is empty
     if (!title || title.trim() === '') {
@@ -164,11 +201,7 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
       return;
     }
     if (!licensingStatus || !String(licensingStatus).trim()) {
-      showToast("Licensing Status is required.", "error");
-      return;
-    }
-    if (licensingStatus === ADMIN_CO_OWNED_LABEL && (!ownershipPercentage || Number.isNaN(parseInt(ownershipPercentage, 10)))) {
-      showToast("Ownership Percentage is required for Admin/Co-Owned.", "error");
+      showToast("Licensing Status is required. Choose One-Stop or Co-Owned.", "error");
       return;
     }
 
@@ -181,12 +214,15 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
       if (audioFile) {
         const fileExt = audioFile.name.split('.').pop();
         const fileName = `${userProfile.id}/${Date.now()}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage
-          .from('song-files')
-          .upload(fileName, audioFile);
-        if (uploadError) {
-          throw uploadError;
+        setUploadProgress({ progress: 0, fileName: audioFile.name });
+        try {
+          await uploadWithProgress(audioFile, fileName, (pct) => {
+            setUploadProgress(prev => prev ? { ...prev, progress: pct } : null);
+          });
+        } catch (uploadErr) {
+          throw uploadErr;
         }
+        setUploadProgress(null);
         // Get the Public URL
         const { data: { publicUrl } } = supabase.storage
           .from('song-files')
@@ -196,9 +232,7 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
 
       // Use manual title if provided, otherwise fallback to file name (without extension)
       const songTitle = title && title.trim() !== '' ? title : (audioFile ? audioFile.name.replace(/\.[^/.]+$/, '') : 'Untitled');
-      const normalizedLicensingStatus = licensingStatus === ADMIN_CO_OWNED_LABEL
-        ? `${ADMIN_CO_OWNED_LABEL} (${parseInt(ownershipPercentage, 10)}%)`
-        : licensingStatus;
+      const isOneStop = licensingStatus === ONE_STOP_LABEL;
 
       const songData = {
         composer_id: userProfile.id,
@@ -212,8 +246,9 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
         mood: mood || null,
         mood_tags: mood ? [mood] : null,
         instrument_type: instrumentType || null,
-        licensing_status: normalizedLicensingStatus || null,
-        is_one_stop: licensingStatus === ONE_STOP_LABEL,
+        licensing_status: licensingStatus || null,
+        is_one_stop: isOneStop,
+        verification_status: isOneStop ? 'verified' : 'pending_splits',
         description: description || null,
         year: year || null,
         audio_url: audioUrl || (editingSong ? editingSong.audio_url : null)
@@ -226,10 +261,29 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
           .eq('id', editingSong.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { data: insertedSong, error } = await supabase
           .from('songs')
-          .insert([songData]);
+          .insert([songData])
+          .select('id')
+          .single();
         if (error) throw error;
+
+        // Auto-create split sheet for One-Stop songs
+        if (isOneStop && insertedSong?.id) {
+          const composerName = `${userProfile.first_name} ${userProfile.last_name}`;
+          await supabase.from('split_sheets').insert([{
+            user_id: userProfile.id,
+            song_id: insertedSong.id,
+            song_title: songTitle,
+            splits: {
+              composition: [{ name: composerName, role: 'Songwriter/Composer', percentage: 100 }],
+              master: [{ name: composerName, role: 'Owner', percentage: 100 }]
+            },
+            signature: composerName,
+            attested: true,
+            input_method: 'auto_one_stop'
+          }]);
+        }
       }
 
       resetForm();
@@ -238,6 +292,7 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
     } catch (err) {
       showToast(friendlyError(err), "error");
     } finally {
+      setUploadProgress(null);
       setLoading(false);
     }
   };
@@ -267,7 +322,6 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
 
   const handleEdit = (song) => {
     const rawLicensingStatus = song.licensing_status || "";
-    const ownershipMatch = rawLicensingStatus.match(/Admin\/Co-Owned\s*\((\d{1,3})%\)/i);
 
     setEditingSong(song);
     setTitle(song.title);
@@ -278,14 +332,12 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
     setInstrumentType(song.instrument_type || "");
     if (rawLicensingStatus.startsWith('One-Stop')) {
       setLicensingStatus(ONE_STOP_LABEL);
-    } else if (rawLicensingStatus.startsWith('Admin/Co-Owned')) {
+    } else if (rawLicensingStatus.startsWith('Admin/Co-Owned') || rawLicensingStatus.startsWith('Co-Owned')) {
       setLicensingStatus(ADMIN_CO_OWNED_LABEL);
-    } else if (rawLicensingStatus.startsWith('Pending/Negotiation')) {
-      setLicensingStatus(PENDING_NEGOTIATION_LABEL);
     } else {
+      // Legacy or unknown — default to Co-Owned so user must re-confirm
       setLicensingStatus(rawLicensingStatus || "");
     }
-    setOwnershipPercentage(ownershipMatch ? ownershipMatch[1] : "");
     setKey(song.key || "");
     setMood(song.mood || "");
     setDescription(song.description || "");
@@ -302,7 +354,6 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
     setBpm("");
     setInstrumentType("");
     setLicensingStatus("");
-    setOwnershipPercentage("");
     setKey("");
     setMood("");
     setDescription("");
@@ -312,7 +363,11 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
   };
 
   const handleBulkFiles = async (e) => {
-    const files = Array.from(e.target.files);
+    const allFiles = Array.from(e.target.files);
+    const files = allFiles.filter(f => f.type.startsWith('audio/') || ACCEPTED_AUDIO_TYPES.includes(f.type));
+    const rejected = allFiles.length - files.length;
+    if (rejected > 0) showToast(`${rejected} non-audio file${rejected > 1 ? 's' : ''} skipped.`, 'info');
+    if (files.length === 0) { showToast('No valid audio files found.', 'error'); return; }
     setBulkFiles(files);
     setShowBulk(true);
 
@@ -347,7 +402,6 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
         bpm: id3Bpm,
         instrument_type: '',
         licensing_status: '',
-        ownership_percentage: '',
         is_one_stop: false,
         key: id3Key,
         mood: '',
@@ -391,7 +445,6 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
       .map((item, idx) => {
         const missing = [];
         if (!item.licensing_status || !String(item.licensing_status).trim()) missing.push('Licensing Status');
-        if (item.licensing_status === ADMIN_CO_OWNED_LABEL && (!item.ownership_percentage || Number.isNaN(parseInt(item.ownership_percentage, 10)))) missing.push('Ownership %');
         return missing.length ? { row: idx + 1, missing } : null;
       })
       .filter(Boolean);
@@ -426,10 +479,14 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
 
     // Phase 2: Upload to Supabase
     setLoading(true);
+    const totalFiles = analyzedData.length;
+    setUploadProgress({ progress: 0, fileName: '', totalFiles, currentFile: 0 });
     try {
       for (let index = 0; index < analyzedData.length; index++) {
         const item = analyzedData[index];
         if (!item.file) continue;
+
+        setUploadProgress({ progress: Math.round((index / totalFiles) * 100), fileName: item.file.name, totalFiles, currentFile: index + 1 });
 
         const fileExt = item.file.name.split('.').pop();
         const fileName = `${userProfile.id}/${Date.now()}_${index}.${fileExt}`;
@@ -448,7 +505,8 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
           .getPublicUrl(fileName);
         const audioUrl = urlData.publicUrl;
 
-        const { error: insertError } = await supabase
+        const isOneStop = item.licensing_status === ONE_STOP_LABEL;
+        const { data: insertedSong, error: insertError } = await supabase
           .from('songs')
           .insert([{
             composer_id: userProfile.id,
@@ -459,20 +517,38 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
             duration: item.duration || null,
             bpm: item.bpm ? parseInt(item.bpm) : null,
             instrument_type: item.instrument_type || null,
-            licensing_status: item.licensing_status === ADMIN_CO_OWNED_LABEL
-              ? `${ADMIN_CO_OWNED_LABEL} (${parseInt(item.ownership_percentage, 10)}%)`
-              : (item.licensing_status || null),
-            is_one_stop: item.licensing_status === ONE_STOP_LABEL,
+            licensing_status: item.licensing_status || null,
+            is_one_stop: isOneStop,
+            verification_status: isOneStop ? 'verified' : 'pending_splits',
             key: item.key || null,
             mood: item.mood || null,
             mood_tags: item.mood ? [item.mood] : null,
             description: item.description || null,
             year: item.year || null,
             audio_url: audioUrl,
-          }]);
+          }])
+          .select('id')
+          .single();
 
         if (insertError) {
           console.error(`Error inserting song row for ${item.title}:`, insertError);
+        }
+
+        // Auto-create split sheet for One-Stop songs
+        if (isOneStop && insertedSong?.id) {
+          const composerName = `${userProfile.first_name} ${userProfile.last_name}`;
+          await supabase.from('split_sheets').insert([{
+            user_id: userProfile.id,
+            song_id: insertedSong.id,
+            song_title: item.title,
+            splits: {
+              composition: [{ name: composerName, role: 'Songwriter/Composer', percentage: 100 }],
+              master: [{ name: composerName, role: 'Owner', percentage: 100 }]
+            },
+            signature: composerName,
+            attested: true,
+            input_method: 'auto_one_stop'
+          }]);
         }
       }
 
@@ -485,6 +561,7 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
     } catch (err) {
       showToast(friendlyError(err), "error");
     } finally {
+      setUploadProgress(null);
       setLoading(false);
       setBulkAnalyzing('');
     }
@@ -552,7 +629,7 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
 
   return (
     <div
-      style={{ padding: "32px 36px", minHeight: "100%", overflowY: "auto", position: "relative" }}
+      style={{ padding: isMobile ? '16px' : "32px 36px", minHeight: "100%", overflowY: "auto", position: "relative" }}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
@@ -578,12 +655,12 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
         </div>
       )}
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+      <div style={{ display: "flex", flexDirection: isMobile ? 'column' : 'row', justifyContent: "space-between", alignItems: isMobile ? 'flex-start' : "center", marginBottom: 24, gap: isMobile ? 12 : 0 }}>
         <div>
-          <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 28, fontWeight: 800, fontFamily: "'Outfit', sans-serif" }}>My Portfolio</h1>
+          <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: isMobile ? 24 : 28, fontWeight: 800, fontFamily: "'Outfit', sans-serif" }}>My Portfolio</h1>
           <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 14, marginTop: 4 }}>Manage your music catalog</p>
         </div>
-        <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ display: "flex", gap: 10, width: isMobile ? '100%' : 'auto' }}>
           <label style={{ background: DESIGN_SYSTEM.colors.accent.purple, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 10, padding: "9px 18px", fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontFamily: "'Outfit', sans-serif" }}>
             <Upload size={15} /> Bulk Upload
             <input type="file" multiple accept="audio/*" onChange={handleBulkFiles} style={{ display: "none" }} />
@@ -609,7 +686,7 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
             </button>
           </div>
           <form onSubmit={handleSubmit}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, marginBottom: 12 }}>
               <input type="text" placeholder="Title (optional)" value={title} onChange={e => setTitle(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif" }} />
               <select value={genre} onChange={e => setGenre(e.target.value)} required style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: genre ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif" }}>
                 <option value="">Primary Genre (required)...</option>
@@ -631,30 +708,36 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
                 <option value="">Select Mood...</option>
                 {moodOptions.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
-              <select value={licensingStatus} onChange={e => handleLicensingStatusChange(e.target.value)} required style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: licensingStatus ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif" }}>
-                <option value="">Licensing Status (required)...</option>
-                <option value={ONE_STOP_LABEL}>{ONE_STOP_LABEL}</option>
-                <option value={ADMIN_CO_OWNED_LABEL}>{ADMIN_CO_OWNED_LABEL}</option>
-                <option value={PENDING_NEGOTIATION_LABEL}>{PENDING_NEGOTIATION_LABEL}</option>
-              </select>
-              {licensingStatus === ADMIN_CO_OWNED_LABEL ? (
-                <input
-                  type="number"
-                  min={1}
-                  max={100}
-                  placeholder="Ownership Percentage (e.g., 50)"
-                  value={ownershipPercentage}
-                  onChange={e => setOwnershipPercentage(e.target.value)}
-                  required
-                  style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif" }}
-                />
-              ) : (
-                <div style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px dashed ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, fontFamily: "'Outfit', sans-serif" }}>
-                  {licensingStatus === ONE_STOP_LABEL ? '\u2713 One-Stop confirmed for this track.' : 'Ownership % required only for Admin/Co-Owned.'}
-                </div>
-              )}
             </div>
-            <div style={{ marginTop: -2, marginBottom: 12, color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 12, fontWeight: 600, fontFamily: "'Outfit', sans-serif" }}>
+            {/* Licensing Status Toggle */}
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 8 }}>Ownership Type (required)</label>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 10 }}>
+                <button type="button" onClick={() => handleLicensingStatusChange(ONE_STOP_LABEL)} style={{
+                  background: licensingStatus === ONE_STOP_LABEL ? `${DESIGN_SYSTEM.colors.brand.primary}18` : DESIGN_SYSTEM.colors.bg.primary,
+                  border: `2px solid ${licensingStatus === ONE_STOP_LABEL ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.border.light}`,
+                  borderRadius: 12, padding: '14px 16px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <Shield size={16} color={licensingStatus === ONE_STOP_LABEL ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.text.muted} />
+                    <span style={{ fontSize: 14, fontWeight: 700, color: licensingStatus === ONE_STOP_LABEL ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.text.primary, fontFamily: "'Outfit', sans-serif" }}>One-Stop (I Own 100%)</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.text.tertiary, fontFamily: "'Outfit', sans-serif" }}>Full master & publishing rights</div>
+                </button>
+                <button type="button" onClick={() => handleLicensingStatusChange(ADMIN_CO_OWNED_LABEL)} style={{
+                  background: licensingStatus === ADMIN_CO_OWNED_LABEL ? `${DESIGN_SYSTEM.colors.accent.amber}18` : DESIGN_SYSTEM.colors.bg.primary,
+                  border: `2px solid ${licensingStatus === ADMIN_CO_OWNED_LABEL ? DESIGN_SYSTEM.colors.accent.amber : DESIGN_SYSTEM.colors.border.light}`,
+                  borderRadius: 12, padding: '14px 16px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <Users size={16} color={licensingStatus === ADMIN_CO_OWNED_LABEL ? DESIGN_SYSTEM.colors.accent.amber : DESIGN_SYSTEM.colors.text.muted} />
+                    <span style={{ fontSize: 14, fontWeight: 700, color: licensingStatus === ADMIN_CO_OWNED_LABEL ? DESIGN_SYSTEM.colors.accent.amber : DESIGN_SYSTEM.colors.text.primary, fontFamily: "'Outfit', sans-serif" }}>Co-Owned</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.text.tertiary, fontFamily: "'Outfit', sans-serif" }}>Multiple rights holders — verify splits later</div>
+                </button>
+              </div>
+            </div>
+            <div style={{ marginBottom: 12, color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 12, fontWeight: 600, fontFamily: "'Outfit', sans-serif" }}>
               One-Stop tracks are prioritized in executive searches for sync opportunities.
             </div>
             <textarea placeholder="Description (optional)" value={description} onChange={e => setDescription(e.target.value)} rows={2} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", resize: "none", marginBottom: 12, boxSizing: "border-box", fontFamily: "'Outfit', sans-serif" }} />
@@ -704,7 +787,7 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
               <X size={18} color={DESIGN_SYSTEM.colors.text.muted} />
             </button>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
             {/* Option A: Same Ownership */}
             <div
               onClick={() => {
@@ -744,12 +827,12 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
                 Prioritized in executive sync searches
               </div>
             </div>
-            {/* Option B: Mixed Ownership */}
+            {/* Option B: Co-Owned */}
             <div
               onClick={() => {
-                setBulkData(prev => prev.map(item => ({ ...item, licensing_status: PENDING_NEGOTIATION_LABEL, is_one_stop: false })));
+                setBulkData(prev => prev.map(item => ({ ...item, licensing_status: ADMIN_CO_OWNED_LABEL, is_one_stop: false })));
                 setBulkStep('metadata');
-                showToast("Songs set to Pending \u2014 update licensing individually in the table or later from your portfolio", "info");
+                showToast("Songs set to Co-Owned — verify splits in the Rights Verification Dashboard", "info");
               }}
               style={{
                 background: DESIGN_SYSTEM.colors.bg.primary,
@@ -766,12 +849,12 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
                 <div style={{ width: 40, height: 40, borderRadius: 10, background: `${DESIGN_SYSTEM.colors.accent.amber}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Users size={20} color={DESIGN_SYSTEM.colors.accent.amber} />
                 </div>
-                <span style={{ fontSize: 11, fontWeight: 700, color: DESIGN_SYSTEM.colors.accent.amber, textTransform: 'uppercase', letterSpacing: 0.5, fontFamily: "'Outfit', sans-serif" }}>Mixed / Pending</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: DESIGN_SYSTEM.colors.accent.amber, textTransform: 'uppercase', letterSpacing: 0.5, fontFamily: "'Outfit', sans-serif" }}>Co-Owned</span>
               </div>
-              <h4 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 15, fontWeight: 700, margin: '0 0 6px', fontFamily: "'Outfit', sans-serif" }}>These songs have different owners/splits</h4>
-              <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13, margin: 0, lineHeight: 1.4 }}>I'll specify licensing details individually per track, either now or later.</p>
+              <h4 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 15, fontWeight: 700, margin: '0 0 6px', fontFamily: "'Outfit', sans-serif" }}>These songs have multiple rights holders</h4>
+              <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13, margin: 0, lineHeight: 1.4 }}>Verify ownership splits in the Rights Verification Dashboard after upload.</p>
               <div style={{ marginTop: 14, color: DESIGN_SYSTEM.colors.accent.amber, fontSize: 12, fontWeight: 600, fontFamily: "'Outfit', sans-serif" }}>
-                Tracks won't appear in One-Stop searches until updated
+                Pending verification until splits are confirmed
               </div>
             </div>
           </div>
@@ -817,8 +900,7 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
                       <th style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, fontWeight: 600, textAlign: "left", padding: "10px", fontFamily: "'Outfit', sans-serif" }}>Secondary Genre</th>
                       <th style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, fontWeight: 600, textAlign: "left", padding: "10px", fontFamily: "'Outfit', sans-serif" }}>BPM</th>
                       <th style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, fontWeight: 600, textAlign: "left", padding: "10px", fontFamily: "'Outfit', sans-serif" }}>Instrument Type</th>
-                      <th style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, fontWeight: 600, textAlign: "left", padding: "10px", fontFamily: "'Outfit', sans-serif" }}>Licensing Status*</th>
-                      <th style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, fontWeight: 600, textAlign: "left", padding: "10px", fontFamily: "'Outfit', sans-serif" }}>Ownership %</th>
+                      <th style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, fontWeight: 600, textAlign: "left", padding: "10px", fontFamily: "'Outfit', sans-serif" }}>Ownership Type*</th>
                       <th style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, fontWeight: 600, textAlign: "left", padding: "10px", fontFamily: "'Outfit', sans-serif" }}>Key</th>
                       <th style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, fontWeight: 600, textAlign: "left", padding: "10px", fontFamily: "'Outfit', sans-serif" }}>Mood</th>
                     </tr>
@@ -832,8 +914,7 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
                         <td style={{ padding: "10px" }}><input value={item.secondary_genre || ''} onChange={e => updateBulkField(i, 'secondary_genre', e.target.value)} placeholder="Optional" style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: "6px 8px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, outline: "none", fontFamily: "'Outfit', sans-serif" }} /></td>
                         <td style={{ padding: "10px" }}><input value={item.bpm} onChange={e => updateBulkField(i, 'bpm', e.target.value)} type="number" style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: "6px 8px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, outline: "none", fontFamily: "'Outfit', sans-serif" }} /></td>
                         <td style={{ padding: "10px" }}><select value={item.instrument_type || ''} onChange={e => updateBulkField(i, 'instrument_type', e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: "6px 8px", color: item.instrument_type ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 13, outline: "none", fontFamily: "'Outfit', sans-serif" }}><option value="">Type...</option><option value="Vocal">Vocal</option><option value="Instrumental">Instrumental</option></select></td>
-                        <td style={{ padding: "10px" }}><select value={item.licensing_status || ''} onChange={e => handleBulkLicensingStatusChange(i, e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: "6px 8px", color: item.licensing_status ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 13, outline: "none", fontFamily: "'Outfit', sans-serif" }}><option value="">Required...</option><option value={ONE_STOP_LABEL}>{ONE_STOP_LABEL}</option><option value={ADMIN_CO_OWNED_LABEL}>{ADMIN_CO_OWNED_LABEL}</option><option value={PENDING_NEGOTIATION_LABEL}>{PENDING_NEGOTIATION_LABEL}</option></select></td>
-                        <td style={{ padding: "10px" }}><input value={item.ownership_percentage || ''} onChange={e => updateBulkField(i, 'ownership_percentage', e.target.value)} type="number" min={1} max={100} placeholder={item.licensing_status === ADMIN_CO_OWNED_LABEL ? 'Required' : 'N/A'} disabled={item.licensing_status !== ADMIN_CO_OWNED_LABEL} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: "6px 8px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, outline: "none", fontFamily: "'Outfit', sans-serif", opacity: item.licensing_status !== ADMIN_CO_OWNED_LABEL ? 0.5 : 1 }} /></td>
+                        <td style={{ padding: "10px" }}><select value={item.licensing_status || ''} onChange={e => handleBulkLicensingStatusChange(i, e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: "6px 8px", color: item.licensing_status ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 13, outline: "none", fontFamily: "'Outfit', sans-serif" }}><option value="">Required...</option><option value={ONE_STOP_LABEL}>One-Stop (100%)</option><option value={ADMIN_CO_OWNED_LABEL}>Co-Owned</option></select></td>
                         <td style={{ padding: "10px" }}><input value={item.key} onChange={e => updateBulkField(i, 'key', e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: "6px 8px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, outline: "none", fontFamily: "'Outfit', sans-serif" }} /></td>
                         <td style={{ padding: "10px" }}><select value={item.mood} onChange={e => updateBulkField(i, 'mood', e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: "6px 8px", color: item.mood ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 13, outline: "none", fontFamily: "'Outfit', sans-serif" }}><option value="">Mood...</option>{moodOptions.map(m => <option key={m} value={m}>{m}</option>)}</select></td>
                       </tr>
@@ -852,6 +933,16 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
             </>
           )}
         </div>
+      )}
+
+      {/* Upload Progress */}
+      {uploadProgress && (
+        <UploadProgressBar
+          progress={uploadProgress.progress}
+          fileName={uploadProgress.fileName}
+          totalFiles={uploadProgress.totalFiles}
+          currentFile={uploadProgress.currentFile}
+        />
       )}
 
       {/* Songs List */}
@@ -877,6 +968,7 @@ export function PortfolioPage({ userProfile, audioPlayer }) {
               onEdit={handleEdit}
               onDelete={handleDelete}
               hideComposerName
+              isMobile={isMobile}
             />
           ))
         )}

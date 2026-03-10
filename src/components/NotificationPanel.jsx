@@ -137,8 +137,14 @@ export function NotificationPanel({ notifications, loading, onMarkAllRead, onNot
             Loading...
           </div>
         ) : notifications.length === 0 ? (
-          <div style={{ padding: 40, textAlign: 'center', color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13 }}>
-            No notifications yet
+          <div style={{ padding: 40, textAlign: 'center' }}>
+            <Bell size={32} color={DESIGN_SYSTEM.colors.text.muted} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
+            <p style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, marginBottom: 4 }}>
+              No notifications yet
+            </p>
+            <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 11 }}>
+              You'll be notified about opportunities, messages, and more
+            </p>
           </div>
         ) : (
           notifications.map(notif => (

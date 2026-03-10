@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { Search, Users, Music, MessageCircle, User, ChevronRight, ChevronLeft, Briefcase, FileText, TrendingUp, Bell, Menu } from "lucide-react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { Search, Users, Music, MessageCircle, User, ChevronRight, ChevronLeft, Briefcase, FileText, TrendingUp, Bell, Menu, Shield } from "lucide-react";
 // ─── Extracted modules ──────────────────────────────────────────────────────
 import { DESIGN_SYSTEM } from './constants/designSystem';
 import { supabase } from './lib/supabase';
@@ -13,21 +13,27 @@ import { Badge } from './components/Badge';
 import { NowPlayingBar } from './components/NowPlayingBar';
 import { NotificationPanel } from './components/NotificationPanel';
 
-// ─── Pages ──────────────────────────────────────────────────────────────────
+// ─── Pages (eagerly loaded — needed immediately) ────────────────────────────
 import { AuthPage } from './pages/AuthPage';
 import { AccountSetupPage } from './pages/AccountSetupPage';
 import { LandingPage } from './pages/LandingPage';
-import { TermsOfServicePage } from './pages/TermsOfServicePage';
-import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
-import { DashboardPage } from './pages/DashboardPage';
-import { RosterPage } from './pages/RosterPage';
-import { CatalogPage } from './pages/CatalogPage';
-import { OpportunitiesPage } from './pages/OpportunitiesPage';
-import { ResponsesPage } from './pages/ResponsesPage';
-import { MessagesPage } from './pages/MessagesPage';
-import { PortfolioPage } from './pages/PortfolioPage';
-import { ProfilePage } from './pages/ProfilePage';
-import { ViewProfilePage } from './pages/ViewProfilePage';
+
+// ─── Pages (lazy loaded — split into separate chunks) ───────────────────────
+const TermsOfServicePage = lazy(() => import('./pages/TermsOfServicePage').then(m => ({ default: m.TermsOfServicePage })));
+const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage').then(m => ({ default: m.PrivacyPolicyPage })));
+const DMCAPage = lazy(() => import('./pages/DMCAPage').then(m => ({ default: m.DMCAPage })));
+const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
+const RosterPage = lazy(() => import('./pages/RosterPage').then(m => ({ default: m.RosterPage })));
+const CatalogPage = lazy(() => import('./pages/CatalogPage').then(m => ({ default: m.CatalogPage })));
+const OpportunitiesPage = lazy(() => import('./pages/OpportunitiesPage').then(m => ({ default: m.OpportunitiesPage })));
+const ResponsesPage = lazy(() => import('./pages/ResponsesPage').then(m => ({ default: m.ResponsesPage })));
+const MessagesPage = lazy(() => import('./pages/MessagesPage').then(m => ({ default: m.MessagesPage })));
+const PortfolioPage = lazy(() => import('./pages/PortfolioPage').then(m => ({ default: m.PortfolioPage })));
+const ProfilePage = lazy(() => import('./pages/ProfilePage').then(m => ({ default: m.ProfilePage })));
+const ViewProfilePage = lazy(() => import('./pages/ViewProfilePage').then(m => ({ default: m.ViewProfilePage })));
+const SplitGenerator = lazy(() => import('./pages/SplitGenerator/SplitGenerator'));
+const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage').then(m => ({ default: m.AdminDashboardPage })));
+
 
 // ═════════════════════════════════════════════════════════════════════════════
 // MAIN APP SHELL
@@ -86,12 +92,12 @@ export default function SongPitch() {
   const [page, setPage] = useState("dashboard");
   const [activeMessageConversationId, setActiveMessageConversationId] = useState(null);
   const [stats, setStats] = useState({ songs: 0, users: 0, opportunities: 0, conversations: 0, profileViews: 0 });
+  const [analytics, setAnalytics] = useState(null);
   const [badgeCounts, setBadgeCounts] = useState({ messages: 0, responses: 0, opportunities: 0 });
   const [viewingProfile, setViewingProfile] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobileView, setIsMobileView] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 768 : false));
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
   // Notification system
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -231,6 +237,7 @@ export default function SongPitch() {
     if (userProfile) {
       loadStats();
       loadSidebarBadges();
+      loadAnalytics();
     }
   }, [userProfile]);
 
@@ -410,9 +417,10 @@ export default function SongPitch() {
 
       if (error) {
         if (error.code === 'PGRST116') {
-          // Check if this is a newly email-confirmed user whose profile hasn't been created yet
+          // Check if this is a newly email-confirmed user or an OAuth user whose profile hasn't been created yet
           const pendingEmail = localStorage.getItem('sp_pending_signup_email');
-          if (pendingEmail) {
+          const isOAuthUser = authUser?.app_metadata?.provider && authUser.app_metadata.provider !== 'email';
+          if (pendingEmail || isOAuthUser) {
             localStorage.removeItem('sp_pending_signup_email');
             setUserProfile(null);
             setShowLanding(false); // Route to AccountSetupPage
@@ -618,6 +626,101 @@ export default function SongPitch() {
     }
   };
 
+  const loadAnalytics = async () => {
+    if (!userProfile) return;
+    try {
+      const now = new Date();
+      const weekAgo = new Date(now.getTime() - 7 * 86400000);
+      const weekAgoISO = weekAgo.toISOString();
+      const isAdmin = userProfile.account_type === 'admin';
+      const isComposer = userProfile.account_type === 'composer';
+      const isExec = userProfile.account_type === 'music_executive';
+      const result = {};
+
+      // Helper: group rows by day of week (returns array of 7 counts)
+      const groupByDay = (rows, dateField = 'created_at') => {
+        const days = Array(7).fill(0);
+        rows.forEach(r => {
+          const d = new Date(r[dateField]);
+          const dayIndex = Math.floor((d.getTime() - weekAgo.getTime()) / 86400000);
+          if (dayIndex >= 0 && dayIndex < 7) days[dayIndex]++;
+        });
+        return days;
+      };
+
+      if (isComposer || isAdmin) {
+        // Profile views this week
+        const { data: views } = await supabase
+          .from('profile_views')
+          .select('created_at')
+          .eq('viewed_profile_id', userProfile.id)
+          .gte('created_at', weekAgoISO);
+        result.profileViewsWeek = groupByDay(views || []);
+      }
+
+      if (isExec || isAdmin) {
+        // Responses this week (to their opportunities)
+        const { data: myOpps } = await supabase
+          .from('opportunities')
+          .select('id')
+          .eq('creator_id', userProfile.id);
+        const oppIds = (myOpps || []).map(o => o.id);
+        if (oppIds.length > 0) {
+          const { data: resps } = await supabase
+            .from('responses')
+            .select('created_at')
+            .in('opportunity_id', oppIds)
+            .gte('created_at', weekAgoISO);
+          result.responsesWeek = groupByDay(resps || []);
+        } else {
+          result.responsesWeek = Array(7).fill(0);
+        }
+      }
+
+      if (isAdmin) {
+        // User signups this week
+        const { data: newUsers } = await supabase
+          .from('user_profiles')
+          .select('created_at')
+          .gte('created_at', weekAgoISO)
+          .neq('account_type', 'admin');
+        result.signupsWeek = groupByDay(newUsers || []);
+
+        // Genre distribution across all songs
+        const { data: allSongs } = await supabase
+          .from('songs')
+          .select('genre');
+        const genreCounts = {};
+        (allSongs || []).forEach(s => {
+          if (s.genre) {
+            genreCounts[s.genre] = (genreCounts[s.genre] || 0) + 1;
+          }
+        });
+        result.genreDistribution = Object.entries(genreCounts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 8)
+          .map(([label, value]) => ({ label, value }));
+
+        // New songs + opportunities per day this week
+        const { data: newSongs } = await supabase
+          .from('songs')
+          .select('created_at')
+          .gte('created_at', weekAgoISO);
+        result.songsWeek = groupByDay(newSongs || []);
+
+        const { data: newOpps } = await supabase
+          .from('opportunities')
+          .select('created_at')
+          .gte('created_at', weekAgoISO);
+        result.oppsWeek = groupByDay(newOpps || []);
+      }
+
+      setAnalytics(result);
+    } catch (err) {
+      console.error('Analytics load failed:', err);
+    }
+  };
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     setUserProfile(null);
@@ -708,6 +811,9 @@ export default function SongPitch() {
   if (legalPage === 'privacy') {
     return <PrivacyPolicyPage onBack={() => setLegalPage(null)} />;
   }
+  if (legalPage === 'dmca') {
+    return <Suspense fallback={null}><DMCAPage onBack={() => setLegalPage(null)} /></Suspense>;
+  }
 
   // Show landing page first for signed-out users only.
   // Signed-in users should resume their session directly after refresh.
@@ -716,7 +822,7 @@ export default function SongPitch() {
   }
 
   if (!session) {
-    return <AuthPage onAuthComplete={(user, profileData) => { if (profileData) { skipProfileLoadRef.current = true; setShowLanding(false); setUserProfile(profileData); setNeedsOnboarding(false); setPage(profileData.account_type === 'music_executive' ? 'roster' : 'portfolio'); } }} onBackToLanding={() => { setShowLanding(true); setAuthError(null); }} initialError={authError} />;
+    return <AuthPage onAuthComplete={(user, profileData) => { if (profileData) { skipProfileLoadRef.current = true; setShowLanding(false); setUserProfile(profileData); setNeedsOnboarding(false); setPage(profileData.account_type === 'music_executive' ? 'roster' : 'portfolio'); } }} onBackToLanding={() => { setShowLanding(true); setAuthError(null); }} onGoogleSignIn={handleGoogleSignIn} initialError={authError} />;
   }
 
   // needsOnboarding is no longer used — profile is created during signup.
@@ -735,13 +841,16 @@ export default function SongPitch() {
     { id: "messages", label: "Messages", icon: <MessageCircle size={17} />, forAll: true, badge: badgeCounts.messages },
     { id: "portfolio", label: "My Portfolio", icon: <Music size={17} />, forComposer: true },
     { id: "profile", label: "My Profile", icon: <User size={17} />, forAll: true },
+    { id: "splits", label: "Split Sheets", icon: <FileText size={17} />, forComposer: true },
+    { id: "admin-dashboard", label: "Admin Panel", icon: <Shield size={17} />, forAdmin: true },
   ];
 
   const isAdmin = userProfile.account_type === 'admin';
   const nav = navItems.filter(item =>
     item.forAll ||
     (item.forComposer && (userProfile.account_type === 'composer' || isAdmin)) ||
-    (item.forExecutive && (userProfile.account_type === 'music_executive' || isAdmin))
+    (item.forExecutive && (userProfile.account_type === 'music_executive' || isAdmin)) ||
+    (item.forAdmin && isAdmin)
   );
 
   const renderPage = () => {
@@ -758,16 +867,18 @@ export default function SongPitch() {
       );
     }
 
-    switch (page) {
-      case "dashboard": return <DashboardPage user={userProfile} stats={stats} onNavigate={setPage} isMobile={isMobileView} />;
+   switch (page) {
+      case "dashboard": return <DashboardPage user={userProfile} stats={stats} onNavigate={setPage} isMobile={isMobileView} analytics={analytics} />;
       case "roster": return <RosterPage accountType={userProfile.account_type} onViewProfile={setViewingProfile} isMobile={isMobileView} />;
-      case "catalog": return <CatalogPage audioPlayer={audioPlayer} />;
-      case "opportunities": return <OpportunitiesPage userProfile={userProfile} onBadgeRefresh={loadSidebarBadges} />;
-      case "responses": return <ResponsesPage userProfile={userProfile} onNavigate={setPage} onViewProfile={setViewingProfile} audioPlayer={audioPlayer} />;
-      case "messages": return <MessagesPage userProfile={userProfile} supportTargetUserId={supportTargetUserId} supportOpenToken={supportOpenToken} onBadgeRefresh={loadSidebarBadges} onActiveConversationChange={setActiveMessageConversationId} />;
-      case "portfolio": return <PortfolioPage userProfile={userProfile} audioPlayer={audioPlayer} />;
+      case "catalog": return <CatalogPage audioPlayer={audioPlayer} isMobile={isMobileView} />;
+      case "opportunities": return <OpportunitiesPage userProfile={userProfile} onBadgeRefresh={loadSidebarBadges} isMobile={isMobileView} />;
+      case "responses": return <ResponsesPage userProfile={userProfile} onNavigate={setPage} onViewProfile={setViewingProfile} audioPlayer={audioPlayer} isMobile={isMobileView} />;
+      case "messages": return <MessagesPage userProfile={userProfile} supportTargetUserId={supportTargetUserId} supportOpenToken={supportOpenToken} onBadgeRefresh={loadSidebarBadges} onActiveConversationChange={setActiveMessageConversationId} isMobile={isMobileView} />;
+      case "portfolio": return <PortfolioPage userProfile={userProfile} audioPlayer={audioPlayer} isMobile={isMobileView} />;
       case "profile": return <ProfilePage user={{ ...userProfile, email: session.user.email }} onSignOut={handleSignOut} onProfileUpdate={() => loadUserProfile(session.user)} onDeleteAccount={handleDeleteAccount} />;
-      default: return <DashboardPage user={userProfile} stats={stats} isMobile={isMobileView} />;
+      case "splits": return <SplitGenerator userProfile={userProfile} />;
+      case "admin-dashboard": return <AdminDashboardPage stats={stats} userProfile={userProfile} onNavigate={setPage} onViewProfile={setViewingProfile} isMobile={isMobileView} analytics={analytics} />;
+      default: return <DashboardPage user={userProfile} stats={stats} isMobile={isMobileView} analytics={analytics} />;
     }
   };
 
@@ -776,6 +887,8 @@ export default function SongPitch() {
 
   return (
     <div className="app-root w-full min-h-screen flex flex-col md:flex-row" style={{ display: "flex", width: '100%', minHeight: '100vh', height: "100vh", background: DESIGN_SYSTEM.colors.bg.secondary, fontFamily: "'Outfit', sans-serif", color: DESIGN_SYSTEM.colors.text.primary, overflow: "hidden", position: 'relative' }}>
+      {/* Skip to content link for keyboard/screen reader users */}
+      <a href="#main-content" style={{ position: 'absolute', left: '-9999px', top: 'auto', width: '1px', height: '1px', overflow: 'hidden', zIndex: 9999 }} onFocus={e => { e.currentTarget.style.left = '16px'; e.currentTarget.style.top = '16px'; e.currentTarget.style.width = 'auto'; e.currentTarget.style.height = 'auto'; e.currentTarget.style.overflow = 'visible'; e.currentTarget.style.background = DESIGN_SYSTEM.colors.brand.primary; e.currentTarget.style.color = '#fff'; e.currentTarget.style.padding = '8px 16px'; e.currentTarget.style.borderRadius = '8px'; e.currentTarget.style.fontSize = '14px'; e.currentTarget.style.fontWeight = '600'; e.currentTarget.style.textDecoration = 'none'; }} onBlur={e => { e.currentTarget.style.left = '-9999px'; e.currentTarget.style.width = '1px'; e.currentTarget.style.height = '1px'; e.currentTarget.style.overflow = 'hidden'; }}>Skip to content</a>
       {isMobileView && (
         <header style={{
           position: 'fixed',
@@ -833,7 +946,7 @@ export default function SongPitch() {
         />
       )}
 
-      <div className={isSidebarCollapsed ? 'sidebar-collapsed' : ''} style={{
+      <nav aria-label="Main navigation" className={isSidebarCollapsed ? 'sidebar-collapsed' : ''} style={{
         width: isMobileView ? 280 : desktopSidebarWidth,
         background: DESIGN_SYSTEM.colors.bg.secondary,
         borderRight: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
@@ -1073,7 +1186,7 @@ export default function SongPitch() {
             );
           })()}
         </div>
-      </div>
+      </nav>
 
       {!isMobileView && isSidebarCollapsed && (
         <button
@@ -1099,7 +1212,9 @@ export default function SongPitch() {
       )}
 
       <main id="main-content" className="page-fade-in flex-1 w-full min-w-0" key={viewingProfile ? `profile-${viewingProfile.id}` : page} style={{ flex: 1, width: '100%', minWidth: 0, overflowY: "auto", background: DESIGN_SYSTEM.colors.bg.secondary, paddingBottom: audioPlayer.playingSong ? 70 : 0, position: 'relative', paddingTop: isMobileView ? 56 : 0 }}>
-        {renderPage()}
+        <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh' }}><div style={{ width: 32, height: 32, border: `3px solid ${DESIGN_SYSTEM.colors.border.light}`, borderTopColor: DESIGN_SYSTEM.colors.brand.primary, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /></div>}>
+          {renderPage()}
+        </Suspense>
       </main>
 
       {/* Now Playing Bar */}

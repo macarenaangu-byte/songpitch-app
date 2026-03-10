@@ -8,6 +8,7 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^13.5.0",
+    "dompurify": "^3.3.2",
     "lucide-react": "^0.577.0",
     "music-metadata": "^11.12.1",
     "react": "^19.2.4",
@@ -19,7 +20,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "lint": "eslint src/ --ext .js,.jsx --max-warnings 0"
   },
   "eslintConfig": {
     "extends": [

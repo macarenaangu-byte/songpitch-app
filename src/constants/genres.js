@@ -10,7 +10,8 @@ export const GENRE_OPTIONS = [
 // Profile badge definitions
 export const PROFILE_BADGES = {
   alpha_tester: { label: 'Alpha Tester', icon: '🧪', color: DESIGN_SYSTEM.colors.brand.purple },
-  verified_composer: { label: 'Complete Profile', icon: '✓', color: DESIGN_SYSTEM.colors.brand.primary },
-  verified_exec: { label: 'Complete Profile', icon: '✓', color: DESIGN_SYSTEM.colors.brand.blue },
+  rising_star: { label: 'Rising Star', icon: '🌟', color: DESIGN_SYSTEM.colors.accent.amber },
+  verified_composer: { label: 'Verified Composer', icon: '✓', color: DESIGN_SYSTEM.colors.brand.primary },
+  verified_exec: { label: 'Verified Executive', icon: '✓', color: DESIGN_SYSTEM.colors.brand.blue },
   top_contributor: { label: 'Top Contributor', icon: '⭐', color: DESIGN_SYSTEM.colors.accent.amber },
 };

@@ -8,7 +8,7 @@ import { Avatar } from '../components/Avatar';
 import { Badge } from '../components/Badge';
 import { LoadingOpportunityCard } from '../components/LoadingCards';
 
-export function ResponsesPage({ userProfile, onNavigate, onViewProfile, audioPlayer }) {
+export function ResponsesPage({ userProfile, onNavigate, onViewProfile, audioPlayer, isMobile = false }) {
   const [opportunities, setOpportunities] = useState([]);
   const [selectedOpp, setSelectedOpp] = useState(null);
   const [responses, setResponses] = useState([]);
@@ -175,10 +175,10 @@ export function ResponsesPage({ userProfile, onNavigate, onViewProfile, audioPla
   };
 
   return (
-    <div style={{ padding: "32px 36px", minHeight: "100%", overflowY: "auto" }}>
+    <div style={{ padding: isMobile ? '16px' : "32px 36px", minHeight: "100%", overflowY: "auto" }}>
       {!selectedOpp ? (
         <>
-          <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 28, fontWeight: 800, fontFamily: "'Outfit', sans-serif", marginBottom: 8 }}>Responses</h1>
+          <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: isMobile ? 24 : 28, fontWeight: 800, fontFamily: "'Outfit', sans-serif", marginBottom: 8 }}>Responses</h1>
           <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 14, marginBottom: 24 }}>View composer applications organized by opportunity</p>
 
           {loading ? (
@@ -190,7 +190,7 @@ export function ResponsesPage({ userProfile, onNavigate, onViewProfile, audioPla
               <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13 }}>Post your first opportunity and watch applications roll in from talented composers!</p>
             </div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
               {opportunities.map(opp => (
                 <div
                   key={opp.id}
@@ -228,12 +228,12 @@ export function ResponsesPage({ userProfile, onNavigate, onViewProfile, audioPla
         </>
       ) : (
         <>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+          <div style={{ display: "flex", flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : "center", gap: 12, marginBottom: 24 }}>
             <button onClick={goBack} style={{ background: DESIGN_SYSTEM.colors.bg.card, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 10, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 14, fontWeight: 600, fontFamily: "'Outfit', sans-serif" }}>
               <ArrowLeft size={16} /> Back
             </button>
             <div>
-              <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 24, fontWeight: 800, fontFamily: "'Outfit', sans-serif" }}>{selectedOpp.title}</h1>
+              <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: isMobile ? 20 : 24, fontWeight: 800, fontFamily: "'Outfit', sans-serif" }}>{selectedOpp.title}</h1>
               <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13, marginTop: 2 }}>{responses.length} {responses.length === 1 ? 'Application' : 'Applications'}</p>
             </div>
           </div>
@@ -280,8 +280,10 @@ export function ResponsesPage({ userProfile, onNavigate, onViewProfile, audioPla
                   opacity: rejectedIds.has(response.id) ? 0.55 : 1,
                   transition: 'all 0.2s ease',
                 }}>
-                  <div style={{ display: "flex", alignItems: "start", gap: 16, marginBottom: 16, paddingBottom: 16, borderBottom: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
-                    <Avatar name={`${response.composer.first_name} ${response.composer.last_name}`} color={response.composer.avatar_color} avatarUrl={response.composer.avatar_url} size={56} />
+                  <div style={{ display: "flex", flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : "start", gap: isMobile ? 12 : 16, marginBottom: 16, paddingBottom: 16, borderBottom: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: isMobile ? '100%' : 'auto' }}>
+                      <Avatar name={`${response.composer.first_name} ${response.composer.last_name}`} color={response.composer.avatar_color} avatarUrl={response.composer.avatar_url} size={isMobile ? 44 : 56} />
+                    </div>
                     <div style={{ flex: 1 }}>
                       <h3
                         onClick={() => onViewProfile && onViewProfile(response.composer)}

@@ -396,6 +396,9 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
           <button onClick={() => onLegalPage('privacy')} style={{ background: 'none', border: 'none', color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>
             Privacy Policy
           </button>
+          <button onClick={() => onLegalPage('dmca')} style={{ background: 'none', border: 'none', color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>
+            DMCA Policy
+          </button>
         </div>
         <p style={{
           color: DESIGN_SYSTEM.colors.text.muted,

@@ -6,9 +6,14 @@ import { showToast } from '../lib/toast';
 import { friendlyError } from '../lib/utils';
 
 export function AccountSetupPage({ user, onComplete }) {
+  // Pre-populate name from Google OAuth metadata when available
+  const googleName = user?.user_metadata?.full_name || '';
   const [accountType, setAccountType] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const [firstName, setFirstName] = useState(() => googleName.split(' ')[0] || '');
+  const [lastName, setLastName] = useState(() => {
+    const parts = googleName.split(' ');
+    return parts.length > 1 ? parts.slice(1).join(' ') : '';
+  });
   const [bio, setBio] = useState("");
   const [location, setLocation] = useState("");
   const [genres, setGenres] = useState([]);

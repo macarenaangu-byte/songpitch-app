@@ -1,9 +1,10 @@
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { StatCard } from '../components/StatCard';
 import { ProfileBadges } from '../components/ProfileBadges';
-import { CheckCircle, Users, Music, Briefcase, MessageCircle, FileText, Search, Eye, User, TrendingUp, ChevronRight } from 'lucide-react';
+import { MiniChart } from '../components/MiniChart';
+import { CheckCircle, Circle, Users, Music, Briefcase, MessageCircle, FileText, Search, Eye, User, TrendingUp, ChevronRight, Award, Sparkles } from 'lucide-react';
 
-export function DashboardPage({ user, stats, onNavigate, isMobile = false }) {
+export function DashboardPage({ user, stats, onNavigate, isMobile = false, analytics }) {
   // Calculate total platform stats for trust signals
   const totalSongs = stats.songs || 0;
   const totalUsers = stats.users || 0;
@@ -101,44 +102,107 @@ export function DashboardPage({ user, stats, onNavigate, isMobile = false }) {
         )}
       </div>
 
-      {/* Profile Completion Bar */}
-      {!isProfileComplete && (
-        <div style={{
-          background: DESIGN_SYSTEM.colors.bg.card,
-          borderRadius: DESIGN_SYSTEM.radius.lg,
-          padding: '20px 24px',
-          marginBottom: DESIGN_SYSTEM.spacing.lg,
-          border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 0, marginBottom: 12 }}>
-            <div>
-              <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: "'Outfit', sans-serif" }}>
-                Complete your profile
+      {/* Profile Completion Card */}
+      {(() => {
+        const progressColor = completionPct < 40 ? DESIGN_SYSTEM.colors.accent.red
+          : completionPct < 70 ? DESIGN_SYSTEM.colors.accent.amber
+          : completionPct < 100 ? DESIGN_SYSTEM.colors.brand.primary
+          : DESIGN_SYSTEM.colors.brand.primary;
+        const nextMilestone = completionPct < 50 ? 50 : completionPct < 75 ? 75 : 100;
+
+        return isProfileComplete ? (
+          /* Celebration state for 100% */
+          <div style={{
+            background: `linear-gradient(135deg, ${DESIGN_SYSTEM.colors.brand.primary}12, ${DESIGN_SYSTEM.colors.brand.primary}08)`,
+            borderRadius: DESIGN_SYSTEM.radius.lg,
+            padding: isMobile ? '16px' : '20px 24px',
+            marginBottom: DESIGN_SYSTEM.spacing.lg,
+            border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}33`,
+            display: 'flex', alignItems: 'center', gap: 14,
+          }}>
+            <div style={{ width: 40, height: 40, borderRadius: '50%', background: `${DESIGN_SYSTEM.colors.brand.primary}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Sparkles size={20} color={DESIGN_SYSTEM.colors.brand.primary} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 15, fontWeight: 700, fontFamily: "'Outfit', sans-serif" }}>
+                Profile 100% complete!
               </div>
-              <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13, marginTop: 4 }}>
-                {completionPct}% complete — add {missingFields.slice(0, 3).map(f => f.label.toLowerCase()).join(', ')}{missingFields.length > 3 ? ` +${missingFields.length - 3} more` : ''}
+              <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13, marginTop: 2 }}>
+                You've unlocked the {isComposer ? 'Verified Composer' : 'Verified Executive'} badge
               </div>
             </div>
-            <button onClick={() => onNavigate && onNavigate('profile')} style={{
-              background: DESIGN_SYSTEM.colors.brand.primary,
-              border: 'none',
-              borderRadius: 8,
-              padding: '8px 18px',
-              color: '#fff',
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontFamily: "'Outfit', sans-serif",
-              whiteSpace: 'nowrap',
-            }}>
-              Complete Profile
-            </button>
           </div>
-          <div style={{ width: '100%', height: 5, background: DESIGN_SYSTEM.colors.bg.primary, borderRadius: 3, overflow: 'hidden' }}>
-            <div style={{ width: `${completionPct}%`, height: '100%', background: DESIGN_SYSTEM.colors.brand.primary, borderRadius: 3, transition: 'width 0.5s ease' }} />
+        ) : (
+          /* Progress card with checklist */
+          <div style={{
+            background: DESIGN_SYSTEM.colors.bg.card,
+            borderRadius: DESIGN_SYSTEM.radius.lg,
+            padding: isMobile ? '16px' : '20px 24px',
+            marginBottom: DESIGN_SYSTEM.spacing.lg,
+            border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 0, marginBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ position: 'relative', width: 44, height: 44, flexShrink: 0 }}>
+                  <svg width="44" height="44" viewBox="0 0 44 44">
+                    <circle cx="22" cy="22" r="19" fill="none" stroke={DESIGN_SYSTEM.colors.bg.primary} strokeWidth="4" />
+                    <circle cx="22" cy="22" r="19" fill="none" stroke={progressColor} strokeWidth="4"
+                      strokeDasharray={`${2 * Math.PI * 19}`}
+                      strokeDashoffset={`${2 * Math.PI * 19 * (1 - completionPct / 100)}`}
+                      strokeLinecap="round" transform="rotate(-90 22 22)"
+                      style={{ transition: 'stroke-dashoffset 0.6s ease' }} />
+                  </svg>
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: progressColor, fontFamily: "'Outfit', sans-serif" }}>
+                    {completionPct}%
+                  </div>
+                </div>
+                <div>
+                  <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: "'Outfit', sans-serif" }}>
+                    Complete your profile
+                  </div>
+                  <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13, marginTop: 2 }}>
+                    {completionPct < 50 ? 'Get to 50% to earn the Rising Star badge' : `${nextMilestone - completionPct > 0 ? `${100 - completionPct}% to go` : ''} — unlock the Verified badge!`}
+                  </div>
+                </div>
+              </div>
+              <button onClick={() => onNavigate && onNavigate('profile')} style={{
+                background: DESIGN_SYSTEM.colors.brand.primary,
+                border: 'none', borderRadius: 8, padding: '8px 18px',
+                color: '#fff', fontSize: 13, fontWeight: 600,
+                cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
+                whiteSpace: 'nowrap',
+              }}>
+                Complete Profile
+              </button>
+            </div>
+
+            {/* Progress bar */}
+            <div style={{ width: '100%', height: 6, background: DESIGN_SYSTEM.colors.bg.primary, borderRadius: 3, overflow: 'hidden', marginBottom: 14 }}>
+              <div style={{ width: `${completionPct}%`, height: '100%', background: progressColor, borderRadius: 3, transition: 'width 0.6s ease' }} />
+            </div>
+
+            {/* Step-by-step checklist */}
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '6px 16px' }}>
+              {profileFields.map(f => (
+                <div key={f.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
+                  {f.filled
+                    ? <CheckCircle size={15} color={DESIGN_SYSTEM.colors.brand.primary} />
+                    : <Circle size={15} color={DESIGN_SYSTEM.colors.text.muted} />
+                  }
+                  <span style={{
+                    fontSize: 13, fontFamily: "'Outfit', sans-serif",
+                    color: f.filled ? DESIGN_SYSTEM.colors.text.tertiary : DESIGN_SYSTEM.colors.text.primary,
+                    textDecoration: f.filled ? 'line-through' : 'none',
+                    fontWeight: f.filled ? 400 : 500,
+                  }}>
+                    {f.label}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Contextual Stats */}
       {isAdminUser ? (
@@ -161,6 +225,36 @@ export function DashboardPage({ user, stats, onNavigate, isMobile = false }) {
           <StatCard icon={<FileText size={20} color={DESIGN_SYSTEM.colors.brand.accent} />} label="Applications Received" value={stats.totalResponses || 0} color={DESIGN_SYSTEM.colors.brand.accent} onClick={() => onNavigate && onNavigate('responses')} subtitle={(stats.totalResponses || 0) > 0 ? "Review applications →" : null} />
           <StatCard icon={<Users size={20} color={DESIGN_SYSTEM.colors.brand.purple} />} label="Composers to Browse" value={stats.users} color={DESIGN_SYSTEM.colors.brand.purple} onClick={() => onNavigate && onNavigate('roster')} />
           <StatCard icon={<MessageCircle size={20} color={DESIGN_SYSTEM.colors.brand.primary} />} label="Conversations" value={stats.conversations || 0} color={DESIGN_SYSTEM.colors.brand.primary} onClick={() => onNavigate && onNavigate('messages')} />
+        </div>
+      )}
+
+      {/* Analytics Sparklines */}
+      {analytics && (
+        <div style={{
+          display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(240px, 1fr))',
+          gap: DESIGN_SYSTEM.spacing.md, marginBottom: DESIGN_SYSTEM.spacing.lg,
+        }}>
+          {/* Composer: Profile views this week */}
+          {(isComposer || isAdminUser) && analytics.profileViewsWeek && (
+            <div style={{ background: DESIGN_SYSTEM.colors.bg.card, borderRadius: DESIGN_SYSTEM.radius.lg, padding: '16px 20px', border: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, fontFamily: "'Outfit', sans-serif" }}>Profile Views This Week</span>
+                <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 18, fontWeight: 700, fontFamily: "'Outfit', sans-serif" }}>{analytics.profileViewsWeek.reduce((a, b) => a + b, 0)}</span>
+              </div>
+              <MiniChart data={analytics.profileViewsWeek} type="bar" color={DESIGN_SYSTEM.colors.brand.primary} width={200} height={36} label="Mon — Sun" />
+            </div>
+          )}
+
+          {/* Executive: Applications this week */}
+          {(user.account_type === 'music_executive' || isAdminUser) && analytics.responsesWeek && (
+            <div style={{ background: DESIGN_SYSTEM.colors.bg.card, borderRadius: DESIGN_SYSTEM.radius.lg, padding: '16px 20px', border: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, fontFamily: "'Outfit', sans-serif" }}>Applications This Week</span>
+                <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 18, fontWeight: 700, fontFamily: "'Outfit', sans-serif" }}>{analytics.responsesWeek.reduce((a, b) => a + b, 0)}</span>
+              </div>
+              <MiniChart data={analytics.responsesWeek} type="bar" color={DESIGN_SYSTEM.colors.brand.accent} width={200} height={36} label="Mon — Sun" />
+            </div>
+          )}
         </div>
       )}
 

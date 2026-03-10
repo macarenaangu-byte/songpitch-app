@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { showToast } from '../lib/toast';
 import { extractWaveformPeaks } from '../lib/utils';
+import { supabase } from '../lib/supabase';
 
 export function useAudioPlayer() {
   const [audio] = useState(new Audio());
@@ -51,7 +52,27 @@ export function useAudioPlayer() {
     };
   }, [audio]);
 
-  const play = (song) => {
+  // Extract storage path from a public Supabase URL
+  const getStoragePath = (publicUrl) => {
+    if (!publicUrl) return null;
+    const marker = '/object/public/song-files/';
+    const idx = publicUrl.indexOf(marker);
+    if (idx === -1) return null;
+    return publicUrl.substring(idx + marker.length);
+  };
+
+  // Get a time-limited signed URL (1 hour) instead of using permanent public URLs
+  const getSignedUrl = async (publicUrl) => {
+    const path = getStoragePath(publicUrl);
+    if (!path) return publicUrl; // fallback to public URL
+    const { data, error } = await supabase.storage
+      .from('song-files')
+      .createSignedUrl(path, 3600); // 1 hour expiry
+    if (error || !data?.signedUrl) return publicUrl; // fallback
+    return data.signedUrl;
+  };
+
+  const play = async (song) => {
     if (!song.audio_url) {
       showToast("No audio file available for this song", "error");
       return;
@@ -64,14 +85,15 @@ export function useAudioPlayer() {
         audio.play();
       }
     } else {
-      audio.src = song.audio_url;
+      const signedUrl = await getSignedUrl(song.audio_url);
+      audio.src = signedUrl;
       audio.play();
       setPlayingSong(song);
       setCurrentTime(0);
       setDuration(0);
       // Extract real waveform peaks in background
       setWaveformPeaks(null);
-      extractWaveformPeaks(song.audio_url).then(peaks => {
+      extractWaveformPeaks(signedUrl).then(peaks => {
         if (peaks) setWaveformPeaks(peaks);
       });
     }
