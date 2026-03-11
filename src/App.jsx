@@ -86,10 +86,16 @@ const VALID_PAGES = new Set([
   'dashboard', 'roster', 'catalog', 'opportunities', 'responses',
   'messages', 'portfolio', 'profile', 'splits', 'admin-dashboard',
 ]);
+const LEGAL_PAGES = new Set(['privacy', 'terms', 'dmca']);
 
 function getPageFromHash() {
   const hash = window.location.hash.replace(/^#/, '');
   return VALID_PAGES.has(hash) ? hash : null;
+}
+
+function getLegalPageFromHash() {
+  const hash = window.location.hash.replace(/^#/, '');
+  return LEGAL_PAGES.has(hash) ? hash : null;
 }
 
 export default function SongPitch() {
@@ -99,7 +105,7 @@ export default function SongPitch() {
   const [savingRole, setSavingRole] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showLanding, setShowLanding] = useState(true);  // NEW: Show landing page first
-  const [legalPage, setLegalPage] = useState(null); // 'terms' or 'privacy'
+  const [legalPage, setLegalPage] = useState(() => getLegalPageFromHash()); // 'terms', 'privacy', 'dmca', or null
   const [page, setPage] = useState(() => getPageFromHash() || "dashboard");
   const [activeMessageConversationId, setActiveMessageConversationId] = useState(null);
   const [stats, setStats] = useState({ songs: 0, users: 0, opportunities: 0, conversations: 0, profileViews: 0 });
@@ -142,6 +148,15 @@ export default function SongPitch() {
   useEffect(() => {
     activeConversationRef.current = activeMessageConversationId;
   }, [activeMessageConversationId]);
+
+  // Sync legal page hash to URL
+  useEffect(() => {
+    if (legalPage && LEGAL_PAGES.has(legalPage)) {
+      window.history.replaceState(null, '', `#${legalPage}`);
+    } else if (!legalPage && getLegalPageFromHash()) {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, [legalPage]);
 
   // Always show Landing first on a fresh app load (including when a cached auth session exists).
   useEffect(() => {
@@ -819,6 +834,17 @@ export default function SongPitch() {
     }
   };
 
+  // Legal pages (accessible without auth — checked before loading spinner)
+  if (legalPage === 'terms') {
+    return <TermsOfServicePage onBack={() => setLegalPage(null)} />;
+  }
+  if (legalPage === 'privacy') {
+    return <PrivacyPolicyPage onBack={() => setLegalPage(null)} />;
+  }
+  if (legalPage === 'dmca') {
+    return <Suspense fallback={null}><DMCAPage onBack={() => setLegalPage(null)} /></Suspense>;
+  }
+
   if (loading) {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: 16, background: DESIGN_SYSTEM.colors.bg.primary, fontFamily: "'Outfit', sans-serif" }}>
@@ -829,17 +855,6 @@ export default function SongPitch() {
         </div>
       </div>
     );
-  }
-
-  // Legal pages (accessible without auth)
-  if (legalPage === 'terms') {
-    return <TermsOfServicePage onBack={() => setLegalPage(null)} />;
-  }
-  if (legalPage === 'privacy') {
-    return <PrivacyPolicyPage onBack={() => setLegalPage(null)} />;
-  }
-  if (legalPage === 'dmca') {
-    return <Suspense fallback={null}><DMCAPage onBack={() => setLegalPage(null)} /></Suspense>;
   }
 
   // Show landing page first for signed-out users only.

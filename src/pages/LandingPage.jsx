@@ -390,15 +390,15 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
           mangulo@songpitchhub.com
         </a>
         <div style={{ marginTop: 20, display: 'flex', justifyContent: 'center', gap: 24 }}>
-          <button onClick={() => onLegalPage('terms')} style={{ background: 'none', border: 'none', color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>
+          <a href="#terms" onClick={(e) => { e.preventDefault(); onLegalPage('terms'); }} style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>
             Terms of Service
-          </button>
-          <button onClick={() => onLegalPage('privacy')} style={{ background: 'none', border: 'none', color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>
+          </a>
+          <a href="#privacy" onClick={(e) => { e.preventDefault(); onLegalPage('privacy'); }} style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>
             Privacy Policy
-          </button>
-          <button onClick={() => onLegalPage('dmca')} style={{ background: 'none', border: 'none', color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>
+          </a>
+          <a href="#dmca" onClick={(e) => { e.preventDefault(); onLegalPage('dmca'); }} style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>
             DMCA Policy
-          </button>
+          </a>
         </div>
         <p style={{
           color: DESIGN_SYSTEM.colors.text.muted,
