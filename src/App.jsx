@@ -81,6 +81,17 @@ function OnboardingPage({ onSelectRole, savingRole }) {
 }
 
 
+// ─── Hash-based page routing ────────────────────────────────────────────────
+const VALID_PAGES = new Set([
+  'dashboard', 'roster', 'catalog', 'opportunities', 'responses',
+  'messages', 'portfolio', 'profile', 'splits', 'admin-dashboard',
+]);
+
+function getPageFromHash() {
+  const hash = window.location.hash.replace(/^#/, '');
+  return VALID_PAGES.has(hash) ? hash : null;
+}
+
 export default function SongPitch() {
   const [session, setSession] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
@@ -89,7 +100,7 @@ export default function SongPitch() {
   const [loading, setLoading] = useState(true);
   const [showLanding, setShowLanding] = useState(true);  // NEW: Show landing page first
   const [legalPage, setLegalPage] = useState(null); // 'terms' or 'privacy'
-  const [page, setPage] = useState("dashboard");
+  const [page, setPage] = useState(() => getPageFromHash() || "dashboard");
   const [activeMessageConversationId, setActiveMessageConversationId] = useState(null);
   const [stats, setStats] = useState({ songs: 0, users: 0, opportunities: 0, conversations: 0, profileViews: 0 });
   const [analytics, setAnalytics] = useState(null);
@@ -158,9 +169,10 @@ export default function SongPitch() {
       page,
       viewingProfile: viewingProfile || null,
     };
+    const targetHash = `#${page}`;
 
     if (!historyReadyRef.current) {
-      window.history.replaceState(state, '');
+      window.history.replaceState(state, '', targetHash);
       historyReadyRef.current = true;
       lastHistoryKeyRef.current = key;
       return;
@@ -169,22 +181,34 @@ export default function SongPitch() {
     if (suppressHistoryPushRef.current) {
       suppressHistoryPushRef.current = false;
       lastHistoryKeyRef.current = key;
+      if (window.location.hash !== targetHash) {
+        window.history.replaceState(state, '', targetHash);
+      }
       return;
     }
 
     if (key === lastHistoryKeyRef.current) return;
 
-    window.history.pushState(state, '');
+    window.history.pushState(state, '', targetHash);
     lastHistoryKeyRef.current = key;
   }, [page, viewingProfile, session, userProfile]);
 
   useEffect(() => {
     const handlePopState = (event) => {
-      if (!event.state?.spApp) return;
-      suppressHistoryPushRef.current = true;
-      setPage(event.state.page || 'dashboard');
-      setViewingProfile(event.state.viewingProfile || null);
-      setShowNotifPanel(false);
+      if (event.state?.spApp) {
+        suppressHistoryPushRef.current = true;
+        setPage(event.state.page || 'dashboard');
+        setViewingProfile(event.state.viewingProfile || null);
+        setShowNotifPanel(false);
+        return;
+      }
+      const hashPage = getPageFromHash();
+      if (hashPage) {
+        suppressHistoryPushRef.current = true;
+        setPage(hashPage);
+        setViewingProfile(null);
+        setShowNotifPanel(false);
+      }
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -448,7 +472,9 @@ export default function SongPitch() {
         setUserProfile(data);
         if (hasValidRole) {
           setNeedsOnboarding(false);
-          setPage('dashboard');
+          if (!getPageFromHash()) {
+            setPage('dashboard');
+          }
         } else {
           setNeedsOnboarding(true);
         }
@@ -725,6 +751,7 @@ export default function SongPitch() {
     await supabase.auth.signOut();
     setUserProfile(null);
     setPage("dashboard");
+    window.history.replaceState(null, '', window.location.pathname);
   };
 
   const handleDeleteAccount = async () => {
