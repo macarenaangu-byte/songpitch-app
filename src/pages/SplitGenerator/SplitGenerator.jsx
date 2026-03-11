@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { FileText, Mic, Camera, Upload, Plus, Trash2, ChevronDown, ChevronUp, Clock, X, Music, Disc, Search, CheckCircle, AlertTriangle, Shield } from 'lucide-react';
+import { FileText, Mic, Camera, Upload, Plus, Trash2, ChevronDown, ChevronUp, Clock, X, Music, Disc, Search, CheckCircle, AlertTriangle, Shield, Equal } from 'lucide-react';
 import { DESIGN_SYSTEM } from '../../constants/designSystem';
 import { supabase } from '../../lib/supabase';
 import { showToast } from '../../lib/toast';
@@ -250,8 +250,35 @@ const COMP_COLOR = DESIGN_SYSTEM.colors.accent.purple;
 const MASTER_COLOR = DESIGN_SYSTEM.colors.brand.blue;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-const calcTotal = (arr) => (arr || []).reduce((sum, s) => sum + (parseFloat(s.percentage) || 0), 0);
-const isValidTotal = (total) => Math.abs(total - 100) < 0.01;
+const calcTotal = (arr) => {
+  const sum = (arr || []).reduce((sum, s) => sum + (parseFloat(s.percentage) || 0), 0);
+  return Math.round(sum * 100) / 100; // Avoid floating-point drift
+};
+const isValidTotal = (total) => Math.abs(total - 100) < 0.05; // Tolerance for display rounding
+
+/** Distribute percentages evenly, ensuring exact 100% total (remainder goes to first contributor) */
+const distributeEvenly = (splits) => {
+  if (!splits || splits.length === 0) return splits;
+  const n = splits.length;
+  const base = Math.floor(10000 / n) / 100; // e.g., 3 people → 33.33
+  const remainder = Math.round((100 - base * n) * 100) / 100;
+  return splits.map((s, i) => ({
+    ...s,
+    percentage: i === 0 ? Math.round((base + remainder) * 100) / 100 : base,
+  }));
+};
+
+/** Round all percentages to 2 decimals, adjust first contributor so total is exactly 100 */
+const normalizePercentages = (splits) => {
+  if (!splits || splits.length === 0) return splits;
+  const rounded = splits.map(s => ({ ...s, percentage: Math.round((parseFloat(s.percentage) || 0) * 100) / 100 }));
+  const sum = rounded.reduce((acc, s) => acc + s.percentage, 0);
+  const diff = Math.round((100 - sum) * 100) / 100;
+  if (diff !== 0 && rounded.length > 0) {
+    rounded[0] = { ...rounded[0], percentage: Math.round((rounded[0].percentage + diff) * 100) / 100 };
+  }
+  return rounded;
+};
 
 const formatDate = (iso) => {
   const d = new Date(iso);
@@ -262,7 +289,7 @@ const formatDate = (iso) => {
 const isLegacyFormat = (splits) => Array.isArray(splits);
 
 // ─── Reusable SplitSection Component ─────────────────────────────────────────
-function SplitSection({ label, icon, accentColor, splits, onUpdate, onRemove, onAdd }) {
+function SplitSection({ label, icon, accentColor, splits, onUpdate, onRemove, onAdd, onDistributeEvenly }) {
   const total = calcTotal(splits);
   const valid = isValidTotal(total);
 
@@ -277,9 +304,16 @@ function SplitSection({ label, icon, accentColor, splits, onUpdate, onRemove, on
             {label === 'Composition / Publishing' ? 'Melody, lyrics, arrangement — songwriters & composers' : 'The sound recording — producers, engineers & artists'}
           </div>
         </div>
-        <button onClick={onAdd} style={styles.addBtn}>
-          <Plus size={14} /> Add
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {(splits || []).length >= 2 && (
+            <button onClick={onDistributeEvenly} style={{ ...styles.addBtn, background: 'transparent', border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, color: DESIGN_SYSTEM.colors.text.secondary }} title="Split equally among all contributors">
+              <Equal size={14} /> Even Split
+            </button>
+          )}
+          <button onClick={onAdd} style={styles.addBtn}>
+            <Plus size={14} /> Add
+          </button>
+        </div>
       </div>
 
       {/* Column labels */}
@@ -311,7 +345,7 @@ function SplitSection({ label, icon, accentColor, splits, onUpdate, onRemove, on
         <div style={styles.totalBar(valid)}>
           <span style={{ fontSize: DESIGN_SYSTEM.fontSize.sm, fontWeight: DESIGN_SYSTEM.fontWeight.medium, color: DESIGN_SYSTEM.colors.text.secondary }}>Total</span>
           <span style={{ fontSize: DESIGN_SYSTEM.fontSize.md, fontWeight: DESIGN_SYSTEM.fontWeight.bold, color: valid ? accentColor : DESIGN_SYSTEM.colors.accent.red }}>
-            {total.toFixed(1)}%
+            {total.toFixed(2)}%
             {!valid && <span style={{ fontSize: DESIGN_SYSTEM.fontSize.xs, fontWeight: DESIGN_SYSTEM.fontWeight.normal, marginLeft: 8 }}>Must equal 100%</span>}
           </span>
         </div>
@@ -439,8 +473,8 @@ export default function SplitGenerator({ userProfile }) {
   const applyAIResults = (data) => {
     if (data.composition || data.master) {
       // New format: { composition: [...], master: [...] }
-      setCompositionSplits((data.composition || []).map(s => ({ ...s })));
-      setMasterSplits((data.master || []).map(s => ({ ...s })));
+      setCompositionSplits(normalizePercentages((data.composition || []).map(s => ({ ...s }))));
+      setMasterSplits(normalizePercentages((data.master || []).map(s => ({ ...s }))));
     } else if (data.splits) {
       // Old format: { splits: [...] } — auto-classify by role
       const comp = [];
@@ -454,8 +488,8 @@ export default function SplitGenerator({ userProfile }) {
           comp.push({ ...s });
         }
       }
-      setCompositionSplits(comp);
-      setMasterSplits(mast);
+      setCompositionSplits(normalizePercentages(comp));
+      setMasterSplits(normalizePercentages(mast));
     }
   };
 
@@ -584,7 +618,7 @@ export default function SplitGenerator({ userProfile }) {
       const updated = [...prev];
       if (field === 'percentage') {
         const num = parseFloat(value);
-        updated[index] = { ...updated[index], percentage: isNaN(num) ? 0 : num };
+        updated[index] = { ...updated[index], percentage: isNaN(num) ? 0 : Math.round(num * 100) / 100 };
       } else {
         updated[index] = { ...updated[index], [field]: value };
       }
@@ -897,6 +931,7 @@ export default function SplitGenerator({ userProfile }) {
                 onUpdate={makeUpdater(setCompositionSplits)}
                 onRemove={makeRemover(setCompositionSplits)}
                 onAdd={makeAdder(setCompositionSplits)}
+                onDistributeEvenly={() => setCompositionSplits(prev => distributeEvenly(prev))}
               />
 
               {/* Master splits */}
@@ -908,6 +943,7 @@ export default function SplitGenerator({ userProfile }) {
                 onUpdate={makeUpdater(setMasterSplits)}
                 onRemove={makeRemover(setMasterSplits)}
                 onAdd={makeAdder(setMasterSplits)}
+                onDistributeEvenly={() => setMasterSplits(prev => distributeEvenly(prev))}
               />
 
               {/* Legal Data Gap Warnings */}

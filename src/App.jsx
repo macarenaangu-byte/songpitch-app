@@ -129,6 +129,7 @@ export default function SongPitch() {
   const activeConversationRef = useRef(activeMessageConversationId);
   const skipProfileLoadRef = useRef(false); // prevent race condition after signup
   const stayOnAuthRef = useRef(false); // prevent !session effect from redirecting to landing after a forced signOut
+  const legalPageFromHashRef = useRef(!!getLegalPageFromHash()); // true if legal page was loaded from URL
   const [authError, setAuthError] = useState(null);
 
   // Global audio player - shared across all pages
@@ -149,12 +150,17 @@ export default function SongPitch() {
     activeConversationRef.current = activeMessageConversationId;
   }, [activeMessageConversationId]);
 
-  // Sync legal page hash to URL
+  // Sync legal page hash to URL (pushState for user clicks, replaceState for initial load)
   useEffect(() => {
     if (legalPage && LEGAL_PAGES.has(legalPage)) {
-      window.history.replaceState(null, '', `#${legalPage}`);
-    } else if (!legalPage && getLegalPageFromHash()) {
-      window.history.replaceState(null, '', window.location.pathname);
+      if (legalPageFromHashRef.current) {
+        // Initial load from URL — don't create a new history entry
+        legalPageFromHashRef.current = false;
+        window.history.replaceState({ spLegal: true, legalPage }, '', `#${legalPage}`);
+      } else {
+        // User clicked a link — push a new history entry so back button works
+        window.history.pushState({ spLegal: true, legalPage }, '', `#${legalPage}`);
+      }
     }
   }, [legalPage]);
 
@@ -210,11 +216,29 @@ export default function SongPitch() {
 
   useEffect(() => {
     const handlePopState = (event) => {
+      // Handle legal page back navigation (return to landing)
+      if (event.state?.spLegal) {
+        setLegalPage(event.state.legalPage);
+        return;
+      }
+      // Going back from a legal page → clear it and return to landing
+      if (legalPage) {
+        setLegalPage(null);
+        return;
+      }
+
       if (event.state?.spApp) {
         suppressHistoryPushRef.current = true;
         setPage(event.state.page || 'dashboard');
         setViewingProfile(event.state.viewingProfile || null);
         setShowNotifPanel(false);
+        return;
+      }
+
+      // Fallback: read hash for legal or nav pages
+      const legalHash = getLegalPageFromHash();
+      if (legalHash) {
+        setLegalPage(legalHash);
         return;
       }
       const hashPage = getPageFromHash();
@@ -223,12 +247,15 @@ export default function SongPitch() {
         setPage(hashPage);
         setViewingProfile(null);
         setShowNotifPanel(false);
+      } else {
+        // No hash = landing page
+        setLegalPage(null);
       }
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+  }, [legalPage]);
 
   useEffect(() => {
     const onResize = () => {
