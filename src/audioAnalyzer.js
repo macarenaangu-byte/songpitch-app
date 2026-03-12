@@ -133,21 +133,21 @@ async function predictGenreMood(file) {
     }
 }
 
-// ─── LYRICS TRANSCRIPTION ──────────────────────────────────────────────────
-// Sends audio file to the FastAPI server for Whisper-powered lyrics transcription
 
+// ─── LYRICS TRANSCRIPTION ──────────────────────────────────────────────────
 async function transcribeLyrics(file) {
     const apiUrl = process.env.REACT_APP_AI_API_URL;
     if (!apiUrl) return null;
 
     try {
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('file', file); // 👈 Just the file, nothing else!
 
         const response = await fetch(`${apiUrl}/transcribe`, {
             method: 'POST',
             body: formData,
         });
+// ... rest of the function stays the same
 
         if (!response.ok) return null;
 

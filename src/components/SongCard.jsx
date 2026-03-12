@@ -5,7 +5,7 @@ import { Badge } from './Badge';
 
 export function SongCard({ song, onPlay, isPlaying, showActions, onEdit, onDelete, hideComposerName, onViewRights, isMobile = false }) {
   const primaryGenre = song.primary_genre || song.genre;
-  const secondaryGenre = isMobile ? null : song.secondary_genre;
+  const secondaryGenre = song.secondary_genre;
   const instrumentType = isMobile ? null : song.instrument_type;
   const licensingStatus = song.licensing_status;
   const isOneStopTrack = !!song.is_one_stop || (typeof licensingStatus === 'string' && licensingStatus.startsWith('One-Stop'));
