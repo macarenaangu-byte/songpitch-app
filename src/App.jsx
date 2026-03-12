@@ -130,6 +130,7 @@ export default function SongPitch() {
   const skipProfileLoadRef = useRef(false); // prevent race condition after signup
   const stayOnAuthRef = useRef(false); // prevent !session effect from redirecting to landing after a forced signOut
   const legalPageFromHashRef = useRef(!!getLegalPageFromHash()); // true if legal page was loaded from URL
+  const suppressLegalPushRef = useRef(false); // prevent double history push on popstate
   const [authError, setAuthError] = useState(null);
 
   // Global audio player - shared across all pages
@@ -150,16 +151,21 @@ export default function SongPitch() {
     activeConversationRef.current = activeMessageConversationId;
   }, [activeMessageConversationId]);
 
-  // Sync legal page hash to URL (pushState for user clicks, replaceState for initial load)
+  // Sync legal page state ↔ URL hash
   useEffect(() => {
     if (legalPage && LEGAL_PAGES.has(legalPage)) {
       if (legalPageFromHashRef.current) {
-        // Initial load from URL — don't create a new history entry
         legalPageFromHashRef.current = false;
         window.history.replaceState({ spLegal: true, legalPage }, '', `#${legalPage}`);
+      } else if (suppressLegalPushRef.current) {
+        suppressLegalPushRef.current = false;
       } else {
-        // User clicked a link — push a new history entry so back button works
         window.history.pushState({ spLegal: true, legalPage }, '', `#${legalPage}`);
+      }
+    } else if (!legalPage) {
+      // Cleared legal page → clean up the URL hash (only if it's still a legal hash)
+      if (getLegalPageFromHash()) {
+        window.history.replaceState(null, '', window.location.pathname);
       }
     }
   }, [legalPage]);
@@ -216,15 +222,20 @@ export default function SongPitch() {
 
   useEffect(() => {
     const handlePopState = (event) => {
-      // Handle legal page back navigation (return to landing)
+      // Navigating forward to a legal page
       if (event.state?.spLegal) {
+        suppressLegalPushRef.current = true;
         setLegalPage(event.state.legalPage);
         return;
       }
-      // Going back from a legal page → clear it and return to landing
-      if (legalPage) {
+
+      // If we're currently on a legal page and going back → clear it
+      const currentLegal = getLegalPageFromHash();
+      if (currentLegal || legalPage) {
+        suppressLegalPushRef.current = true;
         setLegalPage(null);
-        return;
+        // Don't return — let the hash fallback below handle the next page
+        if (!event.state?.spApp && !getPageFromHash()) return;
       }
 
       if (event.state?.spApp) {
@@ -235,21 +246,13 @@ export default function SongPitch() {
         return;
       }
 
-      // Fallback: read hash for legal or nav pages
-      const legalHash = getLegalPageFromHash();
-      if (legalHash) {
-        setLegalPage(legalHash);
-        return;
-      }
+      // Fallback: read hash
       const hashPage = getPageFromHash();
       if (hashPage) {
         suppressHistoryPushRef.current = true;
         setPage(hashPage);
         setViewingProfile(null);
         setShowNotifPanel(false);
-      } else {
-        // No hash = landing page
-        setLegalPage(null);
       }
     };
 

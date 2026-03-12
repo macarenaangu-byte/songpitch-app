@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Edit, LogOut, Upload, Trash2, Bell, BellOff } from 'lucide-react';
+import { Edit, LogOut, Upload, Trash2, Bell, BellOff, CheckCircle } from 'lucide-react';
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { GENRE_OPTIONS } from '../constants/genres';
 import { supabase } from '../lib/supabase';
@@ -13,22 +13,31 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Form state
+  // Generic Form state (Everyone gets these)
   const [firstName, setFirstName] = useState(user.first_name || "");
   const [lastName, setLastName] = useState(user.last_name || "");
   const [bio, setBio] = useState(user.bio || "");
   const [location, setLocation] = useState(user.location || "");
   const [customLocation, setCustomLocation] = useState("");
-  const [proName, setProName] = useState(user.pro_name || user.pro || "");
-  const [proUrl, setProUrl] = useState(user.pro_url || "");
-  const [role, setRole] = useState(user.role || "");
-  const [company, setCompany] = useState(user.company || "");
-  const [jobTitle, setJobTitle] = useState(user.job_title || "");
-  const [genres, setGenres] = useState(user.genres || []);
-  const [instruments, setInstruments] = useState(user.instruments || "");
   const [websiteUrl, setWebsiteUrl] = useState(user.website_url || "");
   const [spotifyUrl, setSpotifyUrl] = useState(user.spotify_url || "");
+  const [linkedInUrl, setLinkedInUrl] = useState(user.linkedin_url || "");
+
+  // Composer specific
   const [instagramUrl, setInstagramUrl] = useState(user.instagram_url || "");
+  const [proName, setProName] = useState(user.pro_name || user.pro || "");
+  const [proUrl, setProUrl] = useState(user.pro_url || "");
+  const [caeIpi, setCaeIpi] = useState(user.cae_ipi || "");
+  const [publishingStatus, setPublishingStatus] = useState(user.publishing_status || "");
+  const [isOneStop, setIsOneStop] = useState(user.is_one_stop || false);
+  const [role, setRole] = useState(user.role || "");
+  const [instruments, setInstruments] = useState(user.instruments || "");
+  const [genres, setGenres] = useState(user.genres || []);
+
+  // Executive specific
+  const [company, setCompany] = useState(user.company || "");
+  const [jobTitle, setJobTitle] = useState(user.job_title || "");
+  const [projectTypes, setProjectTypes] = useState(user.project_types || []);
 
   // Avatar upload state
   const [avatarFile, setAvatarFile] = useState(null);
@@ -59,14 +68,14 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
       if (error) throw error;
       if (onProfileUpdate) await onProfileUpdate();
     } catch (err) {
-      setEmailPrefs(emailPrefs); // revert on error
+      setEmailPrefs(emailPrefs);
       showToast(friendlyError(err), 'error');
     } finally {
       setSavingEmailPrefs(false);
     }
   };
 
-  const MAX_AVATAR_SIZE = 2 * 1024 * 1024; // 2MB
+  const MAX_AVATAR_SIZE = 2 * 1024 * 1024;
   const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
   const handleAvatarChange = (e) => {
@@ -93,30 +102,22 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
   const proOptions = ['ASCAP', 'BMI', 'SESAC', 'GMR', 'SOCAN', 'PRS', 'Other'];
   const composerRoles = ['Singer-Songwriter', 'Producer', 'Film Composer', 'Songwriter', 'Multi-Instrumentalist', 'Beatmaker', 'Session Musician', 'Other'];
   const executiveRoles = ['A&R Manager', 'Sync A&R', 'Music Supervisor', 'Creative Director', 'Music Publisher', 'Label Executive', 'Sync Agent', 'Other'];
+  const projectTypeOptions = ['Film', 'TV Shows', 'Commercials', 'Video Games', 'Trailers', 'Artist Placement'];
+  const pubStatusOptions = ['Independent (100% Control)', 'Published', 'Administered', 'Other'];
   const genreOptions = GENRE_OPTIONS;
   const locationOptions = [
-    'New York, NY',
-    'Los Angeles, CA',
-    'Nashville, TN',
-    'London, UK',
-    'Austin, TX',
-    'Atlanta, GA',
-    'Chicago, IL',
-    'Miami, FL',
-    'Toronto, Canada',
-    'Paris, France',
-    'Berlin, Germany',
-    'Tokyo, Japan',
-    'Sydney, Australia',
-    'Custom...'
+    'New York, NY', 'Los Angeles, CA', 'Nashville, TN', 'London, UK',
+    'Austin, TX', 'Atlanta, GA', 'Chicago, IL', 'Miami, FL',
+    'Toronto, Canada', 'Paris, France', 'Berlin, Germany', 'Tokyo, Japan',
+    'Sydney, Australia', 'Custom...'
   ];
 
   const toggleGenre = (genre) => {
-    setGenres(prev =>
-      prev.includes(genre)
-        ? prev.filter(g => g !== genre)
-        : [...prev, genre]
-    );
+    setGenres(prev => prev.includes(genre) ? prev.filter(g => g !== genre) : [...prev, genre]);
+  };
+
+  const toggleProjectType = (type) => {
+    setProjectTypes(prev => prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]);
   };
 
   const handleSave = async () => {
@@ -142,29 +143,37 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
       }
 
       const resolvedLocation = location === 'Custom...' ? customLocation : location;
+      
       const updateData = {
         first_name: firstName.trim(),
         last_name: lastName.trim(),
         bio: bio.trim() || null,
         location: (resolvedLocation || '').trim() || null,
-        genres: Array.isArray(genres) && genres.length > 0 ? genres : null,
         avatar_url: avatarUrl,
         website_url: websiteUrl.trim() || null,
         spotify_url: spotifyUrl.trim() || null,
-        instagram_url: instagramUrl.trim() || null,
-        pro_name: proName.trim() || null,
-        pro_url: proUrl.trim() || null,
+        linkedin_url: linkedInUrl.trim() || null,
       };
 
       if (user.account_type === 'composer' || user.account_type === 'admin') {
-        updateData.pro = proName.trim() || null;
+        updateData.instagram_url = instagramUrl.trim() || null;
+        updateData.pro_name = proName.trim() || null;
+        updateData.pro = proName.trim() || null; 
+        updateData.pro_url = proUrl.trim() || null;
+        updateData.cae_ipi = caeIpi.trim() || null;
+        updateData.publishing_status = publishingStatus || null;
+        updateData.is_one_stop = isOneStop;
         updateData.role = role || null;
         updateData.instruments = instruments || null;
+        updateData.genres = Array.isArray(genres) && genres.length > 0 ? genres : null;
       }
 
       if (user.account_type === 'music_executive' || user.account_type === 'admin') {
         updateData.company = company || null;
         updateData.job_title = jobTitle || null;
+        // Keep executives' genres in sync if you want them to be able to pick genres of interest
+        updateData.genres = Array.isArray(genres) && genres.length > 0 ? genres : null;
+        updateData.project_types = Array.isArray(projectTypes) && projectTypes.length > 0 ? projectTypes : null;
       }
 
       const { error } = await supabase
@@ -225,10 +234,28 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
 
               {(user.account_type === 'composer' || user.account_type === 'admin') && (
                 <>
+                  {user.is_one_stop && (
+                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12, padding: "8px 12px", background: `${DESIGN_SYSTEM.colors.brand.primary}15`, borderRadius: 6 }}>
+                       <CheckCircle size={16} color={DESIGN_SYSTEM.colors.brand.primary} />
+                       <span style={{ color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 13, fontWeight: 700 }}>Verified One-Stop Catalog</span>
+                     </div>
+                  )}
                   {(user.pro_name || user.pro) && (
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
                       <span style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13 }}>PRO</span>
                       <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, fontWeight: 600 }}>{user.pro_name || user.pro}</span>
+                    </div>
+                  )}
+                  {user.cae_ipi && (
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+                      <span style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13 }}>CAE/IPI #</span>
+                      <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, fontWeight: 600 }}>{user.cae_ipi}</span>
+                    </div>
+                  )}
+                  {user.publishing_status && (
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+                      <span style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13 }}>Publishing</span>
+                      <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, fontWeight: 600 }}>{user.publishing_status}</span>
                     </div>
                   )}
                   {user.role && (
@@ -268,6 +295,14 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
                       <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, fontWeight: 600 }}>{user.job_title}</span>
                     </div>
                   )}
+                  {user.project_types && user.project_types.length > 0 && (
+                    <div style={{ marginBottom: 12 }}>
+                      <span style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13, display: "block", marginBottom: 8 }}>Scouting For</span>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        {user.project_types.map(pt => <Badge key={pt} color={DESIGN_SYSTEM.colors.brand.primary}>{pt}</Badge>)}
+                      </div>
+                    </div>
+                  )}
                   {user.genres && user.genres.length > 0 && (
                     <div style={{ marginBottom: 12 }}>
                       <span style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13, display: "block", marginBottom: 8 }}>Genres of Interest</span>
@@ -289,10 +324,9 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {Object.entries(emailPrefLabels)
                   .filter(([key]) => {
-                    // Only show relevant prefs per account type
                     if (user.account_type === 'composer') return !['submission_received'].includes(key);
                     if (user.account_type === 'music_executive') return !['new_opportunity', 'submission_shortlisted', 'submission_rejected'].includes(key);
-                    return true; // admin sees all
+                    return true;
                   })
                   .map(([key, { label, desc }]) => (
                   <button
@@ -359,7 +393,6 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
                     </button>
                   )}
                 </div>
-                <span style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 11, marginTop: 6 }}>JPG, PNG, or WebP. Max 2MB.</span>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
@@ -385,16 +418,11 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
                   {locationOptions.map(loc => <option key={loc} value={loc}>{loc}</option>)}
                 </select>
                 {location === 'Custom...' && (
-                  <input
-                    type="text"
-                    value={customLocation}
-                    onChange={e => setCustomLocation(e.target.value)}
-                    placeholder="Enter your location..."
-                    style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box" }}
-                  />
+                  <input type="text" value={customLocation} onChange={e => setCustomLocation(e.target.value)} placeholder="Enter your location..." style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box" }} />
                 )}
               </div>
 
+              {/* URLS FOR EVERYONE */}
               <div style={{ marginBottom: 12 }}>
                 <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Website URL</label>
                 <input type="text" value={websiteUrl} onChange={e => setWebsiteUrl(e.target.value)} placeholder="https://yourwebsite.com" style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box" }} />
@@ -406,107 +434,133 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
               </div>
 
               <div style={{ marginBottom: 12 }}>
-                <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Instagram URL</label>
-                <input type="text" value={instagramUrl} onChange={e => setInstagramUrl(e.target.value)} placeholder="https://instagram.com/yourhandle" style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box" }} />
+                <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>LinkedIn URL</label>
+                <input type="text" value={linkedInUrl} onChange={e => setLinkedInUrl(e.target.value)} placeholder="https://linkedin.com/in/..." style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box" }} />
               </div>
 
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Performance Rights Organization (PRO)</label>
-                <select value={proName} onChange={e => setProName(e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box" }}>
-                  <option value="">Select PRO...</option>
-                  {proOptions.map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
-              </div>
-
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>PRO URL</label>
-                <input type="text" value={proUrl} onChange={e => setProUrl(e.target.value)} placeholder="https://..." style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box" }} />
-              </div>
-
+              {/* COMPOSER SPECIFIC FIELDS */}
               {(user.account_type === 'composer' || user.account_type === 'admin') && (
                 <>
-                  <div style={{ marginBottom: 12 }}>
-                    <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Role</label>
-                    <select value={role} onChange={e => setRole(e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box" }}>
-                      <option value="">Select Role...</option>
-                      {composerRoles.map(r => <option key={r} value={r}>{r}</option>)}
-                    </select>
-                  </div>
+                  <div style={{ marginTop: 20, paddingTop: 20, borderTop: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
+                    <h4 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Legal & Creative Data</h4>
 
-                  <div style={{ marginBottom: 12 }}>
-                    <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Instruments (Optional)</label>
-                    <input
-                      type="text"
-                      value={instruments}
-                      onChange={e => setInstruments(e.target.value)}
-                      placeholder="e.g., Piano, Guitar, Vocals"
-                      style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box" }}
-                    />
-                  </div>
+                    {/* INSTAGRAM MOVED HERE */}
+                    <div style={{ marginBottom: 12 }}>
+                      <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Instagram URL</label>
+                      <input type="text" value={instagramUrl} onChange={e => setInstagramUrl(e.target.value)} placeholder="https://instagram.com/yourhandle" style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box" }} />
+                    </div>
+                    
+                    <div style={{ marginBottom: 12, padding: "12px", background: `${DESIGN_SYSTEM.colors.brand.primary}11`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}33`, borderRadius: 8 }}>
+                      <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                        <input type="checkbox" checked={isOneStop} onChange={(e) => setIsOneStop(e.target.checked)} style={{ width: 18, height: 18, cursor: "pointer" }} />
+                        <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, fontWeight: 600 }}>I am a 100% One-Stop Composer</span>
+                      </label>
+                      <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 11, marginTop: 4, marginLeft: 26 }}>Check this if you own 100% of the Master and Composition for your catalog.</p>
+                    </div>
 
-                  <div style={{ marginBottom: 12 }}>
-                    <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 8 }}>Genres (Select all that apply)</label>
-                    <div style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: 12, maxHeight: 200, overflowY: "auto" }}>
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
-                        {genreOptions.map(genre => (
-                          <label key={genre} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "6px 8px", borderRadius: 6, background: genres.includes(genre) ? `${DESIGN_SYSTEM.colors.brand.primary}22` : "transparent", border: genres.includes(genre) ? `1px solid ${DESIGN_SYSTEM.colors.brand.primary}33` : "1px solid transparent" }}>
-                            <input
-                              type="checkbox"
-                              checked={genres.includes(genre)}
-                              onChange={() => toggleGenre(genre)}
-                              style={{ width: 16, height: 16, cursor: "pointer" }}
-                            />
-                            <span style={{ color: genres.includes(genre) ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: genres.includes(genre) ? 600 : 400 }}>{genre}</span>
-                          </label>
-                        ))}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                      <div>
+                        <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>PRO</label>
+                        <select value={proName} onChange={e => setProName(e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none" }}>
+                          <option value="">Select PRO...</option>
+                          {proOptions.map(p => <option key={p} value={p}>{p}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>CAE/IPI Number</label>
+                        <input type="text" value={caeIpi} onChange={e => setCaeIpi(e.target.value)} placeholder="e.g. 123456789" style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none" }} />
                       </div>
                     </div>
-                    {genres.length > 0 && (
-                      <div style={{ marginTop: 8, color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12 }}>
-                        Selected: {genres.length} {genres.length === 1 ? 'genre' : 'genres'}
+
+                    <div style={{ marginBottom: 12 }}>
+                      <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>PRO URL</label>
+                      <input type="text" value={proUrl} onChange={e => setProUrl(e.target.value)} placeholder="https://..." style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box" }} />
+                    </div>
+
+                    <div style={{ marginBottom: 12 }}>
+                      <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Publishing Status</label>
+                      <select value={publishingStatus} onChange={e => setPublishingStatus(e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none" }}>
+                        <option value="">Select Status...</option>
+                        {pubStatusOptions.map(p => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                    </div>
+
+                    <div style={{ marginBottom: 12 }}>
+                      <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Role</label>
+                      <select value={role} onChange={e => setRole(e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box" }}>
+                        <option value="">Select Role...</option>
+                        {composerRoles.map(r => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                    </div>
+
+                    <div style={{ marginBottom: 12 }}>
+                      <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Instruments (Optional)</label>
+                      <input type="text" value={instruments} onChange={e => setInstruments(e.target.value)} placeholder="e.g., Piano, Guitar, Vocals" style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box" }} />
+                    </div>
+
+                    <div style={{ marginBottom: 12 }}>
+                      <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 8 }}>Genres</label>
+                      <div style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: 12, maxHeight: 200, overflowY: "auto" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
+                          {genreOptions.map(genre => (
+                            <label key={genre} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "6px 8px", borderRadius: 6, background: genres.includes(genre) ? `${DESIGN_SYSTEM.colors.brand.primary}22` : "transparent", border: genres.includes(genre) ? `1px solid ${DESIGN_SYSTEM.colors.brand.primary}33` : "1px solid transparent" }}>
+                              <input type="checkbox" checked={genres.includes(genre)} onChange={() => toggleGenre(genre)} style={{ width: 16, height: 16, cursor: "pointer" }} />
+                              <span style={{ color: genres.includes(genre) ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: genres.includes(genre) ? 600 : 400 }}>{genre}</span>
+                            </label>
+                          ))}
+                        </div>
                       </div>
-                    )}
+                    </div>
                   </div>
                 </>
               )}
 
+              {/* EXECUTIVE SPECIFIC FIELDS */}
               {(user.account_type === 'music_executive' || user.account_type === 'admin') && (
                 <>
-                  <div style={{ marginBottom: 12 }}>
-                    <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Company</label>
-                    <input type="text" value={company} onChange={e => setCompany(e.target.value)} placeholder="e.g., Sony Music, Warner Chappell" style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box" }} />
-                  </div>
+                  <div style={{ marginTop: 20, paddingTop: 20, borderTop: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
+                    <h4 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Executive Profile</h4>
+                    
+                    <div style={{ marginBottom: 12 }}>
+                      <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Company</label>
+                      <input type="text" value={company} onChange={e => setCompany(e.target.value)} placeholder="e.g., Sony Music, Warner Chappell" style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box" }} />
+                    </div>
 
-                  <div style={{ marginBottom: 12 }}>
-                    <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Job Title</label>
-                    <select value={jobTitle} onChange={e => setJobTitle(e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box" }}>
-                      <option value="">Select Job Title...</option>
-                      {executiveRoles.map(r => <option key={r} value={r}>{r}</option>)}
-                    </select>
-                  </div>
+                    <div style={{ marginBottom: 12 }}>
+                      <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Job Title</label>
+                      <select value={jobTitle} onChange={e => setJobTitle(e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box" }}>
+                        <option value="">Select Job Title...</option>
+                        {executiveRoles.map(r => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                    </div>
 
-                  <div style={{ marginBottom: 12 }}>
-                    <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 8 }}>Genres of Interest (Select all that apply)</label>
-                    <div style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: 12, maxHeight: 200, overflowY: "auto" }}>
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
-                        {genreOptions.map(genre => (
-                          <label key={genre} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "6px 8px", borderRadius: 6, background: genres.includes(genre) ? `${DESIGN_SYSTEM.colors.brand.primary}22` : "transparent", border: genres.includes(genre) ? `1px solid ${DESIGN_SYSTEM.colors.brand.primary}33` : "1px solid transparent" }}>
-                            <input
-                              type="checkbox"
-                              checked={genres.includes(genre)}
-                              onChange={() => toggleGenre(genre)}
-                              style={{ width: 16, height: 16, cursor: "pointer" }}
-                            />
-                            <span style={{ color: genres.includes(genre) ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: genres.includes(genre) ? 600 : 400 }}>{genre}</span>
-                          </label>
-                        ))}
+                    <div style={{ marginBottom: 12 }}>
+                      <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 8 }}>Primary Project Types</label>
+                      <div style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: 12 }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
+                          {projectTypeOptions.map(type => (
+                            <label key={type} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "6px 8px", borderRadius: 6, background: projectTypes.includes(type) ? `${DESIGN_SYSTEM.colors.brand.primary}22` : "transparent" }}>
+                              <input type="checkbox" checked={projectTypes.includes(type)} onChange={() => toggleProjectType(type)} style={{ width: 16, height: 16 }} />
+                              <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13 }}>{type}</span>
+                            </label>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                    {genres.length > 0 && (
-                      <div style={{ marginTop: 8, color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12 }}>
-                        Selected: {genres.length} {genres.length === 1 ? 'genre' : 'genres'}
+
+                    <div style={{ marginBottom: 12 }}>
+                      <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 8 }}>Genres of Interest</label>
+                      <div style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: 12, maxHeight: 200, overflowY: "auto" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
+                          {genreOptions.map(genre => (
+                            <label key={genre} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "6px 8px", borderRadius: 6, background: genres.includes(genre) ? `${DESIGN_SYSTEM.colors.brand.primary}22` : "transparent", border: genres.includes(genre) ? `1px solid ${DESIGN_SYSTEM.colors.brand.primary}33` : "1px solid transparent" }}>
+                              <input type="checkbox" checked={genres.includes(genre)} onChange={() => toggleGenre(genre)} style={{ width: 16, height: 16, cursor: "pointer" }} />
+                              <span style={{ color: genres.includes(genre) ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: genres.includes(genre) ? 600 : 400 }}>{genre}</span>
+                            </label>
+                          ))}
+                        </div>
                       </div>
-                    )}
+                    </div>
                   </div>
                 </>
               )}
