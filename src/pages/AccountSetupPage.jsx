@@ -9,6 +9,8 @@ export function AccountSetupPage({ user, onComplete }) {
   // Pre-populate name from Google OAuth metadata when available
   const googleName = user?.user_metadata?.full_name || '';
   const [accountType, setAccountType] = useState("");
+  
+  // Generic fields
   const [firstName, setFirstName] = useState(() => googleName.split(' ')[0] || '');
   const [lastName, setLastName] = useState(() => {
     const parts = googleName.split(' ');
@@ -16,39 +18,57 @@ export function AccountSetupPage({ user, onComplete }) {
   });
   const [bio, setBio] = useState("");
   const [location, setLocation] = useState("");
+  const [linkedInUrl, setLinkedInUrl] = useState("");
+
+  // Composer specific
   const [genres, setGenres] = useState([]);
+  const [role, setRole] = useState("");
+
+  // Executive specific
+  const [company, setCompany] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
+
   const [loading, setLoading] = useState(false);
+
+  const composerRoles = ['Producer', 'Film Composer', 'Songwriter', 'Multi-Instrumentalist', 'Beatmaker', 'Session Musician', 'Other'];
+  const executiveRoles = ['A&R Manager', 'Sync A&R', 'Music Supervisor', 'Creative Director', 'Music Publisher', 'Label Executive', 'Sync Agent', 'Other'];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      // Build the unified profile payload
+      const profilePayload = {
+        user_id: user.id,
+        account_type: accountType,
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        bio: bio.trim() || null,
+        location: location.trim() || null,
+        linkedin_url: linkedInUrl.trim() || null,
+        // Only set a random color if they don't have one yet (upsert handles this nicely)
+        avatar_color: `#${Math.floor(Math.random()*16777215).toString(16)}`,
+      };
+
+      // Add specific fields based on account type
+      if (accountType === 'composer') {
+        profilePayload.role = role || null;
+        profilePayload.genres = genres.length > 0 ? genres : null;
+      } else if (accountType === 'music_executive') {
+        profilePayload.company = company.trim() || null;
+        profilePayload.job_title = jobTitle || null;
+      }
+
+      // UPSERT is crucial here: it updates the row if Supabase Auth already created a blank one, 
+      // or inserts it if it doesn't exist. This prevents hidden database errors.
       const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
-        .insert([{
-          user_id: user.id,
-          account_type: accountType,
-          first_name: firstName,
-          last_name: lastName,
-          bio: bio || null,
-          location: location || null,
-          avatar_color: `#${Math.floor(Math.random()*16777215).toString(16)}`
-        }])
+        .upsert(profilePayload, { onConflict: 'user_id' })
         .select()
         .single();
 
       if (profileError) throw profileError;
-
-      if (accountType === 'composer' && genres.length > 0) {
-        const { error: composerError } = await supabase
-          .from('composers')
-          .insert([{
-            user_profile_id: profileData.id,
-            genres: genres
-          }]);
-        if (composerError) throw composerError;
-      }
 
       onComplete();
     } catch (err) {
@@ -60,7 +80,7 @@ export function AccountSetupPage({ user, onComplete }) {
 
   return (
     <div className="hero-animated-bg" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: "'Outfit', sans-serif" }}>
-      <div style={{ width: "100%", maxWidth: 520, background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 24, padding: 40, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}>
+      <div style={{ width: "100%", maxWidth: 520, background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 24, padding: 40, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, boxShadow: '0 16px 48px rgba(0,0,0,0.4)', maxHeight: '90vh', overflowY: 'auto' }}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <img src="/songpitch-logo.png" alt="SongPitch" style={{ width: 48, height: 48, objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} onError={(e) => { e.target.style.display = 'none'; }} />
           <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 26, fontWeight: 800, marginBottom: 6 }}>Complete Your Profile</h1>
@@ -98,20 +118,38 @@ export function AccountSetupPage({ user, onComplete }) {
             <input type="text" placeholder="Last Name *" value={lastName} onChange={e => setLastName(e.target.value)} required style={{ flex: 1, background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 10, padding: "12px 16px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif" }} />
           </div>
 
-          <textarea placeholder="Bio (optional)" value={bio} onChange={e => setBio(e.target.value)} rows={3} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 10, padding: "12px 16px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", resize: "none", marginBottom: 16, boxSizing: "border-box", fontFamily: "'Outfit', sans-serif" }} />
-
           <input type="text" placeholder="Location (optional)" value={location} onChange={e => setLocation(e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 10, padding: "12px 16px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", marginBottom: 16, boxSizing: "border-box", fontFamily: "'Outfit', sans-serif" }} />
+          <input type="text" placeholder="LinkedIn URL (optional)" value={linkedInUrl} onChange={e => setLinkedInUrl(e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 10, padding: "12px 16px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", marginBottom: 16, boxSizing: "border-box", fontFamily: "'Outfit', sans-serif" }} />
 
+          {/* COMPOSER ONBOARDING */}
           {accountType === 'composer' && (
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 8 }}>Genres (select all that apply)</label>
+            <div style={{ background: `${DESIGN_SYSTEM.colors.bg.primary}80`, padding: 16, borderRadius: 12, marginBottom: 20, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
+              <select value={role} onChange={e => setRole(e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 10, padding: "12px 16px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", marginBottom: 16, fontFamily: "'Outfit', sans-serif" }}>
+                <option value="">Select Primary Role...</option>
+                {composerRoles.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+
+              <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 8 }}>Primary Genres</label>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {['Classical', 'Jazz', 'Electronic', 'Hip-Hop', 'Pop', 'Film Score', 'Ambient', 'R&B', 'Afrobeats', 'World Music'].map(g => (
+                {/* Dynamically pull from your real GENRE_OPTIONS instead of hardcoded list */}
+                {GENRE_OPTIONS.slice(0, 12).map(g => (
                   <button key={g} type="button" onClick={() => setGenres(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g])} style={{ background: genres.includes(g) ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.bg.primary, color: genres.includes(g) ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.tertiary, border: `1px solid ${genres.includes(g) ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.border.light}`, borderRadius: 20, padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Outfit', sans-serif" }}>
                     {g}
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* EXECUTIVE ONBOARDING */}
+          {accountType === 'music_executive' && (
+            <div style={{ background: `${DESIGN_SYSTEM.colors.bg.primary}80`, padding: 16, borderRadius: 12, marginBottom: 20, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
+              <input type="text" placeholder="Company / Agency" value={company} onChange={e => setCompany(e.target.value)} required style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 10, padding: "12px 16px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", marginBottom: 16, boxSizing: "border-box", fontFamily: "'Outfit', sans-serif" }} />
+              
+              <select value={jobTitle} onChange={e => setJobTitle(e.target.value)} required style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 10, padding: "12px 16px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif" }}>
+                <option value="">Select Job Title...</option>
+                {executiveRoles.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
             </div>
           )}
 

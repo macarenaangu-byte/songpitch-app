@@ -141,7 +141,7 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
           marginBottom: 0,
           textAlign: 'center'
         }}>
-          Hey everyone! Thank you so much for helping me test SongPitchHub this weekend. The core AI analysis and pitching pipelines are officially live! Since this is an early Alpha, you might spot a few bugs as we stress-test the vault. Poke around, upload some tracks, test the AI, and let me know your thoughts!
+          Hey everyone! Thank you so much for helping me test SongPitchHub! The core AI analysis and pitching pipelines are officially live! Since this is an early Alpha, you might spot a few bugs as we stress-test the vault. Poke around, upload some tracks, test the AI, and let me know your thoughts!
         </p>
       </div>
 
@@ -156,7 +156,7 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
           fontWeight: 800,
           textAlign: "center",
           marginBottom: 60
-        }}>The Solution</h2>
+        }}>What does it do?</h2>
 
         <div style={{
           display: "grid",
@@ -196,9 +196,9 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
             </div>
             <h3 style={{ fontSize: 24, fontWeight: 700, marginBottom: 16 }}>🕵️‍♂️ For Music Executives</h3>
             <ul style={{ color: DESIGN_SYSTEM.colors.text.secondary, lineHeight: 1.7, fontSize: 16, margin: 0, paddingLeft: 22 }}>
-              <li>🚫 Skip the messy Dropbox folders and expired links.</li>
-              <li>🧠 Use AI-powered search to instantly filter by vibe, genre, or BPM.</li>
-              <li>🎧 Review pre-sorted, perfectly tagged tracks in one clean dashboard.</li>
+              <li> Skip the messy Dropbox folders and expired links.</li>
+              <li> Use AI-powered search to instantly filter by vibe, genre, or BPM.</li>
+              <li> Review pre-sorted, perfectly tagged tracks in one clean dashboard.</li>
             </ul>
           </div>
 
@@ -235,9 +235,10 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
             </div>
             <h3 style={{ fontSize: 24, fontWeight: 700, marginBottom: 16 }}>🎹 For Composers & Producers</h3>
             <ul style={{ color: DESIGN_SYSTEM.colors.text.secondary, lineHeight: 1.7, fontSize: 16, margin: 0, paddingLeft: 22 }}>
-              <li>🤖 Let our custom AI instantly auto-tag your genre, mood, and BPM.</li>
-              <li>🔒 Build and manage your own secure, private track vault.</li>
-              <li>🎯 Submit professional, pitch-ready catalogs directly to real industry briefs.</li>
+              <li>Let our custom AI instantly auto-tag your genre, mood, and BPM.</li>
+              <li>Build and manage your own secure, private track vault.</li>
+              <li>Get your split sheets percentages analyzed and settle by our AI helper.</li>
+              <li>Submit professional, pitch-ready catalogs directly to real industry briefs.</li>
             </ul>
           </div>
         </div>
