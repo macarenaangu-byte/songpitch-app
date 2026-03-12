@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Play, Pause, ArrowLeft, FileText, MessageCircle, Briefcase, ChevronRight, CheckCircle, XCircle, Users } from 'lucide-react';
+import { Play, Pause, ArrowLeft, FileText, MessageCircle, Briefcase, ChevronRight, CheckCircle, XCircle, ExternalLink } from 'lucide-react';
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { supabase } from '../lib/supabase';
 import { showToast } from '../lib/toast';
 import { friendlyError, insertNotification } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
 import { Badge } from '../components/Badge';
-import { LoadingOpportunityCard } from '../components/LoadingCards';
 
 export function ResponsesPage({ userProfile, onNavigate, onViewProfile, audioPlayer, isMobile = false }) {
   const [opportunities, setOpportunities] = useState([]);
@@ -125,20 +124,38 @@ export function ResponsesPage({ userProfile, onNavigate, onViewProfile, audioPla
     }
   };
 
-  const loadResponses = async (oppId) => {
+const loadResponses = async (oppId) => {
     setLoading(true);
     try {
+      // THE FIX: We are explicitly telling Supabase to download the user_id, 
+      // account_type, and ALL portfolio links so the Profile page can use them!
       const { data, error} = await supabase
         .from('responses')
         .select(`
           *,
           composer:user_profiles!responses_composer_id_fkey (
+            id,
+            user_id,
+            account_type,
             first_name,
             last_name,
             avatar_color,
             avatar_url,
             bio,
-            location
+            location,
+            role,
+            is_one_stop,
+            website_url,
+            spotify_url,
+            instagram_url,
+            linkedin_url,
+            cae_ipi,
+            publishing_status,
+            pro_name,
+            pro,
+            instruments,
+            company,
+            job_title
           ),
           song:songs (
             id,
@@ -154,7 +171,10 @@ export function ResponsesPage({ userProfile, onNavigate, onViewProfile, audioPla
         .eq('opportunity_id', oppId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase error:", error);
+        throw error;
+      }
       setResponses(data || []);
     } catch (err) {
       console.error("Error loading responses:", err);
@@ -281,23 +301,42 @@ export function ResponsesPage({ userProfile, onNavigate, onViewProfile, audioPla
                   transition: 'all 0.2s ease',
                 }}>
                   <div style={{ display: "flex", flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : "start", gap: isMobile ? 12 : 16, marginBottom: 16, paddingBottom: 16, borderBottom: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: isMobile ? '100%' : 'auto' }}>
+                    
+                    {/* Clickable Avatar */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: isMobile ? '100%' : 'auto', cursor: onViewProfile ? "pointer" : "default" }} onClick={() => onViewProfile && onViewProfile(response.composer)}>
                       <Avatar name={`${response.composer.first_name} ${response.composer.last_name}`} color={response.composer.avatar_color} avatarUrl={response.composer.avatar_url} size={isMobile ? 44 : 56} />
                     </div>
+                    
                     <div style={{ flex: 1 }}>
-                      <h3
-                        onClick={() => onViewProfile && onViewProfile(response.composer)}
-                        style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 18, fontWeight: 700, fontFamily: "'Outfit', sans-serif", marginBottom: 4, cursor: onViewProfile ? "pointer" : "default", display: "inline" }}
-                        onMouseEnter={e => { if (onViewProfile) e.currentTarget.style.color = DESIGN_SYSTEM.colors.brand.primary; }}
-                        onMouseLeave={e => { if (onViewProfile) e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.primary; }}
-                      >
-                        {response.composer.first_name} {response.composer.last_name}
-                      </h3>
-                      {response.composer.location && (
-                        <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13, marginBottom: 6 }}>{response.composer.location}</p>
-                      )}
-                      {response.composer.bio && (
-                        <p style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, lineHeight: 1.5 }}>{response.composer.bio}</p>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                        {/* Clickable Name */}
+                        <h3
+                          onClick={() => onViewProfile && onViewProfile(response.composer)}
+                          style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 18, fontWeight: 700, fontFamily: "'Outfit', sans-serif", cursor: onViewProfile ? "pointer" : "default", margin: 0 }}
+                          onMouseEnter={e => { if (onViewProfile) e.currentTarget.style.color = DESIGN_SYSTEM.colors.brand.primary; }}
+                          onMouseLeave={e => { if (onViewProfile) e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.primary; }}
+                        >
+                          {response.composer.first_name} {response.composer.last_name}
+                        </h3>
+                        {response.composer.is_one_stop && (
+                          <CheckCircle size={14} color={DESIGN_SYSTEM.colors.brand.primary} title="Verified One-Stop" />
+                        )}
+                      </div>
+                      
+                      <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13, marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
+                        {response.composer.role && <span>{response.composer.role}</span>}
+                        {response.composer.role && response.composer.location && <span>•</span>}
+                        {response.composer.location && <span>{response.composer.location}</span>}
+                      </div>
+                      
+                      {/* Explicit View Profile Button */}
+                      {onViewProfile && (
+                        <button 
+                          onClick={() => onViewProfile(response.composer)}
+                          style={{ background: 'transparent', border: 'none', color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 4, fontFamily: "'Outfit', sans-serif" }}
+                        >
+                          View Full Profile <ExternalLink size={12} />
+                        </button>
                       )}
                     </div>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -317,22 +356,34 @@ export function ResponsesPage({ userProfile, onNavigate, onViewProfile, audioPla
 
                   {response.song && (
                     <div style={{ marginBottom: 16 }}>
-                      <h4 style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.5px" }}>Demo</h4>
+                      <h4 style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.5px" }}>Demo Metadata</h4>
                       <div style={{ background: DESIGN_SYSTEM.colors.bg.primary, borderRadius: 12, padding: 16, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                           <div
-                            onClick={() => playAudio(response.song)}
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevents the click from accidentally opening the profile
+                              if (playingSong?.id === response.song.id && isPlaying) {
+                                    stopAudio();
+                                    } else {
+                                          playAudio(response.song);
+                                          }
+                                        }}                           
                             style={{ width: 42, height: 42, borderRadius: 10, background: `${DESIGN_SYSTEM.colors.brand.primary}22`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}33`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}
                           >
                             {playingSong?.id === response.song.id && isPlaying ? <Pause size={16} color={DESIGN_SYSTEM.colors.brand.primary} /> : <Play size={16} color={DESIGN_SYSTEM.colors.brand.primary} fill={DESIGN_SYSTEM.colors.brand.primary} />}
                           </div>
+                          
                           <div style={{ flex: 1 }}>
-                            <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontWeight: 600, fontSize: 15, fontFamily: "'Outfit', sans-serif", marginBottom: 2 }}>{response.song.title}</div>
-                            <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12 }}>
-                              {response.song.genre && `${response.song.genre}`}
-                              {response.song.duration && ` • ${response.song.duration}`}
-                              {response.song.bpm && ` • ${response.song.bpm} BPM`}
-                              {response.song.key && ` • ${response.song.key}`}
+                            <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontWeight: 700, fontSize: 16, fontFamily: "'Outfit', sans-serif", marginBottom: 6 }}>
+                              {response.song.title}
+                            </div>
+                            
+                            {/* Visual Metadata Badges */}
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                              {response.song.genre && <Badge color={DESIGN_SYSTEM.colors.accent.purple}>{response.song.genre}</Badge>}
+                              {response.song.mood && <Badge color={DESIGN_SYSTEM.colors.brand.primary}>{response.song.mood}</Badge>}
+                              {response.song.bpm && <Badge color={DESIGN_SYSTEM.colors.text.secondary}>{response.song.bpm} BPM</Badge>}
+                              {response.song.key && <Badge color={DESIGN_SYSTEM.colors.text.secondary}>Key: {response.song.key}</Badge>}
                             </div>
                           </div>
                         </div>
