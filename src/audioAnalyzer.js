@@ -147,7 +147,6 @@ async function transcribeLyrics(file) {
             method: 'POST',
             body: formData,
         });
-// ... rest of the function stays the same
 
         if (!response.ok) return null;
 

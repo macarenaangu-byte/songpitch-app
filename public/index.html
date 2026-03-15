@@ -25,6 +25,41 @@
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     <title>SongPitch</title>
+
+    <!-- ── Google Analytics 4 ──────────────────────────────────────────────
+         Replace G-XXXXXXXXXX with your real GA4 Measurement ID.
+         Get it from: analytics.google.com → Admin → Data Streams → your stream
+    ──────────────────────────────────────────────────────────────────────── -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-XXXXXXXXXX');
+      // Helper: call window.trackEvent('event_name', { key: value }) anywhere in the app
+      window.trackEvent = function(eventName, params) {
+        if (typeof gtag !== 'undefined') gtag('event', eventName, params || {});
+      };
+    </script>
+
+    <!-- ── Sentry Error Monitoring ─────────────────────────────────────────
+         Replace YOUR_SENTRY_DSN with your real DSN.
+         Get it from: sentry.io → Your Project → Settings → Client Keys (DSN)
+    ──────────────────────────────────────────────────────────────────────── -->
+    <script
+      src="https://browser.sentry-cdn.com/7.114.0/bundle.min.js"
+      integrity="sha384-placeholder"
+      crossorigin="anonymous"
+    ></script>
+    <script>
+      if (window.Sentry) {
+        window.Sentry.init({
+          dsn: "YOUR_SENTRY_DSN",
+          environment: "production",
+          tracesSampleRate: 0.2,
+        });
+      }
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

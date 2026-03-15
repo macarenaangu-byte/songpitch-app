@@ -26,10 +26,34 @@ const triggerEmailNotification = (userId, type, title, body, metadata) => {
   }).catch(err => console.warn('Email notification skipped:', err?.message));
 };
 
+// Check if user has opted in to a given notification type before sending email
+const shouldSendEmail = async (userId, type) => {
+  try {
+    const { data } = await supabase
+      .from('email_preferences')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+    if (!data) return true; // no preferences row = default to enabled
+    // Map notification types to preference keys
+    const prefKey = {
+      'new_response': 'new_responses',
+      'message': 'messages',
+      'opportunity': 'opportunities',
+      'song_approved': 'song_updates',
+      'song_rejected': 'song_updates',
+    }[type];
+    return prefKey ? data[prefKey] !== false : true;
+  } catch {
+    return true; // on error, default to sending
+  }
+};
+
 export const insertNotification = async (userId, type, title, body, metadata = {}) => {
   try {
     await supabase.from('notifications').insert([{ user_id: userId, type, title, body, metadata }]);
-    triggerEmailNotification(userId, type, title, body, metadata);
+    const canEmail = await shouldSendEmail(userId, type);
+    if (canEmail) triggerEmailNotification(userId, type, title, body, metadata);
   } catch (err) {
     console.error('Notification insert failed:', err);
   }
@@ -40,8 +64,11 @@ export const insertNotificationBatch = async (userIds, type, title, body, metada
   try {
     const rows = userIds.map(uid => ({ user_id: uid, type, title, body, metadata }));
     await supabase.from('notifications').insert(rows);
-    // Trigger email for each user (fire-and-forget, non-blocking)
-    userIds.forEach(uid => triggerEmailNotification(uid, type, title, body, metadata));
+    // Check preferences per user before sending email
+    userIds.forEach(async (uid) => {
+      const canEmail = await shouldSendEmail(uid, type);
+      if (canEmail) triggerEmailNotification(uid, type, title, body, metadata);
+    });
   } catch (err) {
     console.error('Batch notification insert failed:', err);
   }

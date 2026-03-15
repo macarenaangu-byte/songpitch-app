@@ -24,20 +24,70 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
   const [filterGenre, setFilterGenre] = useState("");
   const [appliedOpportunities, setAppliedOpportunities] = useState(new Set());
 
-  // Bookmarks (localStorage-backed for now — can migrate to Supabase table later)
-  const [bookmarkedOpps, setBookmarkedOpps] = useState(() => {
-    try { return new Set(JSON.parse(localStorage.getItem(`sp-bookmarks-${userProfile.id}`) || '[]')); }
-    catch { return new Set(); }
-  });
+  // Bookmarks (Supabase-backed, localStorage as migration fallback)
+  const [bookmarkedOpps, setBookmarkedOpps] = useState(new Set());
 
-  const toggleBookmark = (oppId) => {
+  useEffect(() => {
+    const loadBookmarks = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('opportunity_bookmarks')
+          .select('opportunity_id')
+          .eq('user_id', userProfile.id);
+        if (error) throw error;
+        const dbIds = new Set((data || []).map(r => r.opportunity_id));
+        // Migrate any localStorage bookmarks not yet in DB
+        const localIds = (() => {
+          try { return JSON.parse(localStorage.getItem(`sp-bookmarks-${userProfile.id}`) || '[]'); }
+          catch { return []; }
+        })();
+        const toMigrate = localIds.filter(id => !dbIds.has(id));
+        if (toMigrate.length > 0) {
+          await supabase.from('opportunity_bookmarks').upsert(
+            toMigrate.map(id => ({ user_id: userProfile.id, opportunity_id: id })),
+            { onConflict: 'user_id,opportunity_id', ignoreDuplicates: true }
+          );
+          toMigrate.forEach(id => dbIds.add(id));
+          localStorage.removeItem(`sp-bookmarks-${userProfile.id}`);
+        }
+        setBookmarkedOpps(dbIds);
+      } catch {
+        // Fall back to localStorage if table doesn't exist yet
+        try {
+          setBookmarkedOpps(new Set(JSON.parse(localStorage.getItem(`sp-bookmarks-${userProfile.id}`) || '[]')));
+        } catch { /* no-op */ }
+      }
+    };
+    if (userProfile.account_type === 'composer') loadBookmarks();
+  }, [userProfile.id, userProfile.account_type]);
+
+  const toggleBookmark = async (oppId) => {
+    const isBookmarked = bookmarkedOpps.has(oppId);
     setBookmarkedOpps(prev => {
       const next = new Set(prev);
-      if (next.has(oppId)) { next.delete(oppId); showToast("Removed from saved", "info"); }
-      else { next.add(oppId); showToast("Saved for later!", "success"); }
-      localStorage.setItem(`sp-bookmarks-${userProfile.id}`, JSON.stringify([...next]));
+      isBookmarked ? next.delete(oppId) : next.add(oppId);
       return next;
     });
+    showToast(isBookmarked ? "Removed from saved" : "Saved for later!", isBookmarked ? "info" : "success");
+    try {
+      if (isBookmarked) {
+        await supabase.from('opportunity_bookmarks').delete()
+          .eq('user_id', userProfile.id).eq('opportunity_id', oppId);
+      } else {
+        await supabase.from('opportunity_bookmarks').upsert(
+          { user_id: userProfile.id, opportunity_id: oppId },
+          { onConflict: 'user_id,opportunity_id', ignoreDuplicates: true }
+        );
+      }
+    } catch {
+      // Fallback: persist to localStorage if DB fails
+      setBookmarkedOpps(prev => {
+        const next = new Set(prev);
+        isBookmarked ? next.add(oppId) : next.delete(oppId);
+        localStorage.setItem(`sp-bookmarks-${userProfile.id}`, JSON.stringify([...next]));
+        return next;
+      });
+    }
   };
 
   // Confirm modal
@@ -65,6 +115,10 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
   const [aiNotes, setAiNotes] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResult, setAiResult] = useState(null);
+
+  // Pitch Writing Helper state
+  const [pitchSuggestion, setPitchSuggestion] = useState("");
+  const [pitchLoading, setPitchLoading] = useState(false);
 
   // Smart Matching sort preference
   const [sortBy, setSortBy] = useState('match'); // 'match' | 'newest'
@@ -393,6 +447,41 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
     showToast("Brief applied! Review and edit as needed.", "success");
   };
 
+  // Pitch Writing Helper
+  const generatePitch = async () => {
+    setPitchLoading(true);
+    setPitchSuggestion("");
+    const selectedSong = composerSongs.find(s => s.id === selectedSongId);
+    const apiUrl = process.env.REACT_APP_AI_API_URL;
+    try {
+      if (apiUrl) {
+        const response = await fetch(`${apiUrl}/generate-pitch`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            opportunity: { title: applyingTo?.title, description: applyingTo?.description, genres: applyingTo?.genres, moods: applyingTo?.metadata?.moods },
+            composer: { name: `${userProfile.first_name} ${userProfile.last_name}` },
+            song: selectedSong ? { title: selectedSong.title, genre: selectedSong.genre, mood: selectedSong.mood } : null,
+          }),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.pitch) { setPitchSuggestion(data.pitch); return; }
+        }
+      }
+      // Fallback: template-based pitch
+      const songPart = selectedSong ? `My track "${selectedSong.title}"${selectedSong.genre ? ` (${selectedSong.genre})` : ''} ` : 'My music ';
+      const moodPart = selectedSong?.mood ? `with a ${selectedSong.mood.toLowerCase()} feel ` : '';
+      const suggestion = `Hi, I'm ${userProfile.first_name} ${userProfile.last_name}. ${songPart}${moodPart}would be a great fit for "${applyingTo?.title}". I believe my style aligns well with the vision you're looking for, and I'd love the opportunity to collaborate on this project.`;
+      setPitchSuggestion(suggestion);
+    } catch {
+      const suggestion = `Hi, I'm ${userProfile.first_name} ${userProfile.last_name}. I'd love to apply for "${applyingTo?.title}". My work would be a strong fit for this project and I'm excited about the possibility of working together.`;
+      setPitchSuggestion(suggestion);
+    } finally {
+      setPitchLoading(false);
+    }
+  };
+
   const handleStatusChange = async (opp, newStatus) => {
     try {
       const { error } = await supabase
@@ -471,6 +560,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
     setApplyingTo(null);
     setApplyMessage("");
     setSelectedSongId("");
+    setPitchSuggestion("");
     setShowApplyModal(false);
   };
 
@@ -544,6 +634,9 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
 
   const isComposer = userProfile.account_type === 'composer';
 
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   const filtered = opportunities
     .filter(opp => {
       const matchesSearch = opp.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -554,6 +647,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
     .map(opp => ({
       ...opp,
       matchScore: isComposer ? computeMatchScore(opp) : 0,
+      isExpired: opp.deadline ? new Date(opp.deadline) < today : false,
     }))
     .sort((a, b) => {
       if (isComposer && sortBy === 'match') {
@@ -842,7 +936,10 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                     <span style={{ color: DESIGN_SYSTEM.colors.accent.amber, fontSize: 12, fontWeight: 600 }}>{new Date(opp.deadline).toLocaleDateString()}</span>
                   </div>
                 )}
-                <Badge color={opp.status === 'Open' ? DESIGN_SYSTEM.colors.accent.green : DESIGN_SYSTEM.colors.text.muted}>{opp.status}</Badge>
+                {opp.isExpired
+                  ? <Badge color={DESIGN_SYSTEM.colors.text.muted}>Expired</Badge>
+                  : <Badge color={opp.status === 'Open' ? DESIGN_SYSTEM.colors.accent.green : DESIGN_SYSTEM.colors.text.muted}>{opp.status}</Badge>
+                }
                 {opp.response_count > 0 && (
                   <div style={{ display: "flex", alignItems: "center", gap: 5, background: `${DESIGN_SYSTEM.colors.brand.blue}18`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.blue}33`, borderRadius: 8, padding: "6px 12px" }}>
                     <Users size={13} color={DESIGN_SYSTEM.colors.brand.blue} />
@@ -949,7 +1046,17 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
 
             <form onSubmit={handleApply}>
               <div style={{ marginBottom: 16 }}>
-                <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 8 }}>Your Pitch *</label>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600 }}>Your Pitch *</label>
+                  <button
+                    type="button"
+                    onClick={generatePitch}
+                    disabled={pitchLoading}
+                    style={{ background: `${DESIGN_SYSTEM.colors.brand.purple}20`, color: DESIGN_SYSTEM.colors.brand.purple || '#a855f7', border: `1px solid ${DESIGN_SYSTEM.colors.brand.purple || '#a855f7'}44`, borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 600, cursor: pitchLoading ? 'not-allowed' : 'pointer', fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: 4, opacity: pitchLoading ? 0.6 : 1 }}
+                  >
+                    ✨ {pitchLoading ? 'Generating...' : 'AI Help'}
+                  </button>
+                </div>
                 <textarea
                   value={applyMessage}
                   onChange={e => setApplyMessage(e.target.value)}
@@ -958,6 +1065,29 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                   rows={4}
                   style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "12px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", resize: "none", boxSizing: "border-box", fontFamily: "'Outfit', sans-serif" }}
                 />
+                {pitchSuggestion && (
+                  <div style={{ marginTop: 10, background: `${DESIGN_SYSTEM.colors.brand.primary}10`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}30`, borderRadius: 8, padding: 12 }}>
+                    <p style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 12, fontWeight: 600, marginBottom: 6 }}>✨ AI Suggestion</p>
+                    <p style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, lineHeight: 1.6, marginBottom: 10 }}>{pitchSuggestion}</p>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        type="button"
+                        onClick={() => { setApplyMessage(pitchSuggestion); setPitchSuggestion(""); }}
+                        style={{ background: DESIGN_SYSTEM.colors.brand.primary, color: '#fff', border: 'none', borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Outfit', sans-serif" }}
+                      >
+                        Use This
+                      </button>
+                      <button
+                        type="button"
+                        onClick={generatePitch}
+                        disabled={pitchLoading}
+                        style={{ background: 'transparent', color: DESIGN_SYSTEM.colors.text.muted, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Outfit', sans-serif" }}
+                      >
+                        Try Again
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div style={{ marginBottom: 20 }}>

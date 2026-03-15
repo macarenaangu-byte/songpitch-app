@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Mail, RefreshCw } from "lucide-react";
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { supabase } from '../lib/supabase';
 import { showToast } from '../lib/toast';
@@ -84,15 +84,19 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
         if (!firstName.trim() || !lastName.trim()) { setError("First and last name are required."); setLoading(false); return; }
 
         // 1. Create auth account
-        const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { emailRedirectTo: window.location.origin },
+        });
         if (signUpError) throw signUpError;
 
         // 2. If email confirmation is required, no session/JWT exists yet — skip profile insert
         //    (RLS would block it). A flag is stored so App.jsx routes to AccountSetupPage on first login.
         if (!data.session) {
           localStorage.setItem('sp_pending_signup_email', email.toLowerCase().trim());
-          showToast('Account created! Please verify your email then log in.', 'success');
-          switchView('login');
+          setAuthView('verify_email');
+          setLoading(false);
           return;
         }
 
@@ -201,6 +205,70 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
       <div style={{ flex: 1, height: 3, borderRadius: 2, background: step === 2 ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.border.light }} />
     </div>
   );
+
+  // ── EMAIL VERIFICATION SCREEN ────────────────────────────────────────────
+  if (authView === 'verify_email') {
+    const handleResend = async () => {
+      setLoading(true);
+      try {
+        const { error } = await supabase.auth.resend({ type: 'signup', email });
+        if (error) throw error;
+        showToast('Verification email resent!', 'success');
+      } catch (err) {
+        showToast(friendlyError(err), 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    return (
+      <div className="hero-animated-bg" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: "'Outfit', sans-serif" }}>
+        <div style={{ width: "100%", maxWidth: 420, background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 24, padding: 40, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, boxShadow: '0 16px 48px rgba(0,0,0,0.4)', textAlign: 'center' }}>
+          <div style={{ width: 72, height: 72, borderRadius: '50%', background: `${DESIGN_SYSTEM.colors.brand.primary}15`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+            <Mail size={32} color={DESIGN_SYSTEM.colors.brand.primary} />
+          </div>
+          <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 24, fontWeight: 800, marginBottom: 8 }}>Check your email</h1>
+          <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 14, lineHeight: 1.6, marginBottom: 8 }}>
+            We sent a verification link to
+          </p>
+          <p style={{ color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 15, fontWeight: 600, marginBottom: 28, wordBreak: 'break-all' }}>
+            {email}
+          </p>
+          <p style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, lineHeight: 1.6, marginBottom: 28 }}>
+            Click the link in the email to activate your account, then come back and sign in.
+          </p>
+          <button
+            onClick={handleResend}
+            disabled={loading}
+            style={{ width: '100%', background: DESIGN_SYSTEM.colors.brand.primary, color: DESIGN_SYSTEM.colors.text.primary, border: 'none', borderRadius: 10, padding: '13px', fontWeight: 600, fontSize: 15, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: "'Outfit', sans-serif", opacity: loading ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 16px rgba(29,185,84,0.25)', marginBottom: 12 }}
+            onMouseEnter={e => { if (!loading) e.currentTarget.style.background = DESIGN_SYSTEM.colors.brand.light; }}
+            onMouseLeave={e => { e.currentTarget.style.background = DESIGN_SYSTEM.colors.brand.primary; }}
+          >
+            <RefreshCw size={16} /> {loading ? 'Sending...' : 'Resend verification email'}
+          </button>
+          <button
+            onClick={() => { setAuthView('signup'); setSignupStep(1); setError(''); }}
+            style={{ width: '100%', background: 'none', border: 'none', color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, cursor: 'pointer', fontFamily: "'Outfit', sans-serif", padding: '8px' }}
+            onMouseEnter={e => e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.secondary}
+            onMouseLeave={e => e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.muted}
+          >
+            Wrong email? Go back
+          </button>
+          <div style={{ marginTop: 20, paddingTop: 20, borderTop: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
+            <span style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13 }}>Already verified? </span>
+            <button
+              onClick={() => switchView('login')}
+              style={{ background: 'none', border: 'none', color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: "'Outfit', sans-serif" }}
+              onMouseEnter={e => e.currentTarget.style.color = DESIGN_SYSTEM.colors.brand.light}
+              onMouseLeave={e => e.currentTarget.style.color = DESIGN_SYSTEM.colors.brand.primary}
+            >
+              Sign In
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ── SIGNUP STEP 2 — Profile info ─────────────────────────────────────────
   if (authView === 'signup' && signupStep === 2) {

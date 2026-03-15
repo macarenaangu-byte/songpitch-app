@@ -13,11 +13,9 @@ export class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    // Log to console in all environments for debugging
     console.error('ErrorBoundary caught:', error, errorInfo);
-
-    // In production, you could send to an error tracking service (e.g., Sentry)
-    // if (window.Sentry) window.Sentry.captureException(error, { extra: errorInfo });
+    // Send to Sentry if available (loaded via REACT_APP_SENTRY_DSN in public/index.html)
+    if (window.Sentry) window.Sentry.captureException(error, { extra: errorInfo });
   }
 
   render() {

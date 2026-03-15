@@ -140,11 +140,18 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
 
     // 1. Show the game/loading screen instantly
     setAnalyzing(true);
-    
+
     // 2. Pause for 100ms so the browser can paint the UI before the AI freezes it!
     setTimeout(async () => {
+      // 45-second timeout — if AI server hangs, don't trap the user forever
+      const timeoutId = setTimeout(() => {
+        setAnalyzing(false);
+        showToast("Analysis is taking too long. Fill in the details manually!", "info");
+      }, 45000);
+
       try {
         const analysis = await analyzeAudioFile(file);
+        clearTimeout(timeoutId);
         if (analysis.duration) {
           const totalSec = Math.round(analysis.duration);
           const mins = Math.floor(totalSec / 60);
@@ -158,13 +165,13 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
         if (analysis.secondaryGenre) setSecondaryGenre(analysis.secondaryGenre);
         if (analysis.lyrics) setDescription(analysis.lyrics);
       } catch (err) {
+        clearTimeout(timeoutId);
         console.error("Audio analysis failed:", err);
         showToast("Couldn't auto-analyze audio. You can fill in details manually.", "info");
       } finally {
-        // Hide the game when done
         setAnalyzing(false);
       }
-    }, 100); 
+    }, 100);
   };
 
   useEffect(() => {
@@ -374,7 +381,8 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
         if (uploadError) continue;
         const { data: urlData } = supabase.storage.from('song-files').getPublicUrl(fileName);
         const isOneStop = item.licensing_status === ONE_STOP_LABEL;
-        const { data: insertedSong } = await supabase.from('songs').insert([{ composer_id: userProfile.id, title: item.title, primary_genre: item.genre || null, secondary_genre: item.secondary_genre || null, genre: item.genre || null, duration: item.duration || null, bpm: item.bpm ? parseInt(item.bpm) : null, instrument_type: item.instrument_type || null, licensing_status: item.licensing_status || null, is_one_stop: isOneStop, verification_status: isOneStop ? 'verified' : 'pending_splits', key: item.key || null, mood: item.mood || null, mood_tags: item.mood ? [item.mood] : null, description: item.description || null, year: item.year || null, audio_url: urlData.publicUrl }]).select('id').single();
+        const { data: insertedSong, error: insertError } = await supabase.from('songs').insert([{ composer_id: userProfile.id, title: item.title, primary_genre: item.genre || null, secondary_genre: item.secondary_genre || null, genre: item.genre || null, duration: item.duration || null, bpm: item.bpm ? parseInt(item.bpm) : null, instrument_type: item.instrument_type || null, licensing_status: item.licensing_status || null, is_one_stop: isOneStop, verification_status: isOneStop ? 'verified' : 'pending_splits', key: item.key || null, mood: item.mood || null, mood_tags: item.mood ? [item.mood] : null, description: item.description || null, year: item.year || null, audio_url: urlData.publicUrl }]).select('id').single();
+        if (insertError) { console.error(`Insert failed for "${item.title}":`, insertError); continue; }
         if (isOneStop && insertedSong?.id) {
           const composerName = `${userProfile.first_name} ${userProfile.last_name}`;
           await supabase.from('split_sheets').insert([{ user_id: userProfile.id, song_id: insertedSong.id, song_title: item.title, splits: { composition: [{ name: composerName, role: 'Songwriter/Composer', percentage: 100 }], master: [{ name: composerName, role: 'Owner', percentage: 100 }] }, signature: composerName, attested: true, input_method: 'auto_one_stop' }]);

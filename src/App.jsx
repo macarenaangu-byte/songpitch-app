@@ -44,7 +44,7 @@ function OnboardingPage({ onSelectRole, savingRole }) {
     <div className="min-h-screen w-full bg-black text-white flex items-center justify-center px-6">
       <div className="w-full max-w-4xl rounded-2xl border border-zinc-800 bg-zinc-950/90 shadow-2xl p-8 md:p-10">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Welcome to the SongPitch Alpha. How will you use the platform today?</h1>
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Welcome to SongPitch. How will you use the platform today?</h1>
           <p className="mt-2 text-zinc-400">Choose your access path to continue.</p>
         </div>
 
@@ -57,7 +57,7 @@ function OnboardingPage({ onSelectRole, savingRole }) {
           >
             <div className="text-emerald-300 text-lg font-semibold">Executive</div>
             <div className="mt-2 text-zinc-300 text-sm">I am an A&amp;R/Publisher searching for cleared music.</div>
-            <div className="mt-3 text-zinc-500 text-xs">Premium Alpha access to Discovery Roster + sync-ready search.</div>
+            <div className="mt-3 text-zinc-500 text-xs">Early Access to Discovery Roster + sync-ready search.</div>
           </button>
 
           <button
@@ -132,6 +132,7 @@ export default function SongPitch() {
   const legalPageFromHashRef = useRef(!!getLegalPageFromHash()); // true if legal page was loaded from URL
   const suppressLegalPushRef = useRef(false); // prevent double history push on popstate
   const [authError, setAuthError] = useState(null);
+  const [showSessionWarning, setShowSessionWarning] = useState(false);
 
   // Global audio player - shared across all pages
   const audioPlayer = useAudioPlayer();
@@ -301,6 +302,37 @@ export default function SongPitch() {
       subscription.unsubscribe();
     };
   }, []);
+
+  // ─── Inactivity session timeout (24h) ────────────────────────────────────
+  useEffect(() => {
+    if (!session) return;
+    const INACTIVITY_MS = 24 * 60 * 60 * 1000; // 24 hours
+    const WARN_MS = 5 * 60 * 1000; // 5 min to respond before auto sign-out
+    let inactivityTimer;
+    let warnTimer;
+
+    const resetTimer = () => {
+      clearTimeout(inactivityTimer);
+      clearTimeout(warnTimer);
+      setShowSessionWarning(false);
+      inactivityTimer = setTimeout(() => {
+        setShowSessionWarning(true);
+        warnTimer = setTimeout(async () => {
+          await supabase.auth.signOut();
+        }, WARN_MS);
+      }, INACTIVITY_MS);
+    };
+
+    const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+    events.forEach(e => window.addEventListener(e, resetTimer, { passive: true }));
+    resetTimer();
+
+    return () => {
+      clearTimeout(inactivityTimer);
+      clearTimeout(warnTimer);
+      events.forEach(e => window.removeEventListener(e, resetTimer));
+    };
+  }, [session]);
 
   useEffect(() => {
     if (userProfile) {
@@ -489,7 +521,10 @@ export default function SongPitch() {
           // Check if this is a newly email-confirmed user or an OAuth user whose profile hasn't been created yet
           const pendingEmail = localStorage.getItem('sp_pending_signup_email');
           const isOAuthUser = authUser?.app_metadata?.provider && authUser.app_metadata.provider !== 'email';
-          if (pendingEmail || isOAuthUser) {
+          // Also detect users who verified email on a different device (no localStorage flag but email is confirmed)
+          const emailConfirmedAt = authUser?.email_confirmed_at;
+          const isNewlyConfirmed = emailConfirmedAt && (Date.now() - new Date(emailConfirmedAt).getTime()) < 15 * 60 * 1000; // within 15 min
+          if (pendingEmail || isOAuthUser || isNewlyConfirmed) {
             localStorage.removeItem('sp_pending_signup_email');
             setUserProfile(null);
             setShowLanding(false); // Route to AccountSetupPage
@@ -1309,6 +1344,26 @@ export default function SongPitch() {
         sidebarCollapsed={isSidebarCollapsed}
         sidebarOffset={isMobileView ? 0 : desktopSidebarWidth}
       />
+
+      {/* Session inactivity warning */}
+      {showSessionWarning && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 20 }}>
+          <div style={{ background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 20, padding: 32, maxWidth: 380, width: '100%', border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+            <h2 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 20, fontWeight: 800, fontFamily: "'Outfit', sans-serif", marginBottom: 10 }}>Still there?</h2>
+            <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
+              You've been inactive for a while. For your security, we'll sign you out in 5 minutes unless you're still here.
+            </p>
+            <button
+              onClick={() => setShowSessionWarning(false)}
+              style={{ background: DESIGN_SYSTEM.colors.brand.primary, color: '#fff', border: 'none', borderRadius: 10, padding: '12px 28px', fontWeight: 600, fontSize: 15, cursor: 'pointer', fontFamily: "'Outfit', sans-serif", boxShadow: '0 4px 16px rgba(29,185,84,0.25)' }}
+              onMouseEnter={e => e.currentTarget.style.background = DESIGN_SYSTEM.colors.brand.light}
+              onMouseLeave={e => e.currentTarget.style.background = DESIGN_SYSTEM.colors.brand.primary}
+            >
+              Yes, I'm here
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Toast Notifications */}
       <ToastContainer />

@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Users, Music, Briefcase, MessageCircle, FileText, Search, Eye, EyeOff, Shield, ChevronRight, AlertCircle } from 'lucide-react';
+import { Users, Music, Briefcase, MessageCircle, FileText, Search, Eye, EyeOff, Shield, ChevronRight, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { supabase } from '../lib/supabase';
 import { showToast } from '../lib/toast';
-import { friendlyError } from '../lib/utils';
+import { friendlyError, insertNotification } from '../lib/utils';
 import { StatCard } from '../components/StatCard';
 import { MiniChart, HorizontalBarChart } from '../components/MiniChart';
 import { Avatar } from '../components/Avatar';
@@ -104,6 +104,38 @@ export function AdminDashboardPage({ stats, userProfile, onNavigate, onViewProfi
       showToast(friendlyError(err), 'error');
     } finally {
       setSuspendingId(null);
+    }
+  };
+
+  const [verifyingId, setVerifyingId] = useState(null);
+
+  const handleVerifySong = async (song, action) => {
+    setVerifyingId(song.id);
+    try {
+      const newStatus = action === 'approve' ? 'verified' : 'rejected';
+      const { error } = await supabase
+        .from('songs')
+        .update({ verification_status: newStatus })
+        .eq('id', song.id);
+      if (error) throw error;
+
+      // Notify the composer
+      await insertNotification(
+        song.user_profile_id,
+        action === 'approve' ? 'song_approved' : 'song_rejected',
+        action === 'approve' ? 'Song Approved' : 'Song Rejected',
+        action === 'approve'
+          ? `Your song "${song.title}" has been verified and is now visible in the catalog.`
+          : `Your song "${song.title}" was not approved. Please review and re-upload if needed.`,
+        { song_id: song.id, song_title: song.title }
+      );
+
+      setPendingSongs(prev => prev.filter(s => s.id !== song.id));
+      showToast(action === 'approve' ? 'Song approved!' : 'Song rejected', action === 'approve' ? 'success' : 'info');
+    } catch (err) {
+      showToast(friendlyError(err), 'error');
+    } finally {
+      setVerifyingId(null);
     }
   };
 
@@ -363,15 +395,13 @@ export function AdminDashboardPage({ stats, userProfile, onNavigate, onViewProfi
           ) : pendingSongs.length === 0 ? (
             <div style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, padding: 16, textAlign: 'center' }}>No songs pending verification</div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {pendingSongs.map(song => (
-                <button
+                <div
                   key={song.id}
-                  onClick={() => onNavigate('catalog')}
                   style={{
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    background: 'none', border: 'none', padding: '8px 4px', cursor: 'pointer',
-                    borderRadius: 6, fontFamily: "'Outfit', sans-serif", textAlign: 'left', width: '100%',
+                    padding: '10px 4px', borderBottom: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
                   }}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -380,8 +410,25 @@ export function AdminDashboardPage({ stats, userProfile, onNavigate, onViewProfi
                       {song.user_profiles?.first_name} {song.user_profiles?.last_name} · {timeAgo(song.created_at)}
                     </div>
                   </div>
-                  <Badge color={DESIGN_SYSTEM.colors.accent.amber}>Pending</Badge>
-                </button>
+                  <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                    <button
+                      onClick={() => handleVerifySong(song, 'approve')}
+                      disabled={verifyingId === song.id}
+                      title="Approve"
+                      style={{ background: `${DESIGN_SYSTEM.colors.brand.primary}18`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}44`, borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Outfit', sans-serif", color: DESIGN_SYSTEM.colors.brand.primary, display: 'flex', alignItems: 'center', gap: 4, opacity: verifyingId === song.id ? 0.5 : 1 }}
+                    >
+                      <CheckCircle size={12} /> Approve
+                    </button>
+                    <button
+                      onClick={() => handleVerifySong(song, 'reject')}
+                      disabled={verifyingId === song.id}
+                      title="Reject"
+                      style={{ background: `${DESIGN_SYSTEM.colors.accent.red}15`, border: `1px solid ${DESIGN_SYSTEM.colors.accent.red}44`, borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Outfit', sans-serif", color: DESIGN_SYSTEM.colors.accent.red, display: 'flex', alignItems: 'center', gap: 4, opacity: verifyingId === song.id ? 0.5 : 1 }}
+                    >
+                      <XCircle size={12} /> Reject
+                    </button>
+                  </div>
+                </div>
               ))}
             </div>
           )}
