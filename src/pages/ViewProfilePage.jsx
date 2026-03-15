@@ -33,6 +33,7 @@ export function ViewProfilePage({ profileUser, currentUser, onBack, onOpenMessag
     } else {
       setLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profileUser]);
 
   useEffect(() => {

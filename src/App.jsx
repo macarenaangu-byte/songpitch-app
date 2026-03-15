@@ -39,6 +39,7 @@ const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage').then(
 // MAIN APP SHELL
 // ═════════════════════════════════════════════════════════════════════════════
 
+// eslint-disable-next-line no-unused-vars
 function OnboardingPage({ onSelectRole, savingRole }) {
   return (
     <div className="min-h-screen w-full bg-black text-white flex items-center justify-center px-6">
@@ -101,7 +102,9 @@ function getLegalPageFromHash() {
 export default function SongPitch() {
   const [session, setSession] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const [savingRole, setSavingRole] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showLanding, setShowLanding] = useState(true);  // NEW: Show landing page first
@@ -171,9 +174,10 @@ export default function SongPitch() {
     }
   }, [legalPage]);
 
-  // Always show Landing first on a fresh app load (including when a cached auth session exists).
+  // Always show Landing first on a fresh app load. Mark this history entry as landing.
   useEffect(() => {
     setShowLanding(true);
+    window.history.replaceState({ spLanding: true }, '', window.location.pathname);
   }, []);
 
   // Safety reset: when unauthenticated, default back to Landing first.
@@ -223,6 +227,18 @@ export default function SongPitch() {
 
   useEffect(() => {
     const handlePopState = (event) => {
+      // Going back to landing page
+      if (event.state?.spLanding) {
+        setShowLanding(true);
+        return;
+      }
+
+      // Going back to auth (from app pages)
+      if (event.state?.spAuth) {
+        setShowLanding(false);
+        return;
+      }
+
       // Navigating forward to a legal page
       if (event.state?.spLegal) {
         suppressLegalPushRef.current = true;
@@ -340,11 +356,13 @@ export default function SongPitch() {
       loadSidebarBadges();
       loadAnalytics();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userProfile]);
 
   useEffect(() => {
     if (!userProfile) return;
     loadSidebarBadges();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
   // ─── Notification system: load + realtime subscription ─────────────────────
@@ -415,6 +433,7 @@ export default function SongPitch() {
     return () => {
       supabase.removeChannel(channel);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userProfile]);
 
   const handleMarkRead = async (notifId) => {
@@ -566,6 +585,7 @@ export default function SongPitch() {
     }
   };
 
+  // eslint-disable-next-line no-unused-vars
   const handleCompleteOnboarding = async (role) => {
     if (!session?.user) return;
     setSavingRole(true);
@@ -883,6 +903,7 @@ export default function SongPitch() {
 
   const handleGetStarted = () => {
     setShowLanding(false);
+    window.history.pushState({ spAuth: true }, '', window.location.pathname);
   };
 
   const handleGoogleSignIn = async () => {

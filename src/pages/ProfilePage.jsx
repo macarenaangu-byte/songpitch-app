@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Edit, LogOut, Upload, Trash2, Bell, BellOff, CheckCircle } from 'lucide-react';
+import { Edit, LogOut, Upload, Trash2, Bell, CheckCircle } from 'lucide-react';
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { GENRE_OPTIONS } from '../constants/genres';
 import { supabase } from '../lib/supabase';

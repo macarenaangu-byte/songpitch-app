@@ -231,7 +231,7 @@ async function decodeAudio(file) {
 // to estimate genre. Used as fallback when ML server is unavailable.
 
 function classifyGenre(features) {
-    const { bpm, danceability, energy, dynamicComplexity, key, scale } = features;
+    const { bpm, danceability, energy, dynamicComplexity, scale } = features;
 
     // Very slow + minor key + low energy → Classical
     if (bpm && bpm < 90 && energy < 0.15 && dynamicComplexity > 3) return 'Classical';

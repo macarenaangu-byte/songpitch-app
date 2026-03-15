@@ -35,6 +35,7 @@ export function RosterPage({ accountType, onViewProfile, isMobile = false }) {
 
   useEffect(() => {
     loadComposers();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountType, selectedPro, selectedGenre, adminViewMode, debouncedSearch, sortBy]);
 
   const buildQuery = (from, to) => {

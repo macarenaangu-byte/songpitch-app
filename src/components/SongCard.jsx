@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Play, Pause, Music, Edit, Trash2, Clock, Shield, Zap, CheckCircle, AlertTriangle } from "lucide-react";
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { Badge } from './Badge';

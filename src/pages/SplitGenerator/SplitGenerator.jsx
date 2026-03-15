@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { FileText, Mic, Camera, Upload, Plus, Trash2, ChevronDown, ChevronUp, Clock, X, Music, Disc, Search, CheckCircle, AlertTriangle, Shield, Equal } from 'lucide-react';
+import { FileText, Mic, Camera, Upload, Plus, Trash2, ChevronDown, ChevronUp, Clock, X, Music, Disc, Search, CheckCircle, AlertTriangle, Equal } from 'lucide-react';
 import { DESIGN_SYSTEM } from '../../constants/designSystem';
 import { supabase } from '../../lib/supabase';
 import { showToast } from '../../lib/toast';

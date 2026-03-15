@@ -16,7 +16,7 @@ export function AccountSetupPage({ user, onComplete }) {
     const parts = googleName.split(' ');
     return parts.length > 1 ? parts.slice(1).join(' ') : '';
   });
-  const [bio, setBio] = useState("");
+  const [bio] = useState("");
   const [location, setLocation] = useState("");
   const [linkedInUrl, setLinkedInUrl] = useState("");
 
@@ -62,7 +62,7 @@ export function AccountSetupPage({ user, onComplete }) {
 
       // UPSERT is crucial here: it updates the row if Supabase Auth already created a blank one, 
       // or inserts it if it doesn't exist. This prevents hidden database errors.
-      const { data: profileData, error: profileError } = await supabase
+      const { error: profileError } = await supabase
         .from('user_profiles')
         .upsert(profilePayload, { onConflict: 'user_id' })
         .select()

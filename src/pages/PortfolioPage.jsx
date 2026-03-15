@@ -176,6 +176,7 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
 
   useEffect(() => {
     loadSongs();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadSongs = async () => {

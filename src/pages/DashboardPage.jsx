@@ -1,8 +1,7 @@
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { StatCard } from '../components/StatCard';
-import { ProfileBadges } from '../components/ProfileBadges';
 import { MiniChart } from '../components/MiniChart';
-import { CheckCircle, Circle, Users, Music, Briefcase, MessageCircle, FileText, Search, Eye, User, TrendingUp, ChevronRight, Award, Sparkles } from 'lucide-react';
+import { CheckCircle, Circle, Users, Music, Briefcase, MessageCircle, FileText, Search, Eye, User, Sparkles } from 'lucide-react';
 
 export function DashboardPage({ user, stats, onNavigate, isMobile = false, analytics }) {
   // Calculate total platform stats for trust signals

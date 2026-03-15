@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Users, Music, Briefcase, MessageCircle, FileText, Search, Eye, EyeOff, Shield, ChevronRight, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { Users, Music, Briefcase, MessageCircle, FileText, Search, Eye, EyeOff, Shield, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { supabase } from '../lib/supabase';
 import { showToast } from '../lib/toast';

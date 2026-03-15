@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "songpitch-dev",
-      "runtimeExecutable": "/usr/local/bin/node",
-      "runtimeArgs": ["/Users/macarena.nadeau/Desktop/songpitch-app/node_modules/.bin/react-scripts", "start"],
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["start"],
       "port": 3000
     }
   ]

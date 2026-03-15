@@ -135,6 +135,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
       loadComposerSongs();
       loadUserApplications();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userProfile]);
 
   const loadUserApplications = async () => {

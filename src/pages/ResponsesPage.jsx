@@ -70,6 +70,7 @@ export function ResponsesPage({ userProfile, onNavigate, onViewProfile, audioPla
 
   useEffect(() => {
     loadOpportunities();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleContactComposer = async (composerId) => {

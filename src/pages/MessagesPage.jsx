@@ -30,11 +30,13 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
   useEffect(() => {
     loadConversations();
     loadPinnedChats();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (!supportTargetUserId || !supportOpenToken) return;
     openConversationWithUser(supportTargetUserId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supportTargetUserId, supportOpenToken]);
 
   useEffect(() => {
@@ -92,6 +94,7 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
     return () => {
       supabase.removeChannel(channel);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userProfile?.id, selectedConversation?.id]);
 
   useEffect(() => {
@@ -135,6 +138,7 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
         supabase.removeChannel(channel);
       };
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedConversation]);
 
   const loadConversations = async () => {

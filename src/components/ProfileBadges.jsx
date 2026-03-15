@@ -1,4 +1,3 @@
-import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { PROFILE_BADGES } from '../constants/genres';
 
 export function ProfileBadges({ user }) {
