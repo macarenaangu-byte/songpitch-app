@@ -254,6 +254,21 @@ export function ViewProfilePage({ profileUser, currentUser, onBack, onOpenMessag
               </div>
             )}
 
+            {profileUser.sync_credits && profileUser.sync_credits.length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, marginBottom: 8 }}>Sync Credits</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  {profileUser.sync_credits.map((c, i) => (
+                    <div key={i} style={{ fontSize: 13, color: DESIGN_SYSTEM.colors.text.primary, background: DESIGN_SYSTEM.colors.bg.elevated || DESIGN_SYSTEM.colors.bg.primary, borderRadius: 6, padding: "6px 10px", border: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
+                      <span style={{ fontWeight: 600 }}>{c.project}</span>
+                      {c.platform && <span style={{ color: DESIGN_SYSTEM.colors.text.tertiary }}> — {c.platform}</span>}
+                      {c.year && <span style={{ color: DESIGN_SYSTEM.colors.text.muted }}>, {c.year}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <button onClick={handleContact} style={{ background: DESIGN_SYSTEM.colors.brand.primary, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 10, padding: "12px 24px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Outfit', sans-serif", display: "inline-flex", alignItems: "center", gap: 8 }}>
               <MessageCircle size={16} /> Contact {profileUser.first_name}
             </button>

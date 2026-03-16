@@ -6,6 +6,7 @@ import { showToast } from '../lib/toast';
 import { friendlyError, insertNotification } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
 import { Badge } from '../components/Badge';
+import { VerifiedRightsModal } from '../components/VerifiedRightsModal';
 
 export function ResponsesPage({ userProfile, onNavigate, onViewProfile, audioPlayer, isMobile = false }) {
   const [opportunities, setOpportunities] = useState([]);
@@ -14,6 +15,7 @@ export function ResponsesPage({ userProfile, onNavigate, onViewProfile, audioPla
   const [loading, setLoading] = useState(true);
   const [contactingId, setContactingId] = useState(null);
   const [reviewFilter, setReviewFilter] = useState('all');
+  const [viewingRightsSong, setViewingRightsSong] = useState(null);
 
   const shortlistedIds = new Set(responses.filter(r => r.review_status === 'shortlisted').map(r => r.id));
   const rejectedIds = new Set(responses.filter(r => r.review_status === 'rejected').map(r => r.id));
@@ -166,7 +168,8 @@ const loadResponses = async (oppId) => {
             bpm,
             key,
             mood,
-            audio_url
+            audio_url,
+            verification_status
           )
         `)
         .eq('opportunity_id', oppId)
@@ -309,7 +312,7 @@ const loadResponses = async (oppId) => {
                     </div>
                     
                     <div style={{ flex: 1 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
                         {/* Clickable Name */}
                         <h3
                           onClick={() => onViewProfile && onViewProfile(response.composer)}
@@ -322,6 +325,11 @@ const loadResponses = async (oppId) => {
                         {response.composer.is_one_stop && (
                           <CheckCircle size={14} color={DESIGN_SYSTEM.colors.brand.primary} title="Verified One-Stop" />
                         )}
+                        {(response.composer.pro_name || response.composer.pro) && (
+                          <span style={{ fontSize: 11, fontWeight: 700, color: DESIGN_SYSTEM.colors.brand.blue, background: `${DESIGN_SYSTEM.colors.brand.blue}15`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.blue}30`, borderRadius: 4, padding: '2px 6px' }}>
+                            {response.composer.pro_name || response.composer.pro}
+                          </span>
+                        )}
                       </div>
                       
                       <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13, marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
@@ -331,14 +339,24 @@ const loadResponses = async (oppId) => {
                       </div>
                       
                       {/* Explicit View Profile Button */}
-                      {onViewProfile && (
-                        <button 
-                          onClick={() => onViewProfile(response.composer)}
-                          style={{ background: 'transparent', border: 'none', color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 4, fontFamily: "'Outfit', sans-serif" }}
-                        >
-                          View Full Profile <ExternalLink size={12} />
-                        </button>
-                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        {onViewProfile && (
+                          <button
+                            onClick={() => onViewProfile(response.composer)}
+                            style={{ background: 'transparent', border: 'none', color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 4, fontFamily: "'Outfit', sans-serif" }}
+                          >
+                            View Full Profile <ExternalLink size={12} />
+                          </button>
+                        )}
+                        {response.song?.verification_status === 'verified' && (
+                          <button
+                            onClick={() => setViewingRightsSong(response.song)}
+                            style={{ background: 'transparent', border: 'none', color: DESIGN_SYSTEM.colors.accent.green, fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 4, fontFamily: "'Outfit', sans-serif" }}
+                          >
+                            <CheckCircle size={12} /> View Rights
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                       <button onClick={() => toggleShortlist(response.id)} title={shortlistedIds.has(response.id) ? 'Remove from shortlist' : 'Shortlist'} style={{ background: shortlistedIds.has(response.id) ? `${DESIGN_SYSTEM.colors.brand.primary}22` : 'transparent', border: `1px solid ${shortlistedIds.has(response.id) ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, color: shortlistedIds.has(response.id) ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.text.muted, fontFamily: "'Outfit', sans-serif", transition: 'all 0.2s' }}>
@@ -405,6 +423,11 @@ const loadResponses = async (oppId) => {
           )}
         </>
       )}
+      <VerifiedRightsModal
+        open={!!viewingRightsSong}
+        onClose={() => setViewingRightsSong(null)}
+        song={viewingRightsSong}
+      />
     </div>
   );
 }

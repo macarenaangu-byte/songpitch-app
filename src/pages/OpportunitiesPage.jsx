@@ -119,6 +119,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
   // Pitch Writing Helper state
   const [pitchSuggestion, setPitchSuggestion] = useState("");
   const [pitchLoading, setPitchLoading] = useState(false);
+  const [pitchTone, setPitchTone] = useState('professional'); // 'professional' | 'personal' | 'story'
 
   // Smart Matching sort preference
   const [sortBy, setSortBy] = useState('match'); // 'match' | 'newest'
@@ -463,6 +464,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
             opportunity: { title: applyingTo?.title, description: applyingTo?.description, genres: applyingTo?.genres, moods: applyingTo?.metadata?.moods },
             composer: { name: `${userProfile.first_name} ${userProfile.last_name}` },
             song: selectedSong ? { title: selectedSong.title, genre: selectedSong.genre, mood: selectedSong.mood } : null,
+            tone: pitchTone,
           }),
         });
         if (response.ok) {
@@ -470,10 +472,23 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
           if (data.pitch) { setPitchSuggestion(data.pitch); return; }
         }
       }
-      // Fallback: template-based pitch
-      const songPart = selectedSong ? `My track "${selectedSong.title}"${selectedSong.genre ? ` (${selectedSong.genre})` : ''} ` : 'My music ';
-      const moodPart = selectedSong?.mood ? `with a ${selectedSong.mood.toLowerCase()} feel ` : '';
-      const suggestion = `Hi, I'm ${userProfile.first_name} ${userProfile.last_name}. ${songPart}${moodPart}would be a great fit for "${applyingTo?.title}". I believe my style aligns well with the vision you're looking for, and I'd love the opportunity to collaborate on this project.`;
+      // Fallback: 3 distinct tone templates
+      const name = `${userProfile.first_name} ${userProfile.last_name}`;
+      const songTitle = selectedSong?.title || 'my track';
+      const genre = selectedSong?.genre || '';
+      const mood = selectedSong?.mood ? selectedSong.mood.toLowerCase() : '';
+      const bpm = selectedSong?.bpm ? `${selectedSong.bpm}BPM` : '';
+      const licensing = selectedSong?.is_one_stop ? 'One-Stop (master & publishing 100% cleared)' : selectedSong?.licensing_status || 'rights available';
+      const oppTitle = applyingTo?.title || 'your brief';
+
+      let suggestion;
+      if (pitchTone === 'professional') {
+        suggestion = `Hi — "${songTitle}"${genre ? ` is a ${genre} track` : ''}${bpm ? ` at ${bpm}` : ''}${mood ? ` with a ${mood} feel` : ''}. It's a strong match for "${oppTitle}". ${licensing}. Happy to send stems or alternate mixes on request.\n\n— ${name}`;
+      } else if (pitchTone === 'personal') {
+        suggestion = `Hi — I'm ${name}. Something about "${oppTitle}" made me think of "${songTitle}" immediately. It's ${mood ? `${mood}, ` : ''}${genre ? `${genre}, ` : ''}${bpm ? `${bpm} — ` : ''}but more than the metadata, it carries an energy I think fits what you're looking for. ${licensing}. Would love for you to hear it.`;
+      } else {
+        suggestion = `"${songTitle}" started with a specific feeling — ${mood || 'something hard to put into words'}. ${genre ? `It's ${genre}${bpm ? ` at ${bpm}` : ''}` : ''}${mood ? `, built around that ${mood} energy` : ''}. When I read "${oppTitle}", this track came to mind first. ${licensing}.\n\n— ${name}`;
+      }
       setPitchSuggestion(suggestion);
     } catch {
       const suggestion = `Hi, I'm ${userProfile.first_name} ${userProfile.last_name}. I'd love to apply for "${applyingTo?.title}". My work would be a strong fit for this project and I'm excited about the possibility of working together.`;
@@ -562,6 +577,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
     setApplyMessage("");
     setSelectedSongId("");
     setPitchSuggestion("");
+    setPitchTone('professional');
     setShowApplyModal(false);
   };
 
@@ -1046,6 +1062,33 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
             </div>
 
             <form onSubmit={handleApply}>
+              {/* Pitch Tone Selector */}
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>Pitch Tone</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {[
+                    { key: 'professional', label: '🎯 Professional', desc: 'Concise & direct' },
+                    { key: 'personal', label: '💬 Personal', desc: 'Warm & authentic' },
+                    { key: 'story', label: '📖 Story', desc: "Lead with the track's feel" },
+                  ].map(({ key, label, desc }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => { setPitchTone(key); setPitchSuggestion(""); }}
+                      style={{
+                        flex: 1, background: pitchTone === key ? `${DESIGN_SYSTEM.colors.brand.purple}22` : DESIGN_SYSTEM.colors.bg.primary,
+                        border: `1px solid ${pitchTone === key ? DESIGN_SYSTEM.colors.brand.purple : DESIGN_SYSTEM.colors.border.light}`,
+                        borderRadius: 8, padding: '8px 6px', cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      <div style={{ fontSize: 12, fontWeight: 700, color: pitchTone === key ? DESIGN_SYSTEM.colors.brand.purple : DESIGN_SYSTEM.colors.text.primary, marginBottom: 2 }}>{label}</div>
+                      <div style={{ fontSize: 10, color: DESIGN_SYSTEM.colors.text.muted }}>{desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div style={{ marginBottom: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                   <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600 }}>Your Pitch *</label>

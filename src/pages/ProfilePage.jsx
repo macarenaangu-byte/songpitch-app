@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Edit, LogOut, Upload, Trash2, Bell, CheckCircle } from 'lucide-react';
+import { Edit, LogOut, Upload, Trash2, Bell, CheckCircle, Plus, X } from 'lucide-react';
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { GENRE_OPTIONS } from '../constants/genres';
 import { supabase } from '../lib/supabase';
@@ -33,6 +33,9 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
   const [role, setRole] = useState(user.role || "");
   const [instruments, setInstruments] = useState(user.instruments || "");
   const [genres, setGenres] = useState(user.genres || []);
+
+  // Sync credits (composers only)
+  const [syncCredits, setSyncCredits] = useState(user.sync_credits || []);
 
   // Executive specific
   const [company, setCompany] = useState(user.company || "");
@@ -158,7 +161,7 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
       if (user.account_type === 'composer' || user.account_type === 'admin') {
         updateData.instagram_url = instagramUrl.trim() || null;
         updateData.pro_name = proName.trim() || null;
-        updateData.pro = proName.trim() || null; 
+        updateData.pro = proName.trim() || null;
         updateData.pro_url = proUrl.trim() || null;
         updateData.cae_ipi = caeIpi.trim() || null;
         updateData.publishing_status = publishingStatus || null;
@@ -166,6 +169,7 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
         updateData.role = role || null;
         updateData.instruments = instruments || null;
         updateData.genres = Array.isArray(genres) && genres.length > 0 ? genres : null;
+        updateData.sync_credits = syncCredits.filter(c => c.project.trim());
       }
 
       if (user.account_type === 'music_executive' || user.account_type === 'admin') {
@@ -276,6 +280,26 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                         {user.genres.map(g => <Badge key={g} color={DESIGN_SYSTEM.colors.accent.purple}>{g}</Badge>)}
                       </div>
+                    </div>
+                  )}
+                  {user.sync_credits && user.sync_credits.length > 0 && (
+                    <div style={{ marginBottom: 12 }}>
+                      <span style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13, display: "block", marginBottom: 8 }}>Sync Credits</span>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        {user.sync_credits.map((c, i) => (
+                          <div key={i} style={{ fontSize: 13, color: DESIGN_SYSTEM.colors.text.primary, background: DESIGN_SYSTEM.colors.bg.primary, borderRadius: 6, padding: "6px 10px", border: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
+                            <span style={{ fontWeight: 600 }}>{c.project}</span>
+                            {c.platform && <span style={{ color: DESIGN_SYSTEM.colors.text.tertiary }}> — {c.platform}</span>}
+                            {c.year && <span style={{ color: DESIGN_SYSTEM.colors.text.muted }}>, {c.year}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {(!user.sync_credits || user.sync_credits.length === 0) && (
+                    <div style={{ marginBottom: 12 }}>
+                      <span style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13, display: "block", marginBottom: 4 }}>Sync Credits</span>
+                      <button onClick={() => setEditing(true)} style={{ background: 'transparent', border: 'none', color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: "'Outfit', sans-serif" }}>+ Add your first sync credit</button>
                     </div>
                   )}
                 </>
@@ -483,6 +507,34 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
                         <option value="">Select Status...</option>
                         {pubStatusOptions.map(p => <option key={p} value={p}>{p}</option>)}
                       </select>
+                    </div>
+
+                    {/* Sync Credits */}
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600 }}>Sync Credits</label>
+                        {syncCredits.length < 10 && (
+                          <button type="button" onClick={() => setSyncCredits(prev => [...prev, { project: '', platform: '', year: '' }])} style={{ background: `${DESIGN_SYSTEM.colors.brand.primary}18`, color: DESIGN_SYSTEM.colors.brand.primary, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}33`, borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Plus size={12} /> Add Credit
+                          </button>
+                        )}
+                      </div>
+                      {syncCredits.length === 0 ? (
+                        <p style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 12, fontStyle: 'italic' }}>No credits yet — add placements like "Netflix Documentary (2024)" or "Apple Music ad".</p>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          {syncCredits.map((credit, i) => (
+                            <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: 6, alignItems: 'center', background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: '8px 10px' }}>
+                              <input type="text" value={credit.project} onChange={e => { const u = [...syncCredits]; u[i] = { ...u[i], project: e.target.value }; setSyncCredits(u); }} placeholder="Project name *" style={{ background: 'transparent', border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: '6px 8px', color: DESIGN_SYSTEM.colors.text.primary, fontSize: 12, outline: 'none', fontFamily: "'Outfit', sans-serif" }} />
+                              <input type="text" value={credit.platform} onChange={e => { const u = [...syncCredits]; u[i] = { ...u[i], platform: e.target.value }; setSyncCredits(u); }} placeholder="Platform / Network" style={{ background: 'transparent', border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: '6px 8px', color: DESIGN_SYSTEM.colors.text.primary, fontSize: 12, outline: 'none', fontFamily: "'Outfit', sans-serif" }} />
+                              <input type="text" value={credit.year} onChange={e => { const u = [...syncCredits]; u[i] = { ...u[i], year: e.target.value }; setSyncCredits(u); }} placeholder="Year" style={{ background: 'transparent', border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: '6px 8px', color: DESIGN_SYSTEM.colors.text.primary, fontSize: 12, outline: 'none', fontFamily: "'Outfit', sans-serif", width: 60 }} />
+                              <button type="button" onClick={() => setSyncCredits(prev => prev.filter((_, idx) => idx !== i))} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 4, color: DESIGN_SYSTEM.colors.text.muted, display: 'flex', alignItems: 'center' }}>
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     <div style={{ marginBottom: 12 }}>

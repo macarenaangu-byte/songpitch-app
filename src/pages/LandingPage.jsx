@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Music, Briefcase, Headphones, MessageCircle, Users, Shield, ChevronDown, ChevronUp, Play, Star, CheckCircle } from 'lucide-react';
+import { Search, Music, Briefcase, Headphones, MessageCircle, Users, Shield, ChevronDown, ChevronUp, Play, Star, CheckCircle, Lock, Zap } from 'lucide-react';
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 
 const FAQ_ITEMS = [
@@ -409,6 +409,50 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
               <p style={{ fontSize: 13, color: DESIGN_SYSTEM.colors.text.secondary, lineHeight: 1.6, margin: 0 }}>{f.desc}</p>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* ── Trust Signals: Rights-Ready ─────────────────────────────────── */}
+      <div style={{ maxWidth: 960, margin: "0 auto", padding: "0 48px 80px" }}>
+        <div style={{
+          background: DESIGN_SYSTEM.colors.bg.card,
+          border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
+          borderRadius: 20, padding: '48px 40px', textAlign: 'center',
+        }}>
+          <h2 style={{ fontSize: 32, fontWeight: 800, marginBottom: 8 }}>Every track is rights-ready</h2>
+          <p style={{ fontSize: 15, color: DESIGN_SYSTEM.colors.text.secondary, maxWidth: 520, margin: "0 auto 40px", lineHeight: 1.7 }}>
+            Before any track reaches your search results, the legal infrastructure is already in place.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 24 }}>
+            {[
+              {
+                icon: <Lock size={22} />,
+                color: DESIGN_SYSTEM.colors.brand.primary,
+                title: 'Verified Split Sheets',
+                desc: 'Every track has a documented composition and master split sheet before it appears in search results.',
+              },
+              {
+                icon: <CheckCircle size={22} />,
+                color: DESIGN_SYSTEM.colors.brand.blue,
+                title: 'PRO-Registered Composers',
+                desc: "Composers connect their ASCAP, BMI, SESAC, or SOCAN registration so you know who you're dealing with.",
+              },
+              {
+                icon: <Zap size={22} />,
+                color: DESIGN_SYSTEM.colors.accent.amber,
+                title: 'One-Stop Priority',
+                desc: 'Filter for 100% One-Stop tracks — master and publishing owned by one person. Faster clearance, fewer conversations.',
+              },
+            ].map(({ icon, color, title, desc }) => (
+              <div key={title} style={{ background: `${color}08`, border: `1px solid ${color}22`, borderRadius: 14, padding: 24 }}>
+                <div style={{ width: 44, height: 44, borderRadius: 11, background: `${color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', color }}>
+                  {icon}
+                </div>
+                <h4 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>{title}</h4>
+                <p style={{ fontSize: 13, color: DESIGN_SYSTEM.colors.text.secondary, lineHeight: 1.6, margin: 0 }}>{desc}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
