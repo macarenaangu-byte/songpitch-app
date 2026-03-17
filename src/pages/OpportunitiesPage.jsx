@@ -118,6 +118,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
 
   // Pitch Writing Helper state
   const [pitchSuggestion, setPitchSuggestion] = useState("");
+  const [pitchMetaNote, setPitchMetaNote] = useState("");
   const [pitchLoading, setPitchLoading] = useState(false);
   const [pitchTone, setPitchTone] = useState('professional'); // 'professional' | 'personal' | 'story'
 
@@ -449,49 +450,65 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
     showToast("Brief applied! Review and edit as needed.", "success");
   };
 
-  // Pitch Writing Helper
+  // Pitch Writing Helper — reads existing text + returns metadata suggestions
   const generatePitch = async () => {
     setPitchLoading(true);
     setPitchSuggestion("");
+    setPitchMetaNote("");
     const selectedSong = composerSongs.find(s => s.id === selectedSongId);
-    const apiUrl = process.env.REACT_APP_AI_API_URL;
+    const isPolishMode = applyMessage && applyMessage.trim().length > 10;
     try {
-      if (apiUrl) {
-        const response = await fetch(`${apiUrl}/generate-pitch`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            opportunity: { title: applyingTo?.title, description: applyingTo?.description, genres: applyingTo?.genres, moods: applyingTo?.metadata?.moods },
-            composer: { name: `${userProfile.first_name} ${userProfile.last_name}` },
-            song: selectedSong ? { title: selectedSong.title, genre: selectedSong.genre, mood: selectedSong.mood } : null,
-            tone: pitchTone,
-          }),
-        });
-        if (response.ok) {
-          const data = await response.json();
-          if (data.pitch) { setPitchSuggestion(data.pitch); return; }
+      const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+      const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+      const response = await fetch(`${supabaseUrl}/functions/v1/pitch-helper`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+          'apikey': supabaseKey,
+        },
+        body: JSON.stringify({
+          existingPitch: isPolishMode ? applyMessage : null,
+          song: selectedSong || null,
+          opportunity: {
+            title: applyingTo?.title,
+            description: applyingTo?.description,
+            genres: applyingTo?.genres,
+            moods: applyingTo?.metadata?.moods,
+          },
+          tone: pitchTone,
+          composerName: `${userProfile.first_name} ${userProfile.last_name}`,
+        }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.pitch) {
+          setPitchSuggestion(data.pitch);
+          if (data.metadata_note) setPitchMetaNote(data.metadata_note);
+          return;
         }
       }
-      // Fallback: 3 distinct tone templates
+      throw new Error('AI unavailable');
+    } catch {
+      // Fallback: quality templates based on real A&R pitch patterns
       const name = `${userProfile.first_name} ${userProfile.last_name}`;
+      const selectedSong = composerSongs.find(s => s.id === selectedSongId);
       const songTitle = selectedSong?.title || 'my track';
       const genre = selectedSong?.genre || '';
       const mood = selectedSong?.mood ? selectedSong.mood.toLowerCase() : '';
-      const bpm = selectedSong?.bpm ? `${selectedSong.bpm}BPM` : '';
-      const licensing = selectedSong?.is_one_stop ? 'One-Stop (master & publishing 100% cleared)' : selectedSong?.licensing_status || 'rights available';
+      const bpm = selectedSong?.bpm ? `${selectedSong.bpm} BPM` : '';
+      const licensing = selectedSong?.is_one_stop
+        ? 'One-Stop cleared (master + publishing)'
+        : selectedSong?.licensing_status || 'rights available for licensing';
       const oppTitle = applyingTo?.title || 'your brief';
-
       let suggestion;
       if (pitchTone === 'professional') {
-        suggestion = `Hi — "${songTitle}"${genre ? ` is a ${genre} track` : ''}${bpm ? ` at ${bpm}` : ''}${mood ? ` with a ${mood} feel` : ''}. It's a strong match for "${oppTitle}". ${licensing}. Happy to send stems or alternate mixes on request.\n\n— ${name}`;
+        suggestion = `"${songTitle}"${genre ? ` — ${genre}` : ''}${bpm ? `, ${bpm}` : ''}${mood ? `, ${mood}` : ''}. Written for "${oppTitle}" specifically: the energy and production match what you've described. ${licensing}. Stems available on request.\n\n— ${name}`;
       } else if (pitchTone === 'personal') {
-        suggestion = `Hi — I'm ${name}. Something about "${oppTitle}" made me think of "${songTitle}" immediately. It's ${mood ? `${mood}, ` : ''}${genre ? `${genre}, ` : ''}${bpm ? `${bpm} — ` : ''}but more than the metadata, it carries an energy I think fits what you're looking for. ${licensing}. Would love for you to hear it.`;
+        suggestion = `Hi — I'm ${name}. The moment I read "${oppTitle}" I thought of "${songTitle}". It's ${[mood, genre, bpm].filter(Boolean).join(', ')} — but more than the tags, it has the specific feeling your brief is chasing. ${licensing}.`;
       } else {
-        suggestion = `"${songTitle}" started with a specific feeling — ${mood || 'something hard to put into words'}. ${genre ? `It's ${genre}${bpm ? ` at ${bpm}` : ''}` : ''}${mood ? `, built around that ${mood} energy` : ''}. When I read "${oppTitle}", this track came to mind first. ${licensing}.\n\n— ${name}`;
+        suggestion = `"${songTitle}" opens in a ${mood || 'specific'} space${genre ? ` — ${genre}` : ''}${bpm ? `, ${bpm}` : ''}. The production was built to feel like ${mood || 'that moment you can't describe but immediately recognize'}. When I read "${oppTitle}", this was the only track I considered. ${licensing}.\n\n— ${name}`;
       }
-      setPitchSuggestion(suggestion);
-    } catch {
-      const suggestion = `Hi, I'm ${userProfile.first_name} ${userProfile.last_name}. I'd love to apply for "${applyingTo?.title}". My work would be a strong fit for this project and I'm excited about the possibility of working together.`;
       setPitchSuggestion(suggestion);
     } finally {
       setPitchLoading(false);
@@ -1098,7 +1115,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                     disabled={pitchLoading}
                     style={{ background: `${DESIGN_SYSTEM.colors.brand.purple}20`, color: DESIGN_SYSTEM.colors.brand.purple || '#a855f7', border: `1px solid ${DESIGN_SYSTEM.colors.brand.purple || '#a855f7'}44`, borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 600, cursor: pitchLoading ? 'not-allowed' : 'pointer', fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: 4, opacity: pitchLoading ? 0.6 : 1 }}
                   >
-                    ✨ {pitchLoading ? 'Generating...' : 'AI Help'}
+                    ✨ {pitchLoading ? (applyMessage?.trim().length > 10 ? 'Polishing...' : 'Generating...') : (applyMessage?.trim().length > 10 ? 'Polish My Pitch' : 'AI Help')}
                   </button>
                 </div>
                 <textarea
@@ -1111,12 +1128,20 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                 />
                 {pitchSuggestion && (
                   <div style={{ marginTop: 10, background: `${DESIGN_SYSTEM.colors.brand.primary}10`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}30`, borderRadius: 8, padding: 12 }}>
-                    <p style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 12, fontWeight: 600, marginBottom: 6 }}>✨ AI Suggestion</p>
-                    <p style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, lineHeight: 1.6, marginBottom: 10 }}>{pitchSuggestion}</p>
+                    <p style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
+                      ✨ {applyMessage?.trim().length > 10 ? 'Polished Version' : 'AI Suggestion'}
+                    </p>
+                    <p style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, lineHeight: 1.6, marginBottom: 10, whiteSpace: 'pre-wrap' }}>{pitchSuggestion}</p>
+                    {pitchMetaNote && (
+                      <div style={{ background: `${DESIGN_SYSTEM.colors.brand.purple}12`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.purple}30`, borderRadius: 6, padding: '8px 10px', marginBottom: 10 }}>
+                        <p style={{ color: DESIGN_SYSTEM.colors.brand.purple || '#a855f7', fontSize: 11, fontWeight: 700, marginBottom: 3 }}>💡 Metadata Tip</p>
+                        <p style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 12, lineHeight: 1.5, margin: 0 }}>{pitchMetaNote}</p>
+                      </div>
+                    )}
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button
                         type="button"
-                        onClick={() => { setApplyMessage(pitchSuggestion); setPitchSuggestion(""); }}
+                        onClick={() => { setApplyMessage(pitchSuggestion); setPitchSuggestion(""); setPitchMetaNote(""); }}
                         style={{ background: DESIGN_SYSTEM.colors.brand.primary, color: '#fff', border: 'none', borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Outfit', sans-serif" }}
                       >
                         Use This
