@@ -18,6 +18,7 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
   const [pinnedChats, setPinnedChats] = useState(new Set());
   const messagesEndRef = useRef(null);
   const currentPinnedUserId = userProfile?.user_id || userProfile?.id;
+  const isFounderSupportUser = (u) => u?.account_type === 'admin' || u?.email === 'mangulo@songpitchhub.com';
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {

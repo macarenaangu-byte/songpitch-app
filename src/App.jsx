@@ -798,6 +798,27 @@ export default function SongPitch() {
           .eq('viewed_profile_id', userProfile.id)
           .gte('created_at', weekAgoISO);
         result.profileViewsWeek = groupByDay(views || []);
+
+        // Recent viewers (last 8, for "who viewed my profile")
+        const { data: recentViewData } = await supabase
+          .from('profile_views')
+          .select('viewer_user_id, created_at')
+          .eq('viewed_profile_id', userProfile.id)
+          .order('created_at', { ascending: false })
+          .limit(8);
+        if (recentViewData && recentViewData.length > 0) {
+          const viewerIds = [...new Set(recentViewData.map(v => v.viewer_user_id).filter(Boolean))];
+          const { data: viewerProfiles } = await supabase
+            .from('user_profiles')
+            .select('id, user_id, first_name, last_name, account_type, avatar_color')
+            .in('user_id', viewerIds);
+          result.recentViewers = recentViewData
+            .filter(v => v.viewer_user_id)
+            .map(v => ({ ...v, profile: (viewerProfiles || []).find(p => p.user_id === v.viewer_user_id) }))
+            .filter(v => v.profile);
+        } else {
+          result.recentViewers = [];
+        }
       }
 
       if (isExec || isAdmin) {

@@ -23,6 +23,8 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
   const [search, setSearch] = useState("");
   const [filterGenre, setFilterGenre] = useState("");
   const [appliedOpportunities, setAppliedOpportunities] = useState(new Set());
+  const [applicationStatuses, setApplicationStatuses] = useState({});
+  const [submitting, setSubmitting] = useState(false);
 
   // Bookmarks (Supabase-backed, localStorage as migration fallback)
   const [bookmarkedOpps, setBookmarkedOpps] = useState(new Set());
@@ -144,13 +146,16 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
     try {
       const { data, error } = await supabase
         .from('responses')
-        .select('opportunity_id')
+        .select('opportunity_id, review_status')
         .eq('composer_id', userProfile.id);
 
       if (error) throw error;
 
       const appliedIds = new Set(data.map(r => r.opportunity_id));
+      const statuses = {};
+      data.forEach(r => { statuses[r.opportunity_id] = r.review_status; });
       setAppliedOpportunities(appliedIds);
+      setApplicationStatuses(statuses);
     } catch (err) {
       console.error("Error loading applications:", err);
     }
@@ -597,7 +602,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
       return;
     }
 
-    setLoading(true);
+    setSubmitting(true);
     try {
       const isEditing = appliedOpportunities.has(applyingTo.id);
 
@@ -653,7 +658,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
     } catch (err) {
       showToast(friendlyError(err), "error");
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -995,7 +1000,10 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                 appliedOpportunities.has(opp.id) ? (
                   <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
                     <div style={{ flex: 1, background: `${DESIGN_SYSTEM.colors.accent.green}22`, border: `1px solid ${DESIGN_SYSTEM.colors.accent.green}33`, borderRadius: 10, padding: "10px", color: DESIGN_SYSTEM.colors.accent.green, fontWeight: 600, fontSize: 14, fontFamily: "'Outfit', sans-serif", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                      <CheckCircle size={16} /> Applied!
+                      <CheckCircle size={16} />
+                      {applicationStatuses[opp.id] === 'shortlisted' ? '⭐ Shortlisted' :
+                       applicationStatuses[opp.id] === 'rejected' ? 'Passed' :
+                       'Applied'}
                     </div>
                     <button onClick={() => openApplyModal(opp)} style={{ background: `${DESIGN_SYSTEM.colors.brand.primary}22`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}33`, borderRadius: 10, padding: "10px 16px", color: DESIGN_SYSTEM.colors.brand.primary, fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Outfit', sans-serif", display: "flex", alignItems: "center", gap: 5 }}>
                       <Edit size={13} /> Edit
@@ -1117,6 +1125,11 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                   rows={4}
                   style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "12px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", resize: "none", boxSizing: "border-box", fontFamily: "'Outfit', sans-serif" }}
                 />
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+                  <span style={{ fontSize: 11, color: applyMessage.trim().split(/\s+/).filter(Boolean).length > 100 ? DESIGN_SYSTEM.colors.accent.red : DESIGN_SYSTEM.colors.text.muted, fontFamily: "'Outfit', sans-serif" }}>
+                    {applyMessage.trim().split(/\s+/).filter(Boolean).length} / 100 words
+                  </span>
+                </div>
                 {pitchSuggestion && (
                   <div style={{ marginTop: 10, background: `${DESIGN_SYSTEM.colors.brand.primary}10`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}30`, borderRadius: 8, padding: 12 }}>
                     <p style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
@@ -1194,10 +1207,10 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
               <div style={{ display: "flex", gap: 10 }}>
                 <button
                   type="submit"
-                  disabled={loading || composerSongs.length === 0}
-                  style={{ flex: 1, background: DESIGN_SYSTEM.colors.brand.primary, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 10, padding: "12px", fontWeight: 600, fontSize: 15, cursor: (loading || composerSongs.length === 0) ? "not-allowed" : "pointer", fontFamily: "'Outfit', sans-serif", opacity: (loading || composerSongs.length === 0) ? 0.6 : 1 }}
+                  disabled={submitting || composerSongs.length === 0}
+                  style={{ flex: 1, background: DESIGN_SYSTEM.colors.brand.primary, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 10, padding: "12px", fontWeight: 600, fontSize: 15, cursor: (submitting || composerSongs.length === 0) ? "not-allowed" : "pointer", fontFamily: "'Outfit', sans-serif", opacity: (submitting || composerSongs.length === 0) ? 0.6 : 1 }}
                 >
-                  {loading ? (appliedOpportunities.has(applyingTo?.id) ? "Updating..." : "Submitting...") : (appliedOpportunities.has(applyingTo?.id) ? "Update Application" : "Submit Application")}
+                  {submitting ? (appliedOpportunities.has(applyingTo?.id) ? "Updating..." : "Submitting...") : (appliedOpportunities.has(applyingTo?.id) ? "Update Application" : "Submit Application")}
                 </button>
                 <button
                   type="button"

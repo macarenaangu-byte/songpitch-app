@@ -217,7 +217,7 @@ export function DashboardPage({ user, stats, onNavigate, isMobile = false, analy
           <StatCard icon={<Briefcase size={20} color={DESIGN_SYSTEM.colors.brand.accent} />} label={Array.isArray(user.genres) && user.genres.length > 0 ? "Opportunities for your genres" : "Open Opportunities"} value={stats.opportunities} color={DESIGN_SYSTEM.colors.brand.accent} onClick={() => onNavigate && onNavigate('opportunities')} />
           <StatCard icon={<Music size={20} color={DESIGN_SYSTEM.colors.brand.primary} />} label="Your Portfolio" value={stats.mySongs || 0} color={DESIGN_SYSTEM.colors.brand.primary} onClick={() => onNavigate && onNavigate('portfolio')} subtitle={(stats.mySongs || 0) === 0 ? "Upload your first song →" : null} />
           <StatCard icon={<MessageCircle size={20} color={DESIGN_SYSTEM.colors.brand.purple} />} label="Conversations" value={stats.conversations || 0} color={DESIGN_SYSTEM.colors.brand.purple} onClick={() => onNavigate && onNavigate('messages')} />
-          <StatCard icon={<Eye size={20} color={DESIGN_SYSTEM.colors.brand.primary} />} label="Profile Views" value={stats.profileViews || 0} color={DESIGN_SYSTEM.colors.brand.primary} />
+          <StatCard icon={<Eye size={20} color={DESIGN_SYSTEM.colors.brand.primary} />} label="Profile Views" value={stats.profileViews || 0} color={DESIGN_SYSTEM.colors.brand.primary} subtitle={stats.profileViews > 0 ? "See who viewed →" : null} onClick={() => { const el = document.getElementById('recent-viewers'); if (el) el.scrollIntoView({ behavior: 'smooth' }); }} />
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: isMobile ? 'column' : 'row', gap: DESIGN_SYSTEM.spacing.md, marginBottom: DESIGN_SYSTEM.spacing.lg, flexWrap: isMobile ? 'nowrap' : 'wrap' }}>
@@ -254,6 +254,39 @@ export function DashboardPage({ user, stats, onNavigate, isMobile = false, analy
               <MiniChart data={analytics.responsesWeek} type="bar" color={DESIGN_SYSTEM.colors.brand.accent} width={200} height={36} label="Mon — Sun" />
             </div>
           )}
+        </div>
+      )}
+
+      {/* Recent Profile Viewers */}
+      {isComposer && analytics?.recentViewers?.length > 0 && (
+        <div id="recent-viewers" style={{ background: DESIGN_SYSTEM.colors.bg.card, borderRadius: DESIGN_SYSTEM.radius.lg, padding: '20px', border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, marginBottom: DESIGN_SYSTEM.spacing.lg }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, fontWeight: 700, fontFamily: "'Outfit', sans-serif" }}>
+              <Eye size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />
+              Who Viewed Your Profile
+            </span>
+            <span style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 12, fontFamily: "'Outfit', sans-serif" }}>Last {analytics.recentViewers.length} views</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {analytics.recentViewers.map((view, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 32, height: 32, borderRadius: '50%', background: view.profile.avatar_color || DESIGN_SYSTEM.colors.brand.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#fff', fontFamily: "'Outfit', sans-serif", flexShrink: 0 }}>
+                  {(view.profile.first_name?.[0] || '?').toUpperCase()}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, fontWeight: 600, fontFamily: "'Outfit', sans-serif" }}>
+                    {view.profile.first_name} {view.profile.last_name}
+                  </span>
+                  <span style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 11, fontFamily: "'Outfit', sans-serif", marginLeft: 6 }}>
+                    {view.profile.account_type === 'music_executive' ? 'Executive' : view.profile.account_type}
+                  </span>
+                </div>
+                <span style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 11, fontFamily: "'Outfit', sans-serif" }}>
+                  {new Date(view.created_at).toLocaleDateString()}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

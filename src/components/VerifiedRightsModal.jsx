@@ -133,7 +133,7 @@ export function VerifiedRightsModal({ open, onClose, song }) {
             }}>
               <Shield size={14} color={DESIGN_SYSTEM.colors.brand.primary} />
               <span style={{ fontSize: 12, fontWeight: 700, color: DESIGN_SYSTEM.colors.brand.primary }}>
-                AI-Verified · Digital Notary
+                Self-Attested Rights Declaration
               </span>
             </div>
           </div>

@@ -700,8 +700,14 @@ export default function SplitGenerator({ userProfile }) {
   // ─── 6. Delete ─────────────────────────────────────────────────────────────
   const handleDeleteSheet = async (id) => {
     try {
+      const sheet = savedSheets.find(s => s.id === id);
       const { error } = await supabase.from('split_sheets').delete().eq('id', id);
       if (error) throw error;
+      // Revert song verification status so it no longer appears verified in the catalog
+      if (sheet?.song_id) {
+        await supabase.from('songs').update({ verification_status: 'pending_splits' }).eq('id', sheet.song_id);
+        setCoOwnedSongs(prev => prev.map(s => s.id === sheet.song_id ? { ...s, verification_status: 'pending_splits' } : s));
+      }
       setSavedSheets(prev => prev.filter(s => s.id !== id));
       setExpandedSheet(null);
       showToast('Split sheet deleted.', 'success');
