@@ -8,4 +8,10 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Missing Supabase environment variables. Please check your .env file.');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    flowType: 'implicit',        // Use hash-based token delivery (#access_token=...)
+    detectSessionInUrl: true,    // Read the OAuth token from the URL hash on load
+    persistSession: true,
+  },
+});

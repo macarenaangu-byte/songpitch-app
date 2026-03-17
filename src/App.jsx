@@ -132,6 +132,10 @@ export default function SongPitch() {
   const activeConversationRef = useRef(activeMessageConversationId);
   const skipProfileLoadRef = useRef(false); // prevent race condition after signup
   const stayOnAuthRef = useRef(false); // prevent !session effect from redirecting to landing after a forced signOut
+  const oauthInProgressRef = useRef( // true while OAuth callback hash is being processed by Supabase
+    window.location.hash.includes('access_token') ||
+    new URLSearchParams(window.location.search).has('code')
+  );
   const legalPageFromHashRef = useRef(!!getLegalPageFromHash()); // true if legal page was loaded from URL
   const suppressLegalPushRef = useRef(false); // prevent double history push on popstate
   const [authError, setAuthError] = useState(null);
@@ -175,20 +179,32 @@ export default function SongPitch() {
   }, [legalPage]);
 
   // Always show Landing first on a fresh app load. Mark this history entry as landing.
+  // IMPORTANT: Do NOT strip the URL if it contains an OAuth callback token —
+  // Supabase needs to read #access_token from the hash before we clean the URL.
   useEffect(() => {
+    const hasOAuthCallback =
+      window.location.hash.includes('access_token') ||
+      window.location.hash.includes('error_description') ||
+      new URLSearchParams(window.location.search).has('code');
     setShowLanding(true);
-    window.history.replaceState({ spLanding: true }, '', window.location.pathname);
+    if (!hasOAuthCallback) {
+      window.history.replaceState({ spLanding: true }, '', window.location.pathname);
+    }
   }, []);
 
   // Safety reset: when unauthenticated, default back to Landing first.
   // Skip when stayOnAuthRef is set — we intentionally signed out to show an error on AuthPage.
+  // Skip when oauthInProgressRef is set — SIGNED_IN will arrive shortly with the real session.
   useEffect(() => {
     if (!session) {
+      if (oauthInProgressRef.current) return; // OAuth exchange in flight — wait for SIGNED_IN
       if (stayOnAuthRef.current) {
         stayOnAuthRef.current = false;
         return;
       }
       setShowLanding(true);
+    } else {
+      oauthInProgressRef.current = false; // Session arrived — OAuth complete
     }
   }, [session]);
 
