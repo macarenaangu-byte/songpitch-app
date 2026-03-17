@@ -507,7 +507,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
       } else if (pitchTone === 'personal') {
         suggestion = `Hi — I'm ${name}. The moment I read "${oppTitle}" I thought of "${songTitle}". It's ${[mood, genre, bpm].filter(Boolean).join(', ')} — but more than the tags, it has the specific feeling your brief is chasing. ${licensing}.`;
       } else {
-        suggestion = `"${songTitle}" opens in a ${mood || 'specific'} space${genre ? ` — ${genre}` : ''}${bpm ? `, ${bpm}` : ''}. The production was built to feel like ${mood || 'that moment you can't describe but immediately recognize'}. When I read "${oppTitle}", this was the only track I considered. ${licensing}.\n\n— ${name}`;
+        suggestion = `"${songTitle}" opens in a ${mood || 'specific'} space${genre ? ` — ${genre}` : ''}${bpm ? `, ${bpm}` : ''}. The production was built to feel like ${mood || "that moment you can't describe but immediately recognize"}. When I read "${oppTitle}", this was the only track I considered. ${licensing}.\n\n— ${name}`;
       }
       setPitchSuggestion(suggestion);
     } finally {
