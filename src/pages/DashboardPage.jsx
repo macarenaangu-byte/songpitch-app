@@ -17,20 +17,20 @@ export function DashboardPage({ user, stats, onNavigate, isMobile = false, analy
   const isAdminUser = user.account_type === 'admin';
   const profileFields = (isComposer || isAdminUser)
     ? [
-        { key: 'bio', label: 'Bio', filled: !!user.bio },
-        { key: 'location', label: 'Location', filled: !!user.location },
+        { key: 'bio', label: 'Bio', filled: !!(user.bio && user.bio.trim()) },
+        { key: 'location', label: 'Location', filled: !!(user.location && user.location.trim()) },
         { key: 'avatar_url', label: 'Profile photo', filled: !!user.avatar_url },
         { key: 'pro_name', label: 'PRO affiliation', filled: !!(user.pro_name || user.pro) },
         { key: 'role', label: 'Role', filled: !!user.role },
         { key: 'genres', label: 'Genres', filled: Array.isArray(user.genres) && user.genres.length > 0 },
-        { key: 'instruments', label: 'Instruments', filled: !!user.instruments },
+        { key: 'instruments', label: 'Instruments', filled: !!(user.instruments && user.instruments.trim()) },
       ]
     : [
-        { key: 'bio', label: 'Bio', filled: !!user.bio },
-        { key: 'location', label: 'Location', filled: !!user.location },
+        { key: 'bio', label: 'Bio', filled: !!(user.bio && user.bio.trim()) },
+        { key: 'location', label: 'Location', filled: !!(user.location && user.location.trim()) },
         { key: 'avatar_url', label: 'Profile photo', filled: !!user.avatar_url },
-        { key: 'company', label: 'Company', filled: !!user.company },
-        { key: 'job_title', label: 'Job title', filled: !!user.job_title },
+        { key: 'company', label: 'Company', filled: !!(user.company && user.company.trim()) },
+        { key: 'job_title', label: 'Job title', filled: !!(user.job_title && user.job_title.trim()) },
         { key: 'genres', label: 'Genres of interest', filled: Array.isArray(user.genres) && user.genres.length > 0 },
       ];
   const filledCount = profileFields.filter(f => f.filled).length;

@@ -68,7 +68,7 @@ export function AdminDashboardPage({ stats, userProfile, onNavigate, onViewProfi
           .limit(10),
         supabase
           .from('songs')
-          .select('id, title, verification_status, created_at, user_profile_id, user_profiles!songs_user_profile_id_fkey(first_name, last_name)')
+          .select('id, title, verification_status, created_at, composer_id, user_profiles!songs_composer_id_fkey(first_name, last_name)')
           .eq('verification_status', 'pending_splits')
           .order('created_at', { ascending: false })
           .limit(10),
@@ -121,7 +121,7 @@ export function AdminDashboardPage({ stats, userProfile, onNavigate, onViewProfi
 
       // Notify the composer
       await insertNotification(
-        song.user_profile_id,
+        song.composer_id,
         action === 'approve' ? 'song_approved' : 'song_rejected',
         action === 'approve' ? 'Song Approved' : 'Song Rejected',
         action === 'approve'

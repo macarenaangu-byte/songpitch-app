@@ -518,10 +518,8 @@ export default function SplitGenerator({ userProfile }) {
             const formData = new FormData();
             formData.append('audio', audioBlob, 'voice-memo.webm');
 
-            const { data: { session } } = await supabase.auth.getSession();
             const { data, error } = await supabase.functions.invoke('process-audio-splits', {
               body: formData,
-              headers: { Authorization: `Bearer ${session?.access_token}` },
             });
 
             if (error) throw error;

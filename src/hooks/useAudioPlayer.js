@@ -4,7 +4,7 @@ import { extractWaveformPeaks } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 
 export function useAudioPlayer() {
-  const [audio] = useState(new Audio());
+  const [audio] = useState(() => new Audio());
   const [playingSong, setPlayingSong] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);

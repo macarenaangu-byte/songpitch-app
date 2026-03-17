@@ -85,9 +85,9 @@ export function ViewProfilePage({ profileUser, currentUser, onBack, onOpenMessag
         .from('conversations')
         .select('id')
         .or(`and(user1_id.eq.${currentUser.id},user2_id.eq.${profileUser.id}),and(user1_id.eq.${profileUser.id},user2_id.eq.${currentUser.id})`)
-        .single();
+        .maybeSingle();
 
-      if (searchError && searchError.code !== 'PGRST116') {
+      if (searchError) {
         throw searchError;
       }
 

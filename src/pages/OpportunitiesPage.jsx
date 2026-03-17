@@ -664,8 +664,8 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
 
   const filtered = opportunities
     .filter(opp => {
-      const matchesSearch = opp.title.toLowerCase().includes(search.toLowerCase()) ||
-                           opp.description.toLowerCase().includes(search.toLowerCase());
+      const matchesSearch = (opp.title || '').toLowerCase().includes(search.toLowerCase()) ||
+                           (opp.description || '').toLowerCase().includes(search.toLowerCase());
       const matchesGenre = !filterGenre || opp.genres?.includes(filterGenre);
       return matchesSearch && matchesGenre;
     })

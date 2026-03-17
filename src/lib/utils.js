@@ -65,10 +65,10 @@ export const insertNotificationBatch = async (userIds, type, title, body, metada
     const rows = userIds.map(uid => ({ user_id: uid, type, title, body, metadata }));
     await supabase.from('notifications').insert(rows);
     // Check preferences per user before sending email
-    userIds.forEach(async (uid) => {
+    await Promise.all(userIds.map(async (uid) => {
       const canEmail = await shouldSendEmail(uid, type);
       if (canEmail) triggerEmailNotification(uid, type, title, body, metadata);
-    });
+    }));
   } catch (err) {
     console.error('Batch notification insert failed:', err);
   }

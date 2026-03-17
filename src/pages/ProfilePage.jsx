@@ -93,6 +93,7 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
       return;
     }
     setAvatarFile(file);
+    if (avatarPreview && avatarPreview.startsWith('blob:')) URL.revokeObjectURL(avatarPreview);
     const previewUrl = URL.createObjectURL(file);
     setAvatarPreview(previewUrl);
   };

@@ -717,7 +717,7 @@ export default function SongPitch() {
       if (isComposer) {
         queries.push(
           supabase.from('songs').select('id', { count: 'exact', head: true }).eq('composer_id', userProfile.id),
-          supabase.from('profile_views').select('id', { count: 'exact', head: true }).eq('viewed_user_id', userProfile.user_id)
+          supabase.from('profile_views').select('id', { count: 'exact', head: true }).eq('viewed_profile_id', userProfile.id)
         );
       }
       if (isExec || isAdminRole) {

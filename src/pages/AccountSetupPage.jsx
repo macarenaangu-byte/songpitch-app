@@ -48,7 +48,7 @@ export function AccountSetupPage({ user, onComplete }) {
         location: location.trim() || null,
         linkedin_url: linkedInUrl.trim() || null,
         // Only set a random color if they don't have one yet (upsert handles this nicely)
-        avatar_color: `#${Math.floor(Math.random()*16777215).toString(16)}`,
+        avatar_color: `#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}`,
       };
 
       // Add specific fields based on account type
