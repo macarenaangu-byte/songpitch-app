@@ -42,24 +42,7 @@
       };
     </script>
 
-    <!-- ── Sentry Error Monitoring ─────────────────────────────────────────
-         Replace YOUR_SENTRY_DSN with your real DSN.
-         Get it from: sentry.io → Your Project → Settings → Client Keys (DSN)
-    ──────────────────────────────────────────────────────────────────────── -->
-    <script
-      src="https://browser.sentry-cdn.com/7.114.0/bundle.min.js"
-      integrity="sha384-placeholder"
-      crossorigin="anonymous"
-    ></script>
-    <script>
-      if (window.Sentry) {
-        window.Sentry.init({
-          dsn: "YOUR_SENTRY_DSN",
-          environment: "production",
-          tracesSampleRate: 0.2,
-        });
-      }
-    </script>
+    <!-- Sentry: configure when ready (sentry.io → project → Settings → DSN) -->
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
