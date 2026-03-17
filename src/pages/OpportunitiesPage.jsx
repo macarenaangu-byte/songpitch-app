@@ -458,16 +458,8 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
     const selectedSong = composerSongs.find(s => s.id === selectedSongId);
     const isPolishMode = applyMessage && applyMessage.trim().length > 10;
     try {
-      const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
-      const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
-      const response = await fetch(`${supabaseUrl}/functions/v1/pitch-helper`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseKey}`,
-          'apikey': supabaseKey,
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('pitch-helper', {
+        body: {
           existingPitch: isPolishMode ? applyMessage : null,
           song: selectedSong || null,
           opportunity: {
@@ -478,18 +470,17 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
           },
           tone: pitchTone,
           composerName: `${userProfile.first_name} ${userProfile.last_name}`,
-        }),
+        },
       });
-      if (response.ok) {
-        const data = await response.json();
-        if (data.pitch) {
-          setPitchSuggestion(data.pitch);
-          if (data.metadata_note) setPitchMetaNote(data.metadata_note);
-          return;
-        }
+      if (error) throw error;
+      if (data?.pitch) {
+        setPitchSuggestion(data.pitch);
+        if (data.metadata_note) setPitchMetaNote(data.metadata_note);
+        return;
       }
       throw new Error('AI unavailable');
-    } catch {
+    } catch (err) {
+      console.warn('Pitch helper AI unavailable, using fallback:', err);
       // Fallback: quality templates based on real A&R pitch patterns
       const name = `${userProfile.first_name} ${userProfile.last_name}`;
       const selectedSong = composerSongs.find(s => s.id === selectedSongId);
