@@ -68,6 +68,7 @@ export function ViewProfilePage({ profileUser, currentUser, onBack, onOpenMessag
         .from('songs')
         .select('*')
         .eq('composer_id', profileUser.id) // This fetches their catalog!
+        .eq('verification_status', 'verified')
         .order('created_at', { ascending: false });
 
       if (error) throw error;

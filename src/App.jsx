@@ -39,49 +39,6 @@ const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage').then(
 // MAIN APP SHELL
 // ═════════════════════════════════════════════════════════════════════════════
 
-// eslint-disable-next-line no-unused-vars
-function OnboardingPage({ onSelectRole, savingRole }) {
-  return (
-    <div className="min-h-screen w-full bg-black text-white flex items-center justify-center px-6">
-      <div className="w-full max-w-4xl rounded-2xl border border-zinc-800 bg-zinc-950/90 shadow-2xl p-8 md:p-10">
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Welcome to SongPitch. How will you use the platform today?</h1>
-          <p className="mt-2 text-zinc-400">Choose your access path to continue.</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <button
-            type="button"
-            onClick={() => onSelectRole('executive')}
-            disabled={savingRole}
-            className="group text-left rounded-2xl border border-emerald-500/40 bg-zinc-900 hover:border-emerald-400 hover:shadow-[0_0_28px_rgba(16,185,129,0.28)] transition-all p-6 disabled:opacity-60"
-          >
-            <div className="text-emerald-300 text-lg font-semibold">Executive</div>
-            <div className="mt-2 text-zinc-300 text-sm">I am an A&amp;R/Publisher searching for cleared music.</div>
-            <div className="mt-3 text-zinc-500 text-xs">Early Access to Discovery Roster + sync-ready search.</div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onSelectRole('composer')}
-            disabled={savingRole}
-            className="group text-left rounded-2xl border border-cyan-500/25 bg-zinc-900 hover:border-cyan-400 hover:shadow-[0_0_24px_rgba(34,211,238,0.22)] transition-all p-6 disabled:opacity-60"
-          >
-            <div className="text-cyan-300 text-lg font-semibold">Composer</div>
-            <div className="mt-2 text-zinc-300 text-sm">I am a creator uploading 100% owned tracks.</div>
-            <div className="mt-3 text-zinc-500 text-xs">Open your upload + metadata workflow dashboard.</div>
-          </button>
-        </div>
-
-        <div className="mt-8 text-center text-xs text-zinc-500">
-          SongPitch • High-end sync workflow with AI metadata and fast discovery.
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
 // ─── Hash-based page routing ────────────────────────────────────────────────
 const VALID_PAGES = new Set([
   'dashboard', 'roster', 'catalog', 'opportunities', 'responses',
@@ -601,46 +558,6 @@ export default function SongPitch() {
     }
   };
 
-  // eslint-disable-next-line no-unused-vars
-  const handleCompleteOnboarding = async (role) => {
-    if (!session?.user) return;
-    setSavingRole(true);
-    try {
-      const accountType = role === 'executive' ? 'music_executive' : 'composer';
-      const md = session.user.user_metadata || {};
-      const fullName = (md.full_name || md.name || '').trim();
-      const [firstFromFull = '', ...rest] = fullName.split(' ');
-      const firstName = (md.given_name || firstFromFull || session.user.email?.split('@')[0] || 'New').trim();
-      const lastName = (md.family_name || rest.join(' ') || (role === 'executive' ? 'Executive' : 'Composer')).trim();
-
-      const row = {
-        user_id: session.user.id,
-        role,
-        account_type: accountType,
-        first_name: firstName,
-        last_name: lastName,
-        avatar_color: `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`,
-      };
-
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .upsert([row], { onConflict: 'user_id' })
-        .select('*, composers(*)')
-        .single();
-
-      if (error) throw error;
-
-      setUserProfile(data);
-      setNeedsOnboarding(false);
-      setPage(role === 'executive' ? 'roster' : 'portfolio');
-      showToast('Role saved. Welcome to SongPitch.', 'success');
-    } catch (err) {
-      showToast(friendlyError(err), 'error');
-    } finally {
-      setSavingRole(false);
-    }
-  };
-
   const loadSidebarBadges = async () => {
     if (!userProfile) return;
     try {
@@ -758,11 +675,11 @@ export default function SongPitch() {
       }
 
       setStats(newStats);
-      setBadgeCounts({
-        messages: badgeCounts.messages,
+      setBadgeCounts(prev => ({
+        messages: prev.messages,
         responses: (isExec || isAdminRole) ? (newStats.totalResponses || 0) : 0,
-        opportunities: badgeCounts.opportunities,
-      });
+        opportunities: prev.opportunities,
+      }));
     } catch (err) {
       console.error("Error loading stats:", err);
     }
@@ -892,10 +809,17 @@ export default function SongPitch() {
   };
 
   const handleDeleteAccount = async () => {
-    const confirmed = window.confirm('This will permanently delete your account and cannot be undone. Continue?');
-    if (!confirmed) return;
-
-    const typed = window.prompt('Type DELETE to confirm permanent account deletion.');
+    // TODO: Replace window.confirm/prompt with a React state-based modal for restrictive environments
+    let confirmed = false;
+    let typed = null;
+    try {
+      confirmed = window.confirm('This will permanently delete your account and cannot be undone. Continue?');
+      if (!confirmed) return;
+      typed = window.prompt('Type DELETE to confirm permanent account deletion.');
+    } catch {
+      showToast('Unable to show confirmation dialog. Please try again.', 'error');
+      return;
+    }
     if (typed !== 'DELETE') {
       showToast('Account deletion cancelled.', 'info');
       return;

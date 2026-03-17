@@ -255,7 +255,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setSubmitting(true);
 
     try {
       const oppData = {
@@ -312,7 +312,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
     } catch (err) {
       showToast(friendlyError(err), "error");
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -566,13 +566,15 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
           .select('message, song_id')
           .eq('opportunity_id', opp.id)
           .eq('composer_id', userProfile.id)
-          .single();
+          .maybeSingle();
 
         if (error) throw error;
 
         if (data) {
           setApplyMessage(data.message);
           setSelectedSongId(data.song_id);
+        } else {
+          showToast("Application data not found", "error");
         }
       } catch (err) {
         console.error("Error loading application:", err);

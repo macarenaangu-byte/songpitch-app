@@ -82,9 +82,9 @@ export function ResponsesPage({ userProfile, onNavigate, onViewProfile, audioPla
         .from('conversations')
         .select('id')
         .or(`and(user1_id.eq.${userProfile.id},user2_id.eq.${composerId}),and(user1_id.eq.${composerId},user2_id.eq.${userProfile.id})`)
-        .single();
+        .maybeSingle();
 
-      if (searchError && searchError.code !== 'PGRST116') {
+      if (searchError) {
         throw searchError;
       }
 

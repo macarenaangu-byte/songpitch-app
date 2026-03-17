@@ -115,7 +115,8 @@ export function CatalogPage({ audioPlayer, isMobile = false }) {
       try {
         const { data } = await supabase
           .from('songs')
-          .select('genre, mood');
+          .select('genre, mood')
+          .limit(200);
         if (data) {
           setAllGenres([...new Set(data.map(s => s.genre).filter(Boolean))].sort());
           setAllMoods([...new Set(data.map(s => s.mood).filter(Boolean))].sort());

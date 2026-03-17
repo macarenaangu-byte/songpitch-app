@@ -328,10 +328,11 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
   };
 
   const getAudioDuration = (file) => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const audio = new Audio();
       const objectUrl = URL.createObjectURL(file);
       audio.addEventListener('loadedmetadata', () => { resolve(audio.duration); URL.revokeObjectURL(objectUrl); });
+      audio.addEventListener('error', () => { URL.revokeObjectURL(objectUrl); reject(new Error('Audio load failed')); });
       audio.src = objectUrl;
     });
   };

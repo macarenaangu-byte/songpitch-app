@@ -306,7 +306,8 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
           )
         `)
         .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true })
+        .limit(100);
 
       if (error) throw error;
       setMessages(data || []);

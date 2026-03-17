@@ -36,19 +36,13 @@ export function RosterPage({ accountType, onViewProfile, isMobile = false }) {
   useEffect(() => {
     loadComposers();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accountType, selectedPro, selectedGenre, adminViewMode, debouncedSearch, sortBy]);
+  }, [accountType, selectedPro, selectedGenre, adminViewMode, debouncedSearch, sortBy, filterLocation]);
 
   const buildQuery = (from, to) => {
     const targetType = isAdmin ? adminViewMode : (accountType === 'music_executive' ? 'composer' : 'music_executive');
     let query = supabase
       .from('user_profiles')
-      .select(`
-        *,
-        composers (
-          genres,
-          specialties
-        )
-      `, { count: 'exact' })
+      .select('*', { count: 'exact' })
       .in('account_type', [targetType, 'admin'])
       .eq('is_deleted', false);
 
@@ -62,6 +56,10 @@ export function RosterPage({ accountType, onViewProfile, isMobile = false }) {
 
     if (debouncedSearch.trim()) {
       query = query.or(`first_name.ilike.%${debouncedSearch.trim()}%,last_name.ilike.%${debouncedSearch.trim()}%`);
+    }
+
+    if (filterLocation) {
+      query = query.eq('location', filterLocation);
     }
 
     // Sort
@@ -108,11 +106,8 @@ export function RosterPage({ accountType, onViewProfile, isMobile = false }) {
   const rosterProOptions = ['All', 'ASCAP', 'BMI', 'SESAC', 'PRS', 'Other'];
   const rosterLocations = [...new Set(composers.map(c => c.location).filter(Boolean))].sort();
 
-  const filtered = composers.filter(c => {
-    // Name and genre are now server-side — only location remains client-side
-    const locationMatch = !filterLocation || c.location === filterLocation;
-    return locationMatch;
-  });
+  // All filters are now server-side
+  const filtered = composers;
 
   return (
     <div style={{ padding: isMobile ? '16px' : `${DESIGN_SYSTEM.spacing.xl} ${DESIGN_SYSTEM.spacing.xl}`, minHeight: "100%", overflowY: "auto" }}>

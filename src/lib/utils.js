@@ -97,7 +97,14 @@ export const compressImage = (file, maxWidth = 400, quality = 0.8) => {
 
 // ── Waveform Peak Extraction ──
 // Fetches audio, decodes to PCM, downsamples to N peaks for waveform visualization
+const WAVEFORM_CACHE_MAX = 50;
 const waveformCache = {};
+function setWaveformCache(key, value) {
+  if (Object.keys(waveformCache).length >= WAVEFORM_CACHE_MAX) {
+    delete waveformCache[Object.keys(waveformCache)[0]];
+  }
+  waveformCache[key] = value;
+}
 export const extractWaveformPeaks = async (audioUrl, numBars = 100) => {
   if (waveformCache[audioUrl]) return waveformCache[audioUrl];
   try {
@@ -123,7 +130,7 @@ export const extractWaveformPeaks = async (audioUrl, numBars = 100) => {
 
     const maxPeak = Math.max(...peaks, 0.01);
     const normalized = peaks.map(p => p / maxPeak);
-    waveformCache[audioUrl] = normalized;
+    setWaveformCache(audioUrl, normalized);
     return normalized;
   } catch (err) {
     console.warn('Waveform extraction failed:', err);

@@ -16,7 +16,8 @@ export function AccountSetupPage({ user, onComplete }) {
     const parts = googleName.split(' ');
     return parts.length > 1 ? parts.slice(1).join(' ') : '';
   });
-  const [bio] = useState("");
+  // eslint-disable-next-line no-unused-vars
+  const [bio, setBio] = useState("");
   const [location, setLocation] = useState("");
   const [linkedInUrl, setLinkedInUrl] = useState("");
 
