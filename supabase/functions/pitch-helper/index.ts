@@ -12,7 +12,11 @@ serve(async (req) => {
     const { existingPitch, song, opportunity, tone, composerName } = await req.json();
     const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
 
+    console.log('[pitch-helper] received request, isPolishMode:', !!(existingPitch?.trim().length > 10));
+    console.log('[pitch-helper] ANTHROPIC_API_KEY present:', !!apiKey);
+
     if (!apiKey) {
+      console.error('[pitch-helper] ANTHROPIC_API_KEY is not set');
       return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY not set' }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -59,11 +63,15 @@ TONE GUIDE:
 - story: Start with the sonic world of the track — put them inside the feeling first, then facts.
 
 METADATA IMPROVEMENT:
-When suggesting genre/mood improvements, be specific. "Alt-R&B" beats "R&B". "Euphoric" beats "Happy". "Melancholic indie pop" beats "Indie". Think about what a music supervisor would search for.`;
+When suggesting genre/mood improvements, be specific. "Alt-R&B" beats "R&B". "Euphoric" beats "Happy". "Melancholic indie pop" beats "Indie". Think about what a music supervisor would search for.
+
+IMPORTANT: Always respond with ONLY a valid JSON object. No markdown, no backticks, no explanation. Just: { "pitch": "...", "metadata_note": "..." }`;
 
     const userMessage = isPolishMode
-      ? `Polish and improve this pitch. Keep the composer's voice but make it sharper, more specific, and more professional. Under 80 words.\n\nComposer: ${composerName || 'the composer'}\nSong: ${songDescription}\n${oppContext}\n\nTheir current draft:\n"${existingPitch}"\n\nReturn JSON: { "pitch": "improved version", "metadata_note": "one specific suggestion to improve the song's metadata tags to get better opportunities" }`
-      : `Write a ${tone || 'professional'} pitch under 80 words.\n\nComposer: ${composerName || 'the composer'}\nSong: ${songDescription}\n${oppContext}\n\nReturn JSON: { "pitch": "the pitch text", "metadata_note": "one specific suggestion to improve the song's metadata tags to get better opportunities" }`;
+      ? `Polish and improve this pitch. Keep the composer's voice but make it sharper, more specific, and more professional. Under 80 words.\n\nComposer: ${composerName || 'the composer'}\nSong: ${songDescription}\n${oppContext}\n\nTheir current draft:\n"${existingPitch}"\n\nReturn JSON only: { "pitch": "improved version", "metadata_note": "one specific suggestion to improve the song metadata tags" }`
+      : `Write a ${tone || 'professional'} pitch under 80 words.\n\nComposer: ${composerName || 'the composer'}\nSong: ${songDescription}\n${oppContext}\n\nReturn JSON only: { "pitch": "the pitch text", "metadata_note": "one specific suggestion to improve the song metadata tags" }`;
+
+    console.log('[pitch-helper] calling Anthropic API...');
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -73,26 +81,34 @@ When suggesting genre/mood improvements, be specific. "Alt-R&B" beats "R&B". "Eu
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'claude-sonnet-4-6',
         max_tokens: 512,
         system: systemPrompt,
         messages: [{ role: 'user', content: userMessage }],
       }),
     });
 
+    console.log('[pitch-helper] Anthropic response status:', response.status);
+
     if (!response.ok) {
-      const err = await response.text();
-      throw new Error(`Anthropic API error: ${err}`);
+      const errText = await response.text();
+      console.error('[pitch-helper] Anthropic API error:', response.status, errText);
+      throw new Error(`Anthropic API error ${response.status}: ${errText}`);
     }
 
     const result = await response.json();
     const content = result.content?.[0]?.text || '';
+    console.log('[pitch-helper] Claude response length:', content.length);
 
-    // Parse JSON from Claude's response
+    // Parse JSON from Claude's response — strip any markdown wrappers
     const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('Could not parse AI response');
+    if (!jsonMatch) {
+      console.error('[pitch-helper] Could not find JSON in response:', content);
+      throw new Error('Could not parse AI response');
+    }
     const parsed = JSON.parse(jsonMatch[0]);
 
+    console.log('[pitch-helper] success, returning pitch');
     return new Response(JSON.stringify({
       pitch: parsed.pitch || '',
       metadata_note: parsed.metadata_note || '',
@@ -102,6 +118,7 @@ When suggesting genre/mood improvements, be specific. "Alt-R&B" beats "R&B". "Eu
     });
 
   } catch (err) {
+    console.error('[pitch-helper] caught error:', String(err));
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
