@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Eye, EyeOff, Mail, RefreshCw } from "lucide-react";
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { supabase } from '../lib/supabase';
-import { showToast } from '../lib/toast';
+import { showToast } from '../utils/toast';
 import { friendlyError } from '../lib/utils';
 
 const GENRE_LIST = [
@@ -47,8 +47,8 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
     if (/[^A-Za-z0-9]/.test(pw)) score++;
     if (score <= 1) return { level: 1, label: 'Weak', color: '#ef4444' };
     if (score === 2) return { level: 2, label: 'Fair', color: '#f59e0b' };
-    if (score === 3) return { level: 3, label: 'Good', color: '#22c55e' };
-    return { level: 4, label: 'Strong', color: '#1DB954' };
+    if (score === 3) return { level: 3, label: 'Good', color: DESIGN_SYSTEM.colors.brand.primary };
+    return { level: 4, label: 'Strong', color: '#C9A84C' };
   };
 
   const passwordStrength = getPasswordStrength(password);
@@ -128,7 +128,7 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
           }]);
         }
 
-        showToast('Account created! Welcome to SongPitch.', 'success');
+        showToast.success('Account created! Welcome to SongPitch.');
         onAuthComplete(data.user, profileData);
 
       } else if (authView === 'forgot') {
@@ -136,7 +136,7 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
           redirectTo: window.location.origin,
         });
         if (error) throw error;
-        showToast("Password reset link sent! Check your email inbox.", "success");
+        showToast.success("Password reset link sent! Check your email inbox.");
         switchView('login');
 
       } else {
@@ -162,7 +162,7 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
     fontSize: 14,
     outline: "none",
     boxSizing: "border-box",
-    fontFamily: "'Outfit', sans-serif",
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
     transition: "all 0.2s ease",
   };
 
@@ -176,7 +176,7 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
 
   const focusInput = (e) => {
     e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.brand.primary;
-    e.currentTarget.style.boxShadow = "0 0 0 3px rgba(29,185,84,0.1)";
+    e.currentTarget.style.boxShadow = "0 0 0 3px rgba(201,168,76,0.1)";
   };
   const blurInput = (e) => {
     e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.border.light;
@@ -193,10 +193,10 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
     fontWeight: 600,
     fontSize: 15,
     cursor: loading ? "not-allowed" : "pointer",
-    fontFamily: "'Outfit', sans-serif",
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
     opacity: loading ? 0.6 : 1,
     transition: "all 0.2s ease",
-    boxShadow: '0 4px 16px rgba(29,185,84,0.25)',
+    boxShadow: '0 4px 16px rgba(201,168,76,0.25)',
   };
 
   const StepBar = ({ step }) => (
@@ -213,16 +213,16 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
       try {
         const { error } = await supabase.auth.resend({ type: 'signup', email });
         if (error) throw error;
-        showToast('Verification email resent!', 'success');
+        showToast.success('Verification email resent!');
       } catch (err) {
-        showToast(friendlyError(err), 'error');
+        showToast.error(friendlyError(err));
       } finally {
         setLoading(false);
       }
     };
 
     return (
-      <div className="hero-animated-bg" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: "'Outfit', sans-serif" }}>
+      <div className="hero-animated-bg" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
         <div style={{ width: "100%", maxWidth: 420, background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 24, padding: 40, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, boxShadow: '0 16px 48px rgba(0,0,0,0.4)', textAlign: 'center' }}>
           <div style={{ width: 72, height: 72, borderRadius: '50%', background: `${DESIGN_SYSTEM.colors.brand.primary}15`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
             <Mail size={32} color={DESIGN_SYSTEM.colors.brand.primary} />
@@ -240,7 +240,7 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
           <button
             onClick={handleResend}
             disabled={loading}
-            style={{ width: '100%', background: DESIGN_SYSTEM.colors.brand.primary, color: DESIGN_SYSTEM.colors.text.primary, border: 'none', borderRadius: 10, padding: '13px', fontWeight: 600, fontSize: 15, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: "'Outfit', sans-serif", opacity: loading ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 16px rgba(29,185,84,0.25)', marginBottom: 12 }}
+            style={{ width: '100%', background: DESIGN_SYSTEM.colors.brand.primary, color: DESIGN_SYSTEM.colors.text.primary, border: 'none', borderRadius: 10, padding: '13px', fontWeight: 600, fontSize: 15, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", opacity: loading ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 16px rgba(201,168,76,0.25)', marginBottom: 12 }}
             onMouseEnter={e => { if (!loading) e.currentTarget.style.background = DESIGN_SYSTEM.colors.brand.light; }}
             onMouseLeave={e => { e.currentTarget.style.background = DESIGN_SYSTEM.colors.brand.primary; }}
           >
@@ -248,7 +248,7 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
           </button>
           <button
             onClick={() => { setAuthView('signup'); setSignupStep(1); setError(''); }}
-            style={{ width: '100%', background: 'none', border: 'none', color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, cursor: 'pointer', fontFamily: "'Outfit', sans-serif", padding: '8px' }}
+            style={{ width: '100%', background: 'none', border: 'none', color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, cursor: 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", padding: '8px' }}
             onMouseEnter={e => e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.secondary}
             onMouseLeave={e => e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.muted}
           >
@@ -258,7 +258,7 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
             <span style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13 }}>Already verified? </span>
             <button
               onClick={() => switchView('login')}
-              style={{ background: 'none', border: 'none', color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: "'Outfit', sans-serif" }}
+              style={{ background: 'none', border: 'none', color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}
               onMouseEnter={e => e.currentTarget.style.color = DESIGN_SYSTEM.colors.brand.light}
               onMouseLeave={e => e.currentTarget.style.color = DESIGN_SYSTEM.colors.brand.primary}
             >
@@ -273,7 +273,7 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
   // ── SIGNUP STEP 2 — Profile info ─────────────────────────────────────────
   if (authView === 'signup' && signupStep === 2) {
     return (
-      <div className="hero-animated-bg" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: "'Outfit', sans-serif", overflowY: 'auto' }}>
+      <div className="hero-animated-bg" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", overflowY: 'auto' }}>
         <div style={{ width: "100%", maxWidth: 480, background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 24, padding: 40, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, boxShadow: '0 16px 48px rgba(0,0,0,0.4)', margin: '20px 0' }}>
 
           <div style={{ textAlign: "center", marginBottom: 24 }}>
@@ -303,7 +303,7 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
                       border: role === type ? `2px solid ${DESIGN_SYSTEM.colors.brand.primary}` : `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
                       background: role === type ? `${DESIGN_SYSTEM.colors.brand.primary}15` : DESIGN_SYSTEM.colors.bg.primary,
                       color: role === type ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.tertiary,
-                      cursor: "pointer", fontFamily: "'Outfit', sans-serif", transition: 'all 0.2s ease',
+                      cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", transition: 'all 0.2s ease',
                     }}
                   >
                     <div style={{ fontSize: 22, marginBottom: 4 }}>{icon}</div>
@@ -367,7 +367,7 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
                         color: genres.includes(g) ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.tertiary,
                         border: `1px solid ${genres.includes(g) ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.border.light}`,
                         borderRadius: 20, padding: "5px 13px", fontSize: 12, fontWeight: 600,
-                        cursor: "pointer", fontFamily: "'Outfit', sans-serif",
+                        cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                       }}
                     >
                       {g}
@@ -387,8 +387,8 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
               type="submit"
               disabled={loading}
               style={primaryBtnStyle}
-              onMouseEnter={e => { if (!loading) { e.currentTarget.style.background = DESIGN_SYSTEM.colors.brand.light; e.currentTarget.style.boxShadow = '0 6px 24px rgba(29,185,84,0.35)'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
-              onMouseLeave={e => { e.currentTarget.style.background = DESIGN_SYSTEM.colors.brand.primary; e.currentTarget.style.boxShadow = '0 4px 16px rgba(29,185,84,0.25)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+              onMouseEnter={e => { if (!loading) { e.currentTarget.style.background = DESIGN_SYSTEM.colors.brand.light; e.currentTarget.style.boxShadow = '0 6px 24px rgba(201,168,76,0.35)'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
+              onMouseLeave={e => { e.currentTarget.style.background = DESIGN_SYSTEM.colors.brand.primary; e.currentTarget.style.boxShadow = '0 4px 16px rgba(201,168,76,0.25)'; e.currentTarget.style.transform = 'translateY(0)'; }}
             >
               {loading ? "Creating Account..." : "Create Account"}
             </button>
@@ -396,7 +396,7 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
             <button
               type="button"
               onClick={() => { setSignupStep(1); setError(""); }}
-              style={{ width: '100%', marginTop: 10, background: 'none', border: 'none', color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, cursor: 'pointer', fontFamily: "'Outfit', sans-serif", padding: '8px', transition: 'color 0.2s ease' }}
+              style={{ width: '100%', marginTop: 10, background: 'none', border: 'none', color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, cursor: 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", padding: '8px', transition: 'color 0.2s ease' }}
               onMouseEnter={e => e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.secondary}
               onMouseLeave={e => e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.muted}
             >
@@ -417,7 +417,7 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
   };
 
   return (
-    <div className="hero-animated-bg" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: "'Outfit', sans-serif" }}>
+    <div className="hero-animated-bg" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
       <div style={{ width: "100%", maxWidth: 420, background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 24, padding: 40, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}>
 
         <div style={{ textAlign: "center", marginBottom: 32 }}>
@@ -491,7 +491,7 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
                       <div key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: i <= passwordStrength.level ? passwordStrength.color : DESIGN_SYSTEM.colors.border.light, transition: 'background 0.3s' }} />
                     ))}
                   </div>
-                  <span style={{ fontSize: 11, color: passwordStrength.color, fontFamily: "'Outfit', sans-serif" }}>{passwordStrength.label}</span>
+                  <span style={{ fontSize: 11, color: passwordStrength.color, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>{passwordStrength.label}</span>
                 </div>
               )}
             </div>
@@ -502,7 +502,7 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
               <button
                 type="button"
                 onClick={() => switchView('forgot')}
-                style={{ background: 'none', border: 'none', color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, cursor: 'pointer', fontFamily: "'Outfit', sans-serif", transition: 'color 0.2s ease' }}
+                style={{ background: 'none', border: 'none', color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, cursor: 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", transition: 'color 0.2s ease' }}
                 onMouseEnter={e => e.currentTarget.style.color = DESIGN_SYSTEM.colors.brand.primary}
                 onMouseLeave={e => e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.muted}
               >
@@ -523,8 +523,8 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
             type="submit"
             disabled={loading}
             style={primaryBtnStyle}
-            onMouseEnter={e => { if (!loading) { e.currentTarget.style.background = DESIGN_SYSTEM.colors.brand.light; e.currentTarget.style.boxShadow = '0 6px 24px rgba(29,185,84,0.35)'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
-            onMouseLeave={e => { e.currentTarget.style.background = DESIGN_SYSTEM.colors.brand.primary; e.currentTarget.style.boxShadow = '0 4px 16px rgba(29,185,84,0.25)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+            onMouseEnter={e => { if (!loading) { e.currentTarget.style.background = DESIGN_SYSTEM.colors.brand.light; e.currentTarget.style.boxShadow = '0 6px 24px rgba(201,168,76,0.35)'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
+            onMouseLeave={e => { e.currentTarget.style.background = DESIGN_SYSTEM.colors.brand.primary; e.currentTarget.style.boxShadow = '0 4px 16px rgba(201,168,76,0.25)'; e.currentTarget.style.transform = 'translateY(0)'; }}
           >
             {loading ? "Loading..." : authView === 'signup' ? "Next →" : authView === 'forgot' ? "Send Reset Link" : "Sign In"}
           </button>
@@ -539,7 +539,7 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
               <button
                 type="button"
                 onClick={onGoogleSignIn}
-                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, background: '#fff', color: '#3c4043', border: '1px solid #dadce0', borderRadius: 10, padding: '11px 16px', fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: "'Outfit', sans-serif", transition: 'all 0.2s ease' }}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, background: '#fff', color: '#3c4043', border: '1px solid #dadce0', borderRadius: 10, padding: '11px 16px', fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", transition: 'all 0.2s ease' }}
                 onMouseEnter={e => { e.currentTarget.style.background = '#f7f8f8'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
               >
@@ -554,7 +554,7 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
           {authView === 'forgot' ? (
             <button
               onClick={() => switchView('login')}
-              style={{ background: "none", border: "none", color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "'Outfit', sans-serif" }}
+              style={{ background: "none", border: "none", color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}
               onMouseEnter={e => e.currentTarget.style.color = DESIGN_SYSTEM.colors.brand.light}
               onMouseLeave={e => e.currentTarget.style.color = DESIGN_SYSTEM.colors.brand.primary}
             >
@@ -568,7 +568,7 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
               {' '}
               <button
                 onClick={() => switchView(authView === 'signup' ? 'login' : 'signup')}
-                style={{ background: "none", border: "none", color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "'Outfit', sans-serif" }}
+                style={{ background: "none", border: "none", color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}
                 onMouseEnter={e => e.currentTarget.style.color = DESIGN_SYSTEM.colors.brand.light}
                 onMouseLeave={e => e.currentTarget.style.color = DESIGN_SYSTEM.colors.brand.primary}
               >
@@ -581,7 +581,7 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
               <button
                 type="button"
                 onClick={onBackToLanding}
-                style={{ background: "none", border: "none", color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Outfit', sans-serif" }}
+                style={{ background: "none", border: "none", color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}
                 onMouseEnter={e => e.currentTarget.style.color = DESIGN_SYSTEM.colors.brand.primary}
                 onMouseLeave={e => e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.muted}
               >

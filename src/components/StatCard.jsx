@@ -11,6 +11,8 @@ export function StatCard({ icon, label, value, color = DESIGN_SYSTEM.colors.bran
       minWidth: 140,
       transition: DESIGN_SYSTEM.transition.normal,
       cursor: onClick ? 'pointer' : 'default',
+      position: 'relative',
+      overflow: 'hidden',
     }}
     onMouseEnter={e => {
       e.currentTarget.style.borderColor = onClick ? color + '60' : DESIGN_SYSTEM.colors.border.medium;
@@ -38,7 +40,7 @@ export function StatCard({ icon, label, value, color = DESIGN_SYSTEM.colors.bran
         fontSize: DESIGN_SYSTEM.fontSize.xxl,
         fontWeight: DESIGN_SYSTEM.fontWeight.extrabold,
         color: DESIGN_SYSTEM.colors.text.primary,
-        fontFamily: "'Outfit', sans-serif"
+        fontFamily: DESIGN_SYSTEM.font.display,
       }}>{value}</div>
       <div style={{
         fontSize: DESIGN_SYSTEM.fontSize.sm,
@@ -53,6 +55,16 @@ export function StatCard({ icon, label, value, color = DESIGN_SYSTEM.colors.bran
           fontWeight: 600,
         }}>{subtitle}</div>
       )}
+      {/* Color accent bar */}
+      <div style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 3,
+        borderRadius: '0 0 12px 12px',
+        background: `linear-gradient(90deg, ${color}55, ${color}18, transparent)`,
+      }} />
     </div>
   );
 }

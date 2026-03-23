@@ -1,17 +1,26 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
-import { Search, Users, Music, MessageCircle, User, ChevronRight, ChevronLeft, Briefcase, FileText, TrendingUp, Bell, Menu, Shield } from "lucide-react";
+import { Search, Users, Music, MessageCircle, User, ChevronRight, ChevronLeft, Briefcase, FileText, TrendingUp, Bell, Menu, Shield, BookOpen, Scale } from "lucide-react";
 // ─── Extracted modules ──────────────────────────────────────────────────────
 import { DESIGN_SYSTEM } from './constants/designSystem';
 import { supabase } from './lib/supabase';
-import { showToast, ToastContainer } from './lib/toast';
+import { Toaster } from 'react-hot-toast';
+import { showToast } from './utils/toast';
 import { friendlyError } from './lib/utils';
 import { useAudioPlayer } from './hooks/useAudioPlayer';
+import {
+  isPushSupported,
+  registerServiceWorker,
+  requestPermission,
+  subscribeAndSave,
+  unsubscribeAndRemove,
+} from './services/pushNotifications';
 
 // ─── Components ─────────────────────────────────────────────────────────────
 import { Avatar } from './components/Avatar';
 import { Badge } from './components/Badge';
 import { NowPlayingBar } from './components/NowPlayingBar';
 import { NotificationPanel } from './components/NotificationPanel';
+import CommandPalette from './components/CommandPalette';
 
 // ─── Pages (eagerly loaded — needed immediately) ────────────────────────────
 import { AuthPage } from './pages/AuthPage';
@@ -33,6 +42,8 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage').then(m => ({ defaul
 const ViewProfilePage = lazy(() => import('./pages/ViewProfilePage').then(m => ({ default: m.ViewProfilePage })));
 const SplitGenerator = lazy(() => import('./pages/SplitGenerator/SplitGenerator'));
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage').then(m => ({ default: m.AdminDashboardPage })));
+const DealAnalyzerPage = lazy(() => import('./pages/DealAnalyzerPage').then(m => ({ default: m.DealAnalyzerPage })));
+const ContractRevisionPage = lazy(() => import('./pages/ContractRevisionPage').then(m => ({ default: m.ContractRevisionPage })));
 
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -43,6 +54,7 @@ const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage').then(
 const VALID_PAGES = new Set([
   'dashboard', 'roster', 'catalog', 'opportunities', 'responses',
   'messages', 'portfolio', 'profile', 'splits', 'admin-dashboard',
+  'deal-analyzer', 'contract-revision',
 ]);
 const LEGAL_PAGES = new Set(['privacy', 'terms', 'dmca']);
 
@@ -97,6 +109,7 @@ export default function SongPitch() {
   const suppressLegalPushRef = useRef(false); // prevent double history push on popstate
   const [authError, setAuthError] = useState(null);
   const [showSessionWarning, setShowSessionWarning] = useState(false);
+  const [cmdOpen, setCmdOpen] = useState(false);
 
   // Global audio player - shared across all pages
   const audioPlayer = useAudioPlayer();
@@ -115,6 +128,18 @@ export default function SongPitch() {
   useEffect(() => {
     activeConversationRef.current = activeMessageConversationId;
   }, [activeMessageConversationId]);
+
+  // ⌘K / Ctrl+K — open command palette
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setCmdOpen(prev => !prev);
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, []);
 
   // Sync legal page state ↔ URL hash
   useEffect(() => {
@@ -338,6 +363,20 @@ export default function SongPitch() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
+  // ─── Web Push: register service worker + subscribe on login ─────────────────
+  useEffect(() => {
+    if (!userProfile) return;
+    if (!isPushSupported()) return;
+
+    (async () => {
+      await registerServiceWorker();
+      const permission = await requestPermission();
+      if (permission === 'granted') {
+        await subscribeAndSave(supabase, userProfile.id);
+      }
+    })();
+  }, [userProfile?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ─── Notification system: load + realtime subscription ─────────────────────
   const loadNotifications = async () => {
     if (!userProfile) return;
@@ -397,7 +436,7 @@ export default function SongPitch() {
 
           // While actively in the messaging area, skip noisy toast spam for new message notifications.
           if (!(isMessagesPage && isNewMessageNotif)) {
-            showToast(incoming.title, 'info');
+            showToast.info(incoming.title);
           }
         }
       )
@@ -451,7 +490,7 @@ export default function SongPitch() {
           setUnreadCount(prev => prev + 1);
         }
       }
-      showToast(friendlyError(err), 'error');
+      showToast.error(friendlyError(err));
     }
   };
 
@@ -802,6 +841,7 @@ export default function SongPitch() {
   };
 
   const handleSignOut = async () => {
+    await unsubscribeAndRemove(supabase);
     await supabase.auth.signOut();
     setUserProfile(null);
     setPage("dashboard");
@@ -817,23 +857,23 @@ export default function SongPitch() {
       if (!confirmed) return;
       typed = window.prompt('Type DELETE to confirm permanent account deletion.');
     } catch {
-      showToast('Unable to show confirmation dialog. Please try again.', 'error');
+      showToast.error('Unable to show confirmation dialog. Please try again.');
       return;
     }
     if (typed !== 'DELETE') {
-      showToast('Account deletion cancelled.', 'info');
+      showToast.info('Account deletion cancelled.');
       return;
     }
 
     try {
       const { error } = await supabase.functions.invoke('delete-account', { body: {} });
       if (error) throw error;
-      showToast('Account deleted permanently.', 'success');
+      showToast.success('Account deleted permanently.');
       await supabase.auth.signOut();
       setUserProfile(null);
       setPage('dashboard');
     } catch (err) {
-      showToast(friendlyError(err), 'error');
+      showToast.error(friendlyError(err));
     }
   };
 
@@ -849,7 +889,7 @@ export default function SongPitch() {
 
       if (error) throw error;
       if (!founder?.id) {
-        showToast('Founder support account not found yet.', 'info');
+        showToast.info('Founder support account not found yet.');
         return;
       }
 
@@ -858,7 +898,7 @@ export default function SongPitch() {
       setPage('messages');
       setViewingProfile(null);
     } catch (err) {
-      showToast(friendlyError(err), 'error');
+      showToast.error(friendlyError(err));
     }
   };
 
@@ -877,7 +917,7 @@ export default function SongPitch() {
       });
       if (error) throw error;
     } catch (err) {
-      showToast(friendlyError(err), 'error');
+      showToast.error(friendlyError(err));
     }
   };
 
@@ -894,7 +934,7 @@ export default function SongPitch() {
 
   if (loading) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: 16, background: DESIGN_SYSTEM.colors.bg.primary, fontFamily: "'Outfit', sans-serif" }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: 16, background: DESIGN_SYSTEM.colors.bg.primary, fontFamily: DESIGN_SYSTEM.font.body }}>
         <img src="/songpitch-logo.png" alt="SongPitch" style={{ width: 56, height: 56, objectFit: 'contain' }} onError={(e) => e.target.style.display = 'none'} />
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div className="ui-spinner" style={{ width: 16, height: 16, border: `2px solid ${DESIGN_SYSTEM.colors.border.light}`, borderTopColor: DESIGN_SYSTEM.colors.brand.primary, borderRadius: '50%' }} />
@@ -931,6 +971,8 @@ export default function SongPitch() {
     { id: "portfolio", label: "My Portfolio", icon: <Music size={17} />, forComposer: true },
     { id: "profile", label: "My Profile", icon: <User size={17} />, forAll: true },
     { id: "splits", label: "Split Sheets", icon: <FileText size={17} />, forComposer: true },
+    { id: "deal-analyzer", label: "Deal Analyzer", icon: <Scale size={17} />, forComposer: true },
+    { id: "contract-revision", label: "Contract Review", icon: <BookOpen size={17} />, forExecutive: true },
     { id: "admin-dashboard", label: "Admin Panel", icon: <Shield size={17} />, forAdmin: true },
   ];
 
@@ -959,13 +1001,15 @@ export default function SongPitch() {
    switch (page) {
       case "dashboard": return <DashboardPage user={userProfile} stats={stats} onNavigate={setPage} isMobile={isMobileView} analytics={analytics} />;
       case "roster": return <RosterPage accountType={userProfile.account_type} onViewProfile={setViewingProfile} isMobile={isMobileView} />;
-      case "catalog": return <CatalogPage audioPlayer={audioPlayer} isMobile={isMobileView} />;
+      case "catalog": return <CatalogPage audioPlayer={audioPlayer} isMobile={isMobileView} userProfile={userProfile} />;
       case "opportunities": return <OpportunitiesPage userProfile={userProfile} onBadgeRefresh={loadSidebarBadges} isMobile={isMobileView} />;
       case "responses": return <ResponsesPage userProfile={userProfile} onNavigate={setPage} onViewProfile={setViewingProfile} audioPlayer={audioPlayer} isMobile={isMobileView} />;
       case "messages": return <MessagesPage userProfile={userProfile} supportTargetUserId={supportTargetUserId} supportOpenToken={supportOpenToken} onBadgeRefresh={loadSidebarBadges} onActiveConversationChange={setActiveMessageConversationId} isMobile={isMobileView} />;
       case "portfolio": return <PortfolioPage userProfile={userProfile} audioPlayer={audioPlayer} isMobile={isMobileView} />;
       case "profile": return <ProfilePage user={{ ...userProfile, email: session.user.email }} onSignOut={handleSignOut} onProfileUpdate={() => loadUserProfile(session.user)} onDeleteAccount={handleDeleteAccount} />;
       case "splits": return <SplitGenerator userProfile={userProfile} />;
+      case "deal-analyzer": return <DealAnalyzerPage userProfile={userProfile} />;
+      case "contract-revision": return <ContractRevisionPage userProfile={userProfile} />;
       case "admin-dashboard": return <AdminDashboardPage stats={stats} userProfile={userProfile} onNavigate={setPage} onViewProfile={setViewingProfile} isMobile={isMobileView} analytics={analytics} />;
       default: return <DashboardPage user={userProfile} stats={stats} isMobile={isMobileView} analytics={analytics} />;
     }
@@ -975,7 +1019,7 @@ export default function SongPitch() {
   const desktopSidebarWidth = isSidebarCollapsed ? 96 : 240;
 
   return (
-    <div className="app-root w-full min-h-screen flex flex-col md:flex-row" style={{ display: "flex", width: '100%', minHeight: '100vh', height: "100vh", background: DESIGN_SYSTEM.colors.bg.secondary, fontFamily: "'Outfit', sans-serif", color: DESIGN_SYSTEM.colors.text.primary, overflow: "hidden", position: 'relative' }}>
+    <div className="app-root w-full min-h-screen flex flex-col md:flex-row" style={{ display: "flex", width: '100%', minHeight: '100vh', height: "100vh", background: DESIGN_SYSTEM.colors.bg.secondary, fontFamily: DESIGN_SYSTEM.font.body, color: DESIGN_SYSTEM.colors.text.primary, overflow: "hidden", position: 'relative' }}>
       {/* Skip to content link for keyboard/screen reader users */}
       <a href="#main-content" style={{ position: 'absolute', left: '-9999px', top: 'auto', width: '1px', height: '1px', overflow: 'hidden', zIndex: 9999 }} onFocus={e => { e.currentTarget.style.left = '16px'; e.currentTarget.style.top = '16px'; e.currentTarget.style.width = 'auto'; e.currentTarget.style.height = 'auto'; e.currentTarget.style.overflow = 'visible'; e.currentTarget.style.background = DESIGN_SYSTEM.colors.brand.primary; e.currentTarget.style.color = '#fff'; e.currentTarget.style.padding = '8px 16px'; e.currentTarget.style.borderRadius = '8px'; e.currentTarget.style.fontSize = '14px'; e.currentTarget.style.fontWeight = '600'; e.currentTarget.style.textDecoration = 'none'; }} onBlur={e => { e.currentTarget.style.left = '-9999px'; e.currentTarget.style.width = '1px'; e.currentTarget.style.height = '1px'; e.currentTarget.style.overflow = 'hidden'; }}>Skip to content</a>
       {isMobileView && (
@@ -989,18 +1033,20 @@ export default function SongPitch() {
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '0 14px',
-          background: DESIGN_SYSTEM.colors.bg.secondary,
-          borderBottom: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
+          background: 'rgba(8,10,18,0.88)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
           zIndex: 1300,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <img
               src="/songpitch-logo.png"
               alt="SongPitch"
-              style={{ width: 24, height: 24, objectFit: 'contain' }}
+              style={{ width: 24, height: 24, objectFit: 'contain', filter: 'hue-rotate(282deg) saturate(0.75) brightness(0.95)' }}
               onError={(e) => { e.target.style.display = 'none'; }}
             />
-            <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: "'Outfit', sans-serif" }}>SongPitch</span>
+            <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: DESIGN_SYSTEM.font.body }}>SongPitch</span>
           </div>
           <button
             aria-label="Toggle menu"
@@ -1029,7 +1075,7 @@ export default function SongPitch() {
             position: 'fixed',
             inset: 0,
             top: 56,
-            background: 'rgba(0, 0, 0, 0.55)',
+            background: 'rgba(4,5,14,0.80)',
             zIndex: 1190,
           }}
         />
@@ -1037,6 +1083,7 @@ export default function SongPitch() {
 
       <nav aria-label="Main navigation" className={isSidebarCollapsed ? 'sidebar-collapsed' : ''} style={{
         width: isMobileView ? 280 : desktopSidebarWidth,
+        minWidth: isMobileView ? 280 : desktopSidebarWidth,
         background: DESIGN_SYSTEM.colors.bg.secondary,
         borderRight: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
         display: "flex",
@@ -1047,8 +1094,11 @@ export default function SongPitch() {
         left: 0,
         bottom: 0,
         zIndex: 1200,
+        overflow: 'hidden',
         transform: isMobileView ? (isMobileMenuOpen ? 'translateX(0)' : 'translateX(-100%)') : 'none',
-        transition: 'transform 0.25s ease',
+        transition: isMobileView
+          ? 'transform 0.25s ease'
+          : 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
       }}>
         <div style={{ padding: "22px 20px", borderBottom: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -1056,17 +1106,17 @@ export default function SongPitch() {
             <img
               src="/songpitch-logo.png"
               alt="SongPitch"
-              style={{ width: 32, height: 32, objectFit: 'contain', margin: isSidebarCollapsed ? '0 auto' : undefined }}
+              style={{ width: 32, height: 32, objectFit: 'contain', margin: isSidebarCollapsed ? '0 auto' : undefined, filter: 'hue-rotate(282deg) saturate(0.75) brightness(0.95)' }}
               onError={(e) => { e.target.style.display = 'none'; }}
             />
             {!isSidebarCollapsed && (
               <div>
                 <div style={{ 
-                  fontSize: 19, 
-                  fontWeight: 700, 
+                  fontSize: 19,
+                  fontWeight: 700,
                   color: DESIGN_SYSTEM.colors.text.primary,
                   letterSpacing: "-0.3px",
-                  fontFamily: "'Outfit', sans-serif",
+                  fontFamily: DESIGN_SYSTEM.font.body,
                 }}>SongPitch</div>
               </div>
             )}
@@ -1084,14 +1134,14 @@ export default function SongPitch() {
         <nav style={{ flex: 1, padding: "12px 10px", overflowY: "auto", display: 'flex', flexDirection: 'column', gap: 2 }}>
           {nav.map(item => (
             <button key={item.id} aria-label={item.label} onClick={() => { setPage(item.id); setViewingProfile(null); if (isMobileView) setIsMobileMenuOpen(false); }} style={{
-              width: "100%", display: "flex", alignItems: "center", gap: isSidebarCollapsed ? 0 : 10, padding: isSidebarCollapsed ? "10px 6px" : "10px 12px", borderRadius: 8, border: "none", cursor: "pointer", textAlign: "left", fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: page === item.id ? 600 : 400, transition: "all 0.15s", position: 'relative',
-              background: page === item.id ? `${DESIGN_SYSTEM.colors.brand.primary}15` : "transparent",
-              color: page === item.id ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.tertiary,
+              width: "100%", display: "flex", alignItems: "center", gap: isSidebarCollapsed ? 0 : 10, padding: isSidebarCollapsed ? "10px 6px" : "10px 12px", borderRadius: 8, border: "none", cursor: "pointer", textAlign: "left", fontFamily: DESIGN_SYSTEM.font.body, fontSize: 14, fontWeight: page === item.id ? 600 : 400, transition: "all 0.15s", position: 'relative',
+              background: page === item.id ? 'rgba(201,168,76,0.10)' : "transparent",
+              color: page === item.id ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.text.secondary,
               justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',
               borderLeft: page === item.id ? `3px solid ${DESIGN_SYSTEM.colors.brand.primary}` : '3px solid transparent',
             }}
-              onMouseEnter={e => { if (page !== item.id) { e.currentTarget.style.background = DESIGN_SYSTEM.colors.bg.card; e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.secondary; } }}
-              onMouseLeave={e => { if (page !== item.id) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.tertiary; } }}
+              onMouseEnter={e => { if (page !== item.id) { e.currentTarget.style.background = DESIGN_SYSTEM.colors.bg.card; e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.primary; } }}
+              onMouseLeave={e => { if (page !== item.id) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.secondary; } }}
             >
               <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 20, color: page === item.id ? DESIGN_SYSTEM.colors.brand.primary : 'inherit' }}>{item.icon}</span>
               {!isSidebarCollapsed && <span>{item.label}</span>}
@@ -1133,7 +1183,7 @@ export default function SongPitch() {
                 border: "none",
                 cursor: "pointer",
                 textAlign: "left",
-                fontFamily: "'Outfit', sans-serif",
+                fontFamily: DESIGN_SYSTEM.font.body,
                 fontSize: 14,
                 fontWeight: 600,
                 transition: "all 0.15s",
@@ -1156,6 +1206,32 @@ export default function SongPitch() {
           )}
         </nav>
 
+        {/* ⌘K search hint */}
+        {!isSidebarCollapsed && (
+          <div style={{ padding: "0 10px 4px" }}>
+            <button
+              onClick={() => setCmdOpen(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                width: '100%', padding: '10px 16px',
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.07)',
+                borderRadius: 10,
+                color: DESIGN_SYSTEM.colors.text.tertiary,
+                fontFamily: DESIGN_SYSTEM.font.body,
+                fontSize: 13, cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                marginBottom: 8,
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(201,168,76,0.06)'; e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.secondary; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.tertiary; }}
+            >
+              <span style={{ flex: 1, textAlign: 'left' }}>Search...</span>
+              <kbd style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 5, padding: '2px 6px', fontSize: 11 }}>⌘K</kbd>
+            </button>
+          </div>
+        )}
+
         <div style={{ padding: "0 10px 8px" }}>
           <div ref={notifPanelRef} style={{ position: 'relative' }}>
             <button
@@ -1171,18 +1247,18 @@ export default function SongPitch() {
                 border: "none",
                 cursor: "pointer",
                 textAlign: "left",
-                fontFamily: "'Outfit', sans-serif",
+                fontFamily: DESIGN_SYSTEM.font.body,
                 fontSize: 14,
                 fontWeight: unreadCount > 0 ? 600 : 400,
                 transition: "all 0.15s",
                 position: 'relative',
-                background: showNotifPanel ? `${DESIGN_SYSTEM.colors.brand.primary}15` : "transparent",
-                color: showNotifPanel ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.tertiary,
+                background: showNotifPanel ? 'rgba(201,168,76,0.10)' : "transparent",
+                color: showNotifPanel ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.text.secondary,
                 justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',
                 borderLeft: showNotifPanel ? `3px solid ${DESIGN_SYSTEM.colors.brand.primary}` : '3px solid transparent',
               }}
-              onMouseEnter={e => { if (!showNotifPanel) { e.currentTarget.style.background = DESIGN_SYSTEM.colors.bg.card; e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.secondary; } }}
-              onMouseLeave={e => { if (!showNotifPanel) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.tertiary; } }}
+              onMouseEnter={e => { if (!showNotifPanel) { e.currentTarget.style.background = DESIGN_SYSTEM.colors.bg.card; e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.primary; } }}
+              onMouseLeave={e => { if (!showNotifPanel) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.secondary; } }}
               title="Notifications"
             >
               <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 20, color: unreadCount > 0 ? DESIGN_SYSTEM.colors.brand.primary : 'inherit' }}>
@@ -1195,7 +1271,7 @@ export default function SongPitch() {
                   top: isSidebarCollapsed ? 2 : undefined,
                   right: isSidebarCollapsed ? 6 : undefined,
                   marginLeft: isSidebarCollapsed ? 0 : 'auto',
-                  background: DESIGN_SYSTEM.colors.accent.red,
+                  background: DESIGN_SYSTEM.colors.brand.primary,
                   color: '#fff',
                   fontSize: 10,
                   fontWeight: 700,
@@ -1232,7 +1308,7 @@ export default function SongPitch() {
             onMouseEnter={e => e.currentTarget.style.background = DESIGN_SYSTEM.colors.bg.card}
             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
           >
-            <Avatar name={`${userProfile.first_name} ${userProfile.last_name}`} color={userProfile.avatar_color} avatarUrl={userProfile.avatar_url} size={34} />
+            <Avatar name={`${userProfile.first_name} ${userProfile.last_name}`} color={userProfile.avatar_color} avatarUrl={userProfile.avatar_url} size={34} border="1px solid rgba(201,168,76,0.3)" />
             {!isSidebarCollapsed && (
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{userProfile.first_name} {userProfile.last_name}</div>
@@ -1300,7 +1376,7 @@ export default function SongPitch() {
         </button>
       )}
 
-      <main id="main-content" className="page-fade-in flex-1 w-full min-w-0" key={viewingProfile ? `profile-${viewingProfile.id}` : page} style={{ flex: 1, width: '100%', minWidth: 0, overflowY: "auto", background: DESIGN_SYSTEM.colors.bg.secondary, paddingBottom: audioPlayer.playingSong ? 70 : 0, position: 'relative', paddingTop: isMobileView ? 56 : 0 }}>
+      <main id="main-content" className="page-fade-in flex-1 w-full min-w-0" key={viewingProfile ? `profile-${viewingProfile.id}` : page} style={{ flex: 1, width: '100%', minWidth: 0, overflowY: "auto", background: DESIGN_SYSTEM.colors.bg.primary, paddingBottom: audioPlayer.playingSong ? 70 : 0, position: 'relative', paddingTop: isMobileView ? 56 : 0 }}>
         <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh' }}><div style={{ width: 32, height: 32, border: `3px solid ${DESIGN_SYSTEM.colors.border.light}`, borderTopColor: DESIGN_SYSTEM.colors.brand.primary, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /></div>}>
           {renderPage()}
         </Suspense>
@@ -1329,15 +1405,15 @@ export default function SongPitch() {
 
       {/* Session inactivity warning */}
       {showSessionWarning && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 20 }}>
-          <div style={{ background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 20, padding: 32, maxWidth: 380, width: '100%', border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
-            <h2 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 20, fontWeight: 800, fontFamily: "'Outfit', sans-serif", marginBottom: 10 }}>Still there?</h2>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(4,5,14,0.78)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 20 }}>
+          <div className="modal-enter" style={{ background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 20, padding: 32, maxWidth: 380, width: '100%', border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+            <h2 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 20, fontWeight: 800, fontFamily: DESIGN_SYSTEM.font.body, marginBottom: 10 }}>Still there?</h2>
             <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
               You've been inactive for a while. For your security, we'll sign you out in 5 minutes unless you're still here.
             </p>
             <button
               onClick={() => setShowSessionWarning(false)}
-              style={{ background: DESIGN_SYSTEM.colors.brand.primary, color: '#fff', border: 'none', borderRadius: 10, padding: '12px 28px', fontWeight: 600, fontSize: 15, cursor: 'pointer', fontFamily: "'Outfit', sans-serif", boxShadow: '0 4px 16px rgba(29,185,84,0.25)' }}
+              style={{ background: DESIGN_SYSTEM.colors.brand.primary, color: '#fff', border: 'none', borderRadius: 10, padding: '12px 28px', fontWeight: 600, fontSize: 15, cursor: 'pointer', fontFamily: DESIGN_SYSTEM.font.body, boxShadow: '0 4px 16px rgba(201,168,76,0.25)' }}
               onMouseEnter={e => e.currentTarget.style.background = DESIGN_SYSTEM.colors.brand.light}
               onMouseLeave={e => e.currentTarget.style.background = DESIGN_SYSTEM.colors.brand.primary}
             >
@@ -1348,7 +1424,14 @@ export default function SongPitch() {
       )}
 
       {/* Toast Notifications */}
-      <ToastContainer />
+      <Toaster position="bottom-right" toastOptions={{ duration: 3500 }} />
+
+      {/* Command Palette */}
+      <CommandPalette
+        open={cmdOpen}
+        onClose={() => setCmdOpen(false)}
+        onNavigate={(pg) => { setPage(pg); setViewingProfile(null); setCmdOpen(false); }}
+      />
     </div>
   );
 }

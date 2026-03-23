@@ -2,8 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { FileText, Mic, Camera, Upload, Plus, Trash2, ChevronDown, ChevronUp, Clock, X, Music, Disc, Search, CheckCircle, AlertTriangle, Equal } from 'lucide-react';
 import { DESIGN_SYSTEM } from '../../constants/designSystem';
 import { supabase } from '../../lib/supabase';
-import { showToast } from '../../lib/toast';
+import { showToast } from '../../utils/toast';
 import { ConfirmModal } from '../../components/ConfirmModal';
+import { enrichSplits } from '../../services/legalsplits';
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 const styles = {
@@ -112,7 +113,7 @@ const styles = {
     color: DESIGN_SYSTEM.colors.text.primary,
     fontSize: DESIGN_SYSTEM.fontSize.md,
     outline: 'none',
-    fontFamily: "'Outfit', sans-serif",
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
   },
   pctInput: (accentColor) => ({
     width: 64,
@@ -125,7 +126,7 @@ const styles = {
     fontSize: DESIGN_SYSTEM.fontSize.md,
     fontWeight: DESIGN_SYSTEM.fontWeight.bold,
     outline: 'none',
-    fontFamily: "'Outfit', sans-serif",
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
   }),
   removeBtn: {
     background: 'none',
@@ -145,7 +146,7 @@ const styles = {
     color: DESIGN_SYSTEM.colors.text.primary,
     fontSize: DESIGN_SYSTEM.fontSize.md,
     outline: 'none',
-    fontFamily: "'Outfit', sans-serif",
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
     boxSizing: 'border-box',
   },
   primaryBtn: (disabled) => ({
@@ -159,7 +160,7 @@ const styles = {
     background: disabled ? DESIGN_SYSTEM.colors.bg.surface : DESIGN_SYSTEM.colors.brand.primary,
     color: disabled ? DESIGN_SYSTEM.colors.text.muted : '#fff',
     transition: DESIGN_SYSTEM.transition.fast,
-    fontFamily: "'Outfit', sans-serif",
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
   }),
   addBtn: {
     display: 'flex',
@@ -172,7 +173,7 @@ const styles = {
     color: DESIGN_SYSTEM.colors.text.secondary,
     cursor: 'pointer',
     fontSize: DESIGN_SYSTEM.fontSize.sm,
-    fontFamily: "'Outfit', sans-serif",
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
   },
   totalBar: (valid) => ({
     display: 'flex',
@@ -370,6 +371,11 @@ export default function SplitGenerator({ userProfile }) {
   const [signature, setSignature] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
+  // PRO / IPI enrichment (via LegalSplits AI)
+  const [proEnriching, setProEnriching] = useState(false);
+  const [proEnrichedData, setProEnrichedData] = useState(null); // EnrichSplitsResponse
+  const [proEnrichError, setProEnrichError] = useState(null);
+
   // Microphone
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -410,7 +416,7 @@ export default function SplitGenerator({ userProfile }) {
       setSavedSheets(data || []);
     } catch (err) {
       console.error('Failed to load split sheets:', err);
-      showToast('Failed to load split sheet history.', 'error');
+      showToast.error('Failed to load split sheet history.');
     } finally {
       setLoadingHistory(false);
     }
@@ -531,7 +537,7 @@ export default function SplitGenerator({ userProfile }) {
             }
           } catch (err) {
             console.error('Failed to process audio:', err);
-            showToast('The AI had trouble hearing that. Try speaking more clearly.', 'error');
+            showToast.error('The AI had trouble hearing that. Try speaking more clearly.');
           } finally {
             setIsProcessing(false);
           }
@@ -544,7 +550,7 @@ export default function SplitGenerator({ userProfile }) {
         setTranscription(null);
       } catch (err) {
         console.error('Microphone access denied:', err);
-        showToast('Please allow microphone permissions to use Voice Memo.', 'error');
+        showToast.error('Please allow microphone permissions to use Voice Memo.');
       }
     }
   };
@@ -576,7 +582,7 @@ export default function SplitGenerator({ userProfile }) {
       }
     } catch (err) {
       console.error('Failed to process image:', err);
-      showToast("The AI couldn't read that image. Try a clearer photo or screenshot.", 'error');
+      showToast.error("The AI couldn't read that image. Try a clearer photo or screenshot.");
     } finally {
       setIsScanning(false);
       event.target.value = null;
@@ -598,10 +604,10 @@ export default function SplitGenerator({ userProfile }) {
       const { data, error } = await supabase.storage.from('tracks').upload(fileName, file);
       if (error) throw error;
       setUploadedTrackPath(data.path);
-      showToast(`"${file.name}" uploaded to vault. Use Voice Memo or Scan Notes to add splits.`, 'success');
+      showToast.success(`"${file.name}" uploaded to vault. Use Voice Memo or Scan Notes to add splits.`);
     } catch (err) {
       console.error('Failed to upload track:', err);
-      showToast('Failed to upload track. Make sure the tracks bucket exists in Supabase.', 'error');
+      showToast.error('Failed to upload track. Make sure the tracks bucket exists in Supabase.');
     } finally {
       setIsUploadingTrack(false);
       event.target.value = null;
@@ -641,11 +647,11 @@ export default function SplitGenerator({ userProfile }) {
   // ─── 5. Save to Database ──────────────────────────────────────────────────
   const handleSaveToDatabase = async () => {
     if (!bothValid) {
-      showToast('Each split category with contributors must total exactly 100%.', 'error');
+      showToast.error('Each split category with contributors must total exactly 100%.');
       return;
     }
     if (!selectedSongId) {
-      showToast('Please select a song to verify rights for.', 'error');
+      showToast.error('Please select a song to verify rights for.');
       return;
     }
     setIsSaving(true);
@@ -669,7 +675,7 @@ export default function SplitGenerator({ userProfile }) {
         .update({ verification_status: 'verified' })
         .eq('id', selectedSongId);
 
-      showToast(`Rights verified for "${songTitle || 'song'}"!`, 'success');
+      showToast.success(`Rights verified for "${songTitle || 'song'}"!`);
 
       // Update local state so song shows as verified in selector
       setCoOwnedSongs(prev => prev.map(s =>
@@ -689,7 +695,7 @@ export default function SplitGenerator({ userProfile }) {
       setUploadedTrackPath(null);
     } catch (err) {
       console.error('Failed to save:', err);
-      showToast('Failed to save split sheet. Please try again.', 'error');
+      showToast.error('Failed to save split sheet. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -708,16 +714,35 @@ export default function SplitGenerator({ userProfile }) {
       }
       setSavedSheets(prev => prev.filter(s => s.id !== id));
       setExpandedSheet(null);
-      showToast('Split sheet deleted.', 'success');
+      showToast.success('Split sheet deleted.');
     } catch (err) {
       console.error('Failed to delete:', err);
-      showToast('Failed to delete split sheet.', 'error');
+      showToast.error('Failed to delete split sheet.');
     } finally {
       setDeleteTarget(null);
     }
   };
 
   const canSave = isAttested && signature.trim().length >= 3 && bothValid && selectedSongId && !isSaving;
+
+  const handleEnrichPRO = async () => {
+    setProEnriching(true);
+    setProEnrichedData(null);
+    setProEnrichError(null);
+    try {
+      const result = await enrichSplits({
+        song_title: songTitle.trim() || 'Untitled',
+        composition_splits: (compositionSplits || []).map(s => ({ name: s.name, percentage: s.percentage, role: s.role })),
+        master_splits: (masterSplits || []).map(s => ({ name: s.name, percentage: s.percentage, role: s.role })),
+      });
+      setProEnrichedData(result);
+    } catch (err) {
+      console.error('PRO enrichment failed:', err);
+      setProEnrichError('Could not reach LegalSplits AI. Please try again.');
+    } finally {
+      setProEnriching(false);
+    }
+  };
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
@@ -963,6 +988,108 @@ export default function SplitGenerator({ userProfile }) {
                   <span style={{ color: DESIGN_SYSTEM.colors.accent.red, fontSize: DESIGN_SYSTEM.fontSize.sm, fontWeight: DESIGN_SYSTEM.fontWeight.semibold }}>
                     Legal Data Gap: Master splits total {masterTotal.toFixed(1)}%, not 100%. All rights must be accounted for.
                   </span>
+                </div>
+              )}
+
+              {/* PRO & IPI Enrichment */}
+              {((compositionSplits || []).length > 0 || (masterSplits || []).length > 0) && (
+                <div style={{ ...styles.card, marginBottom: DESIGN_SYSTEM.spacing.md }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: DESIGN_SYSTEM.spacing.sm }}>
+                    <div>
+                      <h3 style={{ fontSize: DESIGN_SYSTEM.fontSize.md, fontWeight: DESIGN_SYSTEM.fontWeight.bold, color: DESIGN_SYSTEM.colors.text.primary, margin: 0 }}>
+                        PRO &amp; IPI Verification
+                      </h3>
+                      <p style={{ fontSize: DESIGN_SYSTEM.fontSize.sm, color: DESIGN_SYSTEM.colors.text.secondary, marginTop: 4, marginBottom: 0 }}>
+                        Look up performing rights affiliations and IPI numbers for your writers via LegalSplits AI.
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleEnrichPRO}
+                      disabled={proEnriching}
+                      style={{
+                        flexShrink: 0,
+                        padding: '8px 16px',
+                        borderRadius: DESIGN_SYSTEM.radius.sm,
+                        border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}`,
+                        background: proEnriching ? 'transparent' : `${DESIGN_SYSTEM.colors.brand.primary}15`,
+                        color: DESIGN_SYSTEM.colors.brand.primary,
+                        fontSize: DESIGN_SYSTEM.fontSize.sm,
+                        fontWeight: DESIGN_SYSTEM.fontWeight.semibold,
+                        cursor: proEnriching ? 'not-allowed' : 'pointer',
+                        whiteSpace: 'nowrap',
+                        opacity: proEnriching ? 0.6 : 1,
+                      }}
+                    >
+                      {proEnriching ? 'Looking up…' : '🔍 Verify PRO & IPI'}
+                    </button>
+                  </div>
+
+                  {proEnrichError && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: `${DESIGN_SYSTEM.colors.accent.red}12`, border: `1px solid ${DESIGN_SYSTEM.colors.accent.red}40`, borderRadius: DESIGN_SYSTEM.radius.sm, marginTop: DESIGN_SYSTEM.spacing.sm }}>
+                      <AlertTriangle size={16} color={DESIGN_SYSTEM.colors.accent.red} />
+                      <span style={{ fontSize: DESIGN_SYSTEM.fontSize.sm, color: DESIGN_SYSTEM.colors.accent.red }}>{proEnrichError}</span>
+                    </div>
+                  )}
+
+                  {proEnrichedData && (() => {
+                    const allWriters = [
+                      ...(proEnrichedData.composition_splits || []).map(s => ({ ...s, type: 'Composition' })),
+                      ...(proEnrichedData.master_splits || []).filter(s =>
+                        !(proEnrichedData.composition_splits || []).some(c => c.name.toLowerCase() === s.name.toLowerCase())
+                      ).map(s => ({ ...s, type: 'Master' })),
+                    ];
+                    return (
+                      <div style={{ marginTop: DESIGN_SYSTEM.spacing.md }}>
+                        <div style={{ overflowX: 'auto', borderRadius: DESIGN_SYSTEM.radius.sm, border: `1px solid ${DESIGN_SYSTEM.colors.bg.card}` }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: DESIGN_SYSTEM.fontSize.sm }}>
+                            <thead>
+                              <tr style={{ background: DESIGN_SYSTEM.colors.bg.card }}>
+                                {['Writer', 'PRO', 'IPI Number', '%'].map(h => (
+                                  <th key={h} style={{ textAlign: 'left', padding: '8px 12px', fontSize: 11, fontWeight: DESIGN_SYSTEM.fontWeight.semibold, color: DESIGN_SYSTEM.colors.text.secondary, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid rgba(255,255,255,0.06)` }}>
+                                    {h}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {allWriters.map((writer, i) => {
+                                const hasPro = writer.pro && writer.pro !== 'Unknown';
+                                const hasIpi = writer.ipi && writer.ipi !== 'Unknown';
+                                return (
+                                  <tr key={i} style={{ borderBottom: i < allWriters.length - 1 ? `1px solid rgba(255,255,255,0.04)` : 'none' }}>
+                                    <td style={{ padding: '10px 12px', color: DESIGN_SYSTEM.colors.text.primary, fontWeight: DESIGN_SYSTEM.fontWeight.medium }}>
+                                      {writer.name}
+                                    </td>
+                                    <td style={{ padding: '10px 12px' }}>
+                                      {hasPro ? (
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: '#4ade80', fontWeight: DESIGN_SYSTEM.fontWeight.semibold }}>
+                                          <CheckCircle size={13} /> {writer.pro}
+                                        </span>
+                                      ) : (
+                                        <span style={{ color: DESIGN_SYSTEM.colors.text.secondary }}>—</span>
+                                      )}
+                                    </td>
+                                    <td style={{ padding: '10px 12px', fontFamily: 'monospace', fontSize: 12, color: hasIpi ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.secondary }}>
+                                      {hasIpi ? writer.ipi : '—'}
+                                    </td>
+                                    <td style={{ padding: '10px 12px', color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 12 }}>
+                                      {writer.percentage}%
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                        <p style={{ fontSize: 11, color: DESIGN_SYSTEM.colors.text.secondary, marginTop: 8, marginBottom: 0 }}>
+                          ⚗️ AI-compiled from public sources. Verify IPI numbers on{' '}
+                          <a href="https://www.ascap.com/repertory" target="_blank" rel="noreferrer" style={{ color: DESIGN_SYSTEM.colors.brand.primary }}>ASCAP</a>,{' '}
+                          <a href="https://repertoire.bmi.com" target="_blank" rel="noreferrer" style={{ color: DESIGN_SYSTEM.colors.brand.primary }}>BMI</a>, or{' '}
+                          <a href="https://www.sesac.com" target="_blank" rel="noreferrer" style={{ color: DESIGN_SYSTEM.colors.brand.primary }}>SESAC</a> before use.
+                        </p>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 

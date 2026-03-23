@@ -41,13 +41,15 @@ export function NowPlayingBar({ playingSong, isPlaying, currentTime, duration, w
       bottom: 0,
       left: typeof sidebarOffset === 'number' ? sidebarOffset : (sidebarCollapsed ? 96 : 240),
       right: 0,
-      background: DESIGN_SYSTEM.colors.bg.card,
+      background: 'rgba(9,11,20,0.94)',
+      backdropFilter: 'blur(28px)',
+      WebkitBackdropFilter: 'blur(28px)',
       borderTop: `1px solid ${DESIGN_SYSTEM.colors.border.medium}`,
       padding: '0',
       zIndex: 100,
       transition: 'left 0.2s ease',
-      fontFamily: "'Outfit', sans-serif",
-      boxShadow: '0 -4px 20px rgba(0,0,0,0.4)',
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+      boxShadow: '0 -8px 32px rgba(0,0,0,0.6), 0 -1px 0 rgba(201,168,76,0.06)',
     }}>
       {/* Waveform Progress Bar (clickable) */}
       <div
