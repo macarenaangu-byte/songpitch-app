@@ -867,7 +867,51 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
             </div>
           )}
 
-          {/* CTA below steps */}
+          {/* ── GIF Preview — synced to tab ── */}
+          <div className="reveal" style={{ marginTop: 48 }}>
+            {/* Browser chrome bar */}
+            <div style={{
+              background: 'rgba(18,20,31,0.9)',
+              border: `1px solid ${DESIGN_SYSTEM.colors.border.medium}`,
+              borderBottom: 'none',
+              borderRadius: '16px 16px 0 0',
+              padding: '10px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+            }}>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {['#FF5F57','#FEBC2E','#28C840'].map(c => (
+                  <div key={c} style={{ width: 12, height: 12, borderRadius: '50%', background: c, opacity: 0.85 }} />
+                ))}
+              </div>
+              <div style={{ flex: 1, background: 'rgba(255,255,255,0.06)', borderRadius: 6, padding: '4px 12px', fontSize: 11, color: DESIGN_SYSTEM.colors.text.muted, fontFamily: 'monospace' }}>
+                app.songpitchhub.com
+              </div>
+              <div style={{ fontSize: 11, color: DESIGN_SYSTEM.colors.text.muted, background: `${DESIGN_SYSTEM.colors.brand.primary}20`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}40`, borderRadius: 6, padding: '3px 8px', fontWeight: 600 }}>
+                {howTab === 'composer' ? '🎵 Composer' : '🎬 Executive'}
+              </div>
+            </div>
+            {/* GIF frame */}
+            <div style={{
+              borderRadius: '0 0 16px 16px',
+              overflow: 'hidden',
+              border: `1px solid ${DESIGN_SYSTEM.colors.border.medium}`,
+              boxShadow: howTab === 'composer'
+                ? '0 20px 60px rgba(201,168,76,0.18)'
+                : '0 20px 60px rgba(139,92,246,0.18)',
+              lineHeight: 0,
+            }}>
+              <img
+                key={howTab}
+                src={howTab === 'composer' ? '/composer_flow.gif' : '/executive_flow.gif'}
+                alt={howTab === 'composer' ? 'Composer workflow demo' : 'Executive workflow demo'}
+                style={{ width: '100%', display: 'block' }}
+              />
+            </div>
+          </div>
+
+          {/* CTA below preview */}
           <div style={{ textAlign: 'center', marginTop: 40 }}>
             <button onClick={onGetStarted} style={{ background: DESIGN_SYSTEM.colors.gradient.main, border: 'none', borderRadius: 10, padding: '13px 32px', fontSize: 14, fontWeight: 700, color: '#0D0B0F', cursor: 'pointer', fontFamily: DESIGN_SYSTEM.font.body, boxShadow: '0 4px 20px rgba(201,168,76,0.3)', transition: 'all 0.2s ease' }}
               onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(201,168,76,0.4)'; }}
@@ -879,32 +923,74 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
         </div>
       </div>
 
-      {/* ── Demo Video ──────────────────────────────────────────────────── */}
-      <div id="demo-section" style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "0 20px 60px" : "0 48px 80px" }}>
-        <h2 style={{ fontSize: 38, fontWeight: 600, textAlign: "center", marginBottom: 8, fontFamily: DESIGN_SYSTEM.font.display }}>See It In Action</h2>
-        <p style={{ fontSize: 16, color: DESIGN_SYSTEM.colors.text.secondary, textAlign: "center", marginBottom: 32 }}>
-          A full walkthrough of uploading tracks, running AI analysis, and pitching to a brief.
-        </p>
-        <div style={{
-          borderRadius: 20, overflow: 'hidden',
-          border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
-          boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
-          background: DESIGN_SYSTEM.colors.bg.card,
-          aspectRatio: '16/9',
-        }}>
-          {/* Place your trimmed video file as /public/demo-video.mp4 */}
-          <video
-            src="/demo-video.mp4"
-            controls
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-            poster="/logo512.png"
-          >
-            Your browser does not support the video tag.
-          </video>
+      {/* ── See It In Action (full-width showcase) ──────────────────────── */}
+      <div id="demo-section" style={{ padding: isMobile ? '60px 20px' : '80px 48px', background: `linear-gradient(180deg, transparent 0%, rgba(201,168,76,0.04) 50%, transparent 100%)` }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+
+          {/* Header */}
+          <div className="reveal" style={{ textAlign: 'center', marginBottom: 48 }}>
+            <div style={{ display: 'inline-block', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 24, padding: '6px 20px', marginBottom: 16 }}>
+              <span style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Live Platform Preview</span>
+            </div>
+            <h2 style={{ fontFamily: DESIGN_SYSTEM.font.display, fontSize: isMobile ? 32 : 52, fontWeight: 600, letterSpacing: '0.01em', margin: '0 0 14px' }}>
+              Built for both sides of the deal
+            </h2>
+            <p style={{ fontSize: 16, color: DESIGN_SYSTEM.colors.text.secondary, maxWidth: 540, margin: '0 auto' }}>
+              Real workflows, real data — see exactly what composers and executives experience on the platform.
+            </p>
+          </div>
+
+          {/* Side-by-side cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 28 }}>
+
+            {/* Composer card */}
+            <div className="reveal" style={{ borderRadius: 20, overflow: 'hidden', border: `1px solid rgba(201,168,76,0.25)`, boxShadow: '0 20px 60px rgba(201,168,76,0.12)', background: DESIGN_SYSTEM.colors.bg.card }}>
+              {/* Card header */}
+              <div style={{ padding: '20px 24px', borderBottom: `1px solid rgba(201,168,76,0.15)`, display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: `${DESIGN_SYSTEM.colors.brand.primary}20`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🎵</div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 15, color: DESIGN_SYSTEM.colors.text.primary }}>Composer Workflow</div>
+                  <div style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.text.muted, marginTop: 2 }}>Portfolio → Deal Analyzer → AI Analysis</div>
+                </div>
+                <div style={{ marginLeft: 'auto', background: `${DESIGN_SYSTEM.colors.brand.primary}15`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}35`, borderRadius: 20, padding: '3px 10px', fontSize: 11, fontWeight: 700, color: DESIGN_SYSTEM.colors.brand.primary }}>PRO</div>
+              </div>
+              {/* GIF */}
+              <div style={{ lineHeight: 0 }}>
+                <img src="/composer_flow.gif" alt="Composer workflow" style={{ width: '100%', display: 'block' }} />
+              </div>
+              {/* Footer */}
+              <div style={{ padding: '14px 24px', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                {['Upload tracks', 'AI contract analysis', 'Deal Vault', 'Assign splits'].map(tag => (
+                  <span key={tag} style={{ fontSize: 11, color: DESIGN_SYSTEM.colors.brand.primary, background: `${DESIGN_SYSTEM.colors.brand.primary}12`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}25`, borderRadius: 20, padding: '3px 10px', fontWeight: 600 }}>{tag}</span>
+                ))}
+              </div>
+            </div>
+
+            {/* Executive card */}
+            <div className="reveal" style={{ borderRadius: 20, overflow: 'hidden', border: `1px solid rgba(139,92,246,0.25)`, boxShadow: '0 20px 60px rgba(139,92,246,0.12)', background: DESIGN_SYSTEM.colors.bg.card }}>
+              {/* Card header */}
+              <div style={{ padding: '20px 24px', borderBottom: `1px solid rgba(139,92,246,0.15)`, display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🎬</div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 15, color: DESIGN_SYSTEM.colors.text.primary }}>Executive Workflow</div>
+                  <div style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.text.muted, marginTop: 2 }}>Opportunities → Contract Review → Vault</div>
+                </div>
+                <div style={{ marginLeft: 'auto', background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.35)', borderRadius: 20, padding: '3px 10px', fontSize: 11, fontWeight: 700, color: '#8B5CF6' }}>PRO</div>
+              </div>
+              {/* GIF */}
+              <div style={{ lineHeight: 0 }}>
+                <img src="/executive_flow.gif" alt="Executive workflow" style={{ width: '100%', display: 'block' }} />
+              </div>
+              {/* Footer */}
+              <div style={{ padding: '14px 24px', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                {['Browse talent', 'AI contract review', 'Contract Vault', 'Red flag detection'].map(tag => (
+                  <span key={tag} style={{ fontSize: 11, color: '#8B5CF6', background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.25)', borderRadius: 20, padding: '3px 10px', fontWeight: 600 }}>{tag}</span>
+                ))}
+              </div>
+            </div>
+
+          </div>
         </div>
-        <p style={{ textAlign: 'center', color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, marginTop: 12 }}>
-          Full 8-minute tutorial available after sign-up
-        </p>
       </div>
 
       {/* ── Value Props: For Executives & Composers ─────────────────────── */}
