@@ -202,94 +202,63 @@ export function SongCard({ song, onPlay, isPlaying, showActions, onEdit, onDelet
         </div>
       </div>
 
-      {/* Metadata pills — list mode shows essentials only */}
-      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "nowrap", flex: "1 1 auto", minWidth: 0, overflow: 'hidden', justifyContent: "flex-start" }}>
-        {primaryGenre && <Badge color={DESIGN_SYSTEM.colors.brand.purple}>{primaryGenre}</Badge>}
-        {secondaryGenre && !isMobile && <Badge color={DESIGN_SYSTEM.colors.brand.blue}>{secondaryGenre}</Badge>}
-        {song.mood && !isMobile && <Badge color={DESIGN_SYSTEM.colors.brand.accent}>{song.mood}</Badge>}
-        {song.key && !isMobile && <Badge color={DESIGN_SYSTEM.colors.brand.secondary}><Music size={10} style={{ marginRight: 3, verticalAlign: "middle" }} />{song.key}</Badge>}
-        {licensingStatus && (
-          <span style={{
-            background: isOneStopTrack ? `${DESIGN_SYSTEM.colors.brand.primary}18` : `${DESIGN_SYSTEM.colors.bg.elevated}`,
-            color: isOneStopTrack ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.text.secondary,
-            fontSize: 11,
-            fontWeight: 700,
-            padding: "3px 8px",
-            borderRadius: 6,
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 4,
-            whiteSpace: "nowrap",
-            border: `1px solid ${isOneStopTrack ? DESIGN_SYSTEM.colors.brand.primary + '40' : DESIGN_SYSTEM.colors.border.light}`,
-          }} title={isOneStopTrack ? 'Prioritized in executive sync searches' : undefined}>
-            <Shield size={10} />
-            {isOneStopTrack ? 'One-Stop \u2022 Priority' : licensingStatus}
-          </span>
-        )}
-        {song.verification_status === 'verified' && (
-          <span className="badge-verified-shimmer" style={{
-            color: DESIGN_SYSTEM.colors.brand.primary,
-            fontSize: 11,
-            fontWeight: 700,
-            padding: "3px 10px",
-            borderRadius: 6,
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 3,
-            whiteSpace: "nowrap",
-            border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}40`,
-            letterSpacing: '0.2px',
-          }} title="Rights have been verified">
-            <CheckCircle size={10} /> Verified
-          </span>
-        )}
-        {song.verification_status === 'pending_splits' && !isOneStopTrack && (
-          <span style={{
-            background: `${DESIGN_SYSTEM.colors.accent.amber}15`,
-            color: DESIGN_SYSTEM.colors.accent.amber,
-            fontSize: 10,
-            fontWeight: 700,
-            padding: "3px 8px",
-            borderRadius: 6,
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 3,
-            whiteSpace: "nowrap",
-            border: `1px solid ${DESIGN_SYSTEM.colors.accent.amber}30`,
-          }} title="Ownership splits need verification">
-            <AlertTriangle size={10} /> Pending Verification
-          </span>
-        )}
-        {song.bpm && (
-          <span style={{
-            background: `${DESIGN_SYSTEM.colors.accent.amber}18`,
-            color: DESIGN_SYSTEM.colors.accent.amber,
-            fontSize: 11,
-            fontWeight: 600,
-            padding: "3px 10px",
-            borderRadius: 6,
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 3,
-            whiteSpace: "nowrap",
-            border: `1px solid ${DESIGN_SYSTEM.colors.accent.amber}30`,
-            letterSpacing: '0.2px',
-          }}>
-            <Zap size={10} />{song.bpm} BPM
-          </span>
-        )}
-        {song.duration && (
-          <span style={{
-            color: DESIGN_SYSTEM.colors.text.muted,
-            fontSize: DESIGN_SYSTEM.fontSize.xs,
-            display: "inline-flex",
-            alignItems: "center",
-            gap: '4px',
-            fontWeight: DESIGN_SYSTEM.fontWeight.medium,
-          }}>
-            <Clock size={12} />{song.duration}
-          </span>
-        )}
+      {/* Metadata pills — 2-row layout, breathable spacing */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 5, flex: "1 1 auto", minWidth: 0, overflow: 'hidden' }}>
+        {/* Row 1: genre tags */}
+        <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+          {primaryGenre && <Badge color={DESIGN_SYSTEM.colors.brand.purple}>{primaryGenre}</Badge>}
+          {secondaryGenre && !isMobile && <Badge color={DESIGN_SYSTEM.colors.brand.blue}>{secondaryGenre}</Badge>}
+          {song.mood && !isMobile && <Badge color={DESIGN_SYSTEM.colors.brand.accent}>{song.mood}</Badge>}
+          {song.key && !isMobile && (
+            <Badge color={DESIGN_SYSTEM.colors.brand.secondary}>
+              <Music size={10} style={{ marginRight: 3, verticalAlign: "middle" }} />{song.key}
+            </Badge>
+          )}
+        </div>
+        {/* Row 2: status badges */}
+        <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+          {isOneStopTrack && (
+            <span style={{
+              background: `${DESIGN_SYSTEM.colors.brand.primary}18`,
+              color: DESIGN_SYSTEM.colors.brand.primary,
+              fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
+              display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap",
+              border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}40`,
+            }} title="One-Stop — no split negotiations needed">
+              <Shield size={10} /> One-Stop
+            </span>
+          )}
+          {!isOneStopTrack && licensingStatus && (
+            <span style={{
+              background: DESIGN_SYSTEM.colors.bg.elevated,
+              color: DESIGN_SYSTEM.colors.text.secondary,
+              fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 6,
+              display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap",
+              border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
+            }}>
+              <Shield size={10} /> {licensingStatus}
+            </span>
+          )}
+          {song.verification_status === 'verified' && (
+            <span className="badge-verified-shimmer" style={{
+              color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 11, fontWeight: 700,
+              padding: "3px 10px", borderRadius: 6, display: "inline-flex", alignItems: "center",
+              gap: 3, whiteSpace: "nowrap", border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}40`,
+            }} title="Rights have been verified">
+              <CheckCircle size={10} /> Verified
+            </span>
+          )}
+          {song.verification_status === 'pending_splits' && !isOneStopTrack && (
+            <span style={{
+              background: `${DESIGN_SYSTEM.colors.accent.amber}15`, color: DESIGN_SYSTEM.colors.accent.amber,
+              fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
+              display: "inline-flex", alignItems: "center", gap: 3, whiteSpace: "nowrap",
+              border: `1px solid ${DESIGN_SYSTEM.colors.accent.amber}30`,
+            }} title="Ownership splits need verification">
+              <AlertTriangle size={10} /> Pending Verification
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Actions */}

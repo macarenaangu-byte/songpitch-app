@@ -294,9 +294,31 @@ function StatCounter({ value, suffix, label, color }) {
   );
 }
 
+const GIF_SLIDES = [
+  {
+    id: 'composer',
+    src: '/composer_flow.gif',
+    label: '🎵 Composer Flow',
+    desc: 'Portfolio → Deal Analyzer → AI Vault',
+    accent: '#C9A84C',
+    shadow: 'rgba(201,168,76,0.22)',
+    tags: ['Upload tracks', 'AI contract analysis', 'Deal Vault', 'Assign splits'],
+  },
+  {
+    id: 'executive',
+    src: '/executive_flow.gif',
+    label: '🎬 Executive Flow',
+    desc: 'Opportunities → Contract Review → Vault',
+    accent: '#8B5CF6',
+    shadow: 'rgba(139,92,246,0.22)',
+    tags: ['Browse talent', 'AI contract review', 'Red flag detection', 'Contract Vault'],
+  },
+];
+
 export function LandingPage({ onGetStarted, onLegalPage }) {
   const [activeSection, setActiveSection] = useState('');
   const [howTab, setHowTab] = useState('composer'); // 'composer' | 'executive'
+  const [gifSlide, setGifSlide] = useState(0); // 0=composer, 1=executive
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
@@ -775,7 +797,7 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
 
       {/* ── How It Works ────────────────────────────────────────────────── */}
       <div id="how-it-works" style={{ background: DESIGN_SYSTEM.colors.bg.secondary, borderTop: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderBottom: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, padding: '80px 0' }}>
-        <div style={{ maxWidth: 1000, margin: '0 auto', padding: isMobile ? '0 20px' : '0 48px' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: isMobile ? '0 20px' : '0 64px' }}>
 
           {/* Header */}
           <div className="reveal" style={{ textAlign: 'center', marginBottom: 48 }}>
@@ -867,52 +889,119 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
             </div>
           )}
 
-          {/* ── GIF Preview — synced to tab ── */}
-          <div className="reveal" style={{ marginTop: 48 }}>
-            {/* Browser chrome bar */}
-            <div style={{
-              background: 'rgba(18,20,31,0.9)',
-              border: `1px solid ${DESIGN_SYSTEM.colors.border.medium}`,
-              borderBottom: 'none',
-              borderRadius: '16px 16px 0 0',
-              padding: '10px 16px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-            }}>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {['#FF5F57','#FEBC2E','#28C840'].map(c => (
-                  <div key={c} style={{ width: 12, height: 12, borderRadius: '50%', background: c, opacity: 0.85 }} />
+          {/* ── GIF Slider ── */}
+          <div className="reveal" style={{ marginTop: 56, position: 'relative' }}>
+
+            {/* Slide label + counter */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{
+                  background: gifSlide === 0 ? 'rgba(201,168,76,0.15)' : 'rgba(139,92,246,0.15)',
+                  border: `1px solid ${GIF_SLIDES[gifSlide].accent}40`,
+                  borderRadius: 20, padding: '5px 14px',
+                  fontSize: 13, fontWeight: 700,
+                  color: GIF_SLIDES[gifSlide].accent,
+                  transition: 'all 0.3s ease',
+                }}>
+                  {GIF_SLIDES[gifSlide].label}
+                </div>
+                <span style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.text.muted }}>
+                  {GIF_SLIDES[gifSlide].desc}
+                </span>
+              </div>
+              <span style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.text.muted, fontWeight: 600, letterSpacing: '0.05em' }}>
+                {gifSlide + 1} / {GIF_SLIDES.length}
+              </span>
+            </div>
+
+            {/* Slide track */}
+            <div style={{ overflow: 'hidden', borderRadius: 16, boxShadow: `0 24px 80px ${GIF_SLIDES[gifSlide].shadow}`, transition: 'box-shadow 0.4s ease' }}>
+              {/* Browser chrome */}
+              <div style={{
+                background: 'rgba(14,16,26,0.97)',
+                borderBottom: '1px solid rgba(255,255,255,0.08)',
+                padding: '11px 18px',
+                display: 'flex', alignItems: 'center', gap: 12,
+              }}>
+                <div style={{ display: 'flex', gap: 7 }}>
+                  {['#FF5F57','#FEBC2E','#28C840'].map(c => (
+                    <div key={c} style={{ width: 13, height: 13, borderRadius: '50%', background: c }} />
+                  ))}
+                </div>
+                <div style={{ flex: 1, background: 'rgba(255,255,255,0.07)', borderRadius: 7, padding: '5px 14px', fontSize: 12, color: DESIGN_SYSTEM.colors.text.muted, fontFamily: 'monospace', letterSpacing: '0.01em' }}>
+                  app.songpitchhub.com
+                </div>
+                {GIF_SLIDES[gifSlide].tags.slice(0, 2).map(t => (
+                  <div key={t} style={{ fontSize: 10, color: GIF_SLIDES[gifSlide].accent, background: `${GIF_SLIDES[gifSlide].accent}15`, border: `1px solid ${GIF_SLIDES[gifSlide].accent}35`, borderRadius: 5, padding: '3px 8px', fontWeight: 700, whiteSpace: 'nowrap' }}>{t}</div>
                 ))}
               </div>
-              <div style={{ flex: 1, background: 'rgba(255,255,255,0.06)', borderRadius: 6, padding: '4px 12px', fontSize: 11, color: DESIGN_SYSTEM.colors.text.muted, fontFamily: 'monospace' }}>
-                app.songpitchhub.com
-              </div>
-              <div style={{ fontSize: 11, color: DESIGN_SYSTEM.colors.text.muted, background: `${DESIGN_SYSTEM.colors.brand.primary}20`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}40`, borderRadius: 6, padding: '3px 8px', fontWeight: 600 }}>
-                {howTab === 'composer' ? '🎵 Composer' : '🎬 Executive'}
+
+              {/* Sliding GIF frame */}
+              <div style={{ display: 'flex', transition: 'transform 0.45s cubic-bezier(0.4,0,0.2,1)', transform: `translateX(-${gifSlide * 100}%)` }}>
+                {GIF_SLIDES.map(slide => (
+                  <div key={slide.id} style={{ minWidth: '100%', lineHeight: 0 }}>
+                    <img src={slide.src} alt={slide.label} style={{ width: '100%', display: 'block' }} />
+                  </div>
+                ))}
               </div>
             </div>
-            {/* GIF frame */}
-            <div style={{
-              borderRadius: '0 0 16px 16px',
-              overflow: 'hidden',
-              border: `1px solid ${DESIGN_SYSTEM.colors.border.medium}`,
-              boxShadow: howTab === 'composer'
-                ? '0 20px 60px rgba(201,168,76,0.18)'
-                : '0 20px 60px rgba(139,92,246,0.18)',
-              lineHeight: 0,
-            }}>
-              <img
-                key={howTab}
-                src={howTab === 'composer' ? '/composer_flow.gif' : '/executive_flow.gif'}
-                alt={howTab === 'composer' ? 'Composer workflow demo' : 'Executive workflow demo'}
-                style={{ width: '100%', display: 'block' }}
-              />
+
+            {/* Prev arrow */}
+            <button
+              onClick={() => setGifSlide(s => Math.max(0, s - 1))}
+              disabled={gifSlide === 0}
+              style={{
+                position: 'absolute', left: isMobile ? -4 : -24, top: '52%', transform: 'translateY(-50%)',
+                width: 48, height: 48, borderRadius: '50%',
+                background: gifSlide === 0 ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.10)',
+                border: `1px solid ${gifSlide === 0 ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.18)'}`,
+                color: gifSlide === 0 ? DESIGN_SYSTEM.colors.text.muted : DESIGN_SYSTEM.colors.text.primary,
+                fontSize: 22, cursor: gifSlide === 0 ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 0.2s ease', backdropFilter: 'blur(8px)',
+              }}
+              onMouseEnter={e => { if (gifSlide > 0) e.currentTarget.style.background = 'rgba(255,255,255,0.16)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = gifSlide === 0 ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.10)'; }}
+            >‹</button>
+
+            {/* Next arrow */}
+            <button
+              onClick={() => setGifSlide(s => Math.min(GIF_SLIDES.length - 1, s + 1))}
+              disabled={gifSlide === GIF_SLIDES.length - 1}
+              style={{
+                position: 'absolute', right: isMobile ? -4 : -24, top: '52%', transform: 'translateY(-50%)',
+                width: 48, height: 48, borderRadius: '50%',
+                background: gifSlide === GIF_SLIDES.length - 1 ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.10)',
+                border: `1px solid ${gifSlide === GIF_SLIDES.length - 1 ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.18)'}`,
+                color: gifSlide === GIF_SLIDES.length - 1 ? DESIGN_SYSTEM.colors.text.muted : DESIGN_SYSTEM.colors.text.primary,
+                fontSize: 22, cursor: gifSlide === GIF_SLIDES.length - 1 ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 0.2s ease', backdropFilter: 'blur(8px)',
+              }}
+              onMouseEnter={e => { if (gifSlide < GIF_SLIDES.length - 1) e.currentTarget.style.background = 'rgba(255,255,255,0.16)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = gifSlide === GIF_SLIDES.length - 1 ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.10)'; }}
+            >›</button>
+
+            {/* Dot indicators */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 20 }}>
+              {GIF_SLIDES.map((s, i) => (
+                <button
+                  key={s.id}
+                  onClick={() => setGifSlide(i)}
+                  style={{
+                    width: gifSlide === i ? 32 : 8, height: 8, borderRadius: 4,
+                    background: gifSlide === i ? GIF_SLIDES[i].accent : DESIGN_SYSTEM.colors.border.medium,
+                    border: 'none', cursor: 'pointer',
+                    transition: 'all 0.35s cubic-bezier(0.4,0,0.2,1)',
+                    padding: 0,
+                  }}
+                />
+              ))}
             </div>
           </div>
 
-          {/* CTA below preview */}
-          <div style={{ textAlign: 'center', marginTop: 40 }}>
+          {/* CTA below slider */}
+          <div style={{ textAlign: 'center', marginTop: 44 }}>
             <button onClick={onGetStarted} style={{ background: DESIGN_SYSTEM.colors.gradient.main, border: 'none', borderRadius: 10, padding: '13px 32px', fontSize: 14, fontWeight: 700, color: '#0D0B0F', cursor: 'pointer', fontFamily: DESIGN_SYSTEM.font.body, boxShadow: '0 4px 20px rgba(201,168,76,0.3)', transition: 'all 0.2s ease' }}
               onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(201,168,76,0.4)'; }}
               onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(201,168,76,0.3)'; }}
