@@ -56,7 +56,7 @@ code {
 
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; }
 }
 
 .hero-animated-bg {
@@ -180,7 +180,7 @@ body::before {
 }
 @keyframes pageFadeIn {
   from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; }
 }
 
 /* ── Interactive button base ───────────────────────────────────────────────── */
@@ -249,7 +249,7 @@ body::before {
 }
 @keyframes modalSlideIn {
   from { opacity: 0; transform: scale(0.94) translateY(8px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
+  to   { opacity: 1; }
 }
 
 /* ── Command palette item hover ────────────────────────────────────────────── */
@@ -283,7 +283,7 @@ body::before {
 }
 @keyframes nowPlayingSlideIn {
   from { transform: translateY(100%); opacity: 0; }
-  to   { transform: translateY(0); opacity: 1; }
+  to   { opacity: 1; }
 }
 
 /* ── Button press micro-interaction ─────────────────────────────────────────── */
