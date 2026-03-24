@@ -9,7 +9,7 @@ import { DESIGN_SYSTEM } from '../constants/designSystem';
 export function SortDropdown({ options = [], value, onChange }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <span style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 12, fontWeight: 500, fontFamily: "'Outfit', sans-serif", whiteSpace: 'nowrap' }}>Sort by</span>
+      <span style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 12, fontWeight: 500, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", whiteSpace: 'nowrap' }}>Sort by</span>
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
@@ -21,7 +21,7 @@ export function SortDropdown({ options = [], value, onChange }) {
           color: DESIGN_SYSTEM.colors.text.primary,
           fontSize: 13,
           fontWeight: 500,
-          fontFamily: "'Outfit', sans-serif",
+          fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
           cursor: 'pointer',
           outline: 'none',
           appearance: 'auto',

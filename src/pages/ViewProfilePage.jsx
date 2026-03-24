@@ -114,7 +114,7 @@ export function ViewProfilePage({ profileUser, currentUser, onBack, onOpenMessag
   return (
     <div style={{ padding: "32px 36px", minHeight: "100%", overflowY: "auto" }}>
       {/* Back Button */}
-      <button onClick={onBack} style={{ background: "transparent", border: "none", color: DESIGN_SYSTEM.colors.brand.primary, cursor: "pointer", fontFamily: "'Outfit', sans-serif", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 6, marginBottom: 20 }}>
+      <button onClick={onBack} style={{ background: "transparent", border: "none", color: DESIGN_SYSTEM.colors.brand.primary, cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 6, marginBottom: 20 }}>
         <ArrowLeft size={16} /> Back
       </button>
 
@@ -137,7 +137,7 @@ export function ViewProfilePage({ profileUser, currentUser, onBack, onOpenMessag
 
           <div style={{ flex: 1 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-              <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 28, fontWeight: 800, fontFamily: "'Outfit', sans-serif", margin: 0 }}>
+              <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 28, fontWeight: 800, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", margin: 0 }}>
                 {profileUser.first_name} {profileUser.last_name}
               </h1>
               {profileUser.is_one_stop && (
@@ -166,7 +166,7 @@ export function ViewProfilePage({ profileUser, currentUser, onBack, onOpenMessag
                   </a>
                 )}
                 {profileUser.spotify_url && (
-                  <a href={profileUser.spotify_url} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 6, color: "#1DB954", fontSize: 13, fontWeight: 600, textDecoration: "none", background: "#1DB95411", padding: "6px 12px", borderRadius: 8 }}>
+                  <a href={profileUser.spotify_url} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 6, color: "#C9A84C", fontSize: 13, fontWeight: 600, textDecoration: "none", background: "rgba(201,168,76,0.1)", padding: "6px 12px", borderRadius: 8 }}>
                     <ExternalLink size={14} /> Spotify
                   </a>
                 )}
@@ -270,7 +270,7 @@ export function ViewProfilePage({ profileUser, currentUser, onBack, onOpenMessag
               </div>
             )}
 
-            <button onClick={handleContact} style={{ background: DESIGN_SYSTEM.colors.brand.primary, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 10, padding: "12px 24px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Outfit', sans-serif", display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <button onClick={handleContact} style={{ background: DESIGN_SYSTEM.colors.brand.primary, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 10, padding: "12px 24px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", display: "inline-flex", alignItems: "center", gap: 8 }}>
               <MessageCircle size={16} /> Contact {profileUser.first_name}
             </button>
           </div>
@@ -280,7 +280,7 @@ export function ViewProfilePage({ profileUser, currentUser, onBack, onOpenMessag
       {/* Portfolio (Composers + Admin) */}
       {(profileUser.account_type === 'composer' || profileUser.account_type === 'admin') && (
         <div>
-          <h2 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 22, fontWeight: 800, fontFamily: "'Outfit', sans-serif", marginBottom: 16 }}>Portfolio</h2>
+          <h2 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 22, fontWeight: 800, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", marginBottom: 16 }}>Portfolio</h2>
 
           {loading ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

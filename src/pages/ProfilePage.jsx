@@ -3,7 +3,7 @@ import { Edit, LogOut, Upload, Trash2, Bell, CheckCircle, Plus, X } from 'lucide
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { GENRE_OPTIONS } from '../constants/genres';
 import { supabase } from '../lib/supabase';
-import { showToast } from '../lib/toast';
+import { showToast } from '../utils/toast';
 import { friendlyError } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
 import { Badge } from '../components/Badge';
@@ -72,7 +72,7 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
       if (onProfileUpdate) await onProfileUpdate();
     } catch (err) {
       setEmailPrefs(emailPrefs);
-      showToast(friendlyError(err), 'error');
+      showToast.error(friendlyError(err));
     } finally {
       setSavingEmailPrefs(false);
     }
@@ -85,11 +85,11 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
     const file = e.target.files[0];
     if (!file) return;
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-      showToast("Please upload a JPG, PNG, or WebP image.", "error");
+      showToast.error("Please upload a JPG, PNG, or WebP image.");
       return;
     }
     if (file.size > MAX_AVATAR_SIZE) {
-      showToast("Image must be under 2MB.", "error");
+      showToast.error("Image must be under 2MB.");
       return;
     }
     setAvatarFile(file);
@@ -188,54 +188,88 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
 
       if (error) throw error;
 
-      showToast("Profile updated successfully!", "success");
+      showToast.success("Profile updated successfully!");
       setEditing(false);
       setAvatarFile(null);
       setAvatarPreview(avatarUrl);
       if (onProfileUpdate) await onProfileUpdate();
     } catch (err) {
-      showToast(friendlyError(err), "error");
+      showToast.error(friendlyError(err));
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div style={{ padding: "32px 36px", minHeight: "100%", overflowY: "auto" }}>
+    <div className="page-enter" style={{ padding: "32px 36px", minHeight: "100%", overflowY: "auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 28, fontWeight: 800, fontFamily: "'Outfit', sans-serif" }}>My Profile</h1>
+        <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 28, fontWeight: 800, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>My Profile</h1>
         {!editing && (
-          <button onClick={() => setEditing(true)} style={{ background: DESIGN_SYSTEM.colors.brand.primary, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 10, padding: "9px 18px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Outfit', sans-serif", display: "flex", alignItems: "center", gap: 6 }}>
+          <button onClick={() => setEditing(true)} style={{ background: DESIGN_SYSTEM.colors.brand.primary, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 10, padding: "9px 18px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", display: "flex", alignItems: "center", gap: 6 }}>
             <Edit size={15} /> Edit Profile
           </button>
         )}
       </div>
 
-      <div style={{ maxWidth: 600, background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 20, padding: 28, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
+      <div style={{ maxWidth: 600, background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 20, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, overflow: 'hidden' }}>
         {!editing ? (
           <>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
-              <Avatar name={`${user.first_name} ${user.last_name}`} color={user.avatar_color} avatarUrl={user.avatar_url} size={80} />
-              <h2 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 22, fontWeight: 800, fontFamily: "'Outfit', sans-serif", marginTop: 14 }}>{user.first_name} {user.last_name}</h2>
-              <Badge color={DESIGN_SYSTEM.colors.brand.primary} style={{ marginTop: 8 }}>
-                {user.account_type === "admin" ? "👋 Founder" : user.account_type === "music_executive" ? "Music Executive" : "Composer"}
-              </Badge>
-              <div style={{ marginTop: 10 }}><ProfileBadges user={user} /></div>
-              {user.bio && <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13, lineHeight: 1.6, marginTop: 12 }}>{user.bio}</p>}
+            {/* ── Cover band + floating avatar ── */}
+            <div style={{ position: 'relative', marginBottom: 52 }}>
+              {/* Cover gradient */}
+              <div style={{
+                height: 96,
+                background: `linear-gradient(135deg, #0D1020 0%, rgba(201,168,76,0.18) 50%, rgba(139,92,246,0.12) 100%)`,
+                borderBottom: `1px solid rgba(201,168,76,0.12)`,
+              }} />
+              {/* Floating avatar */}
+              <div style={{
+                position: 'absolute',
+                bottom: -44,
+                left: 28,
+                padding: 3,
+                borderRadius: '50%',
+                background: DESIGN_SYSTEM.colors.bg.card,
+                boxShadow: '0 0 0 3px rgba(201,168,76,0.25)',
+              }}>
+                <Avatar name={`${user.first_name} ${user.last_name}`} color={user.avatar_color} avatarUrl={user.avatar_url} size={80} />
+              </div>
             </div>
 
-            <div style={{ marginTop: 22, paddingTop: 20, borderTop: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
+            {/* Name + role */}
+            <div style={{ padding: '0 28px 4px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
+              <div>
+                <h2 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 22, fontWeight: 800, fontFamily: DESIGN_SYSTEM.font.display, margin: 0, letterSpacing: '-0.01em' }}>
+                  {user.first_name} {user.last_name}
+                </h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+                  <Badge color={DESIGN_SYSTEM.colors.brand.primary}>
+                    {user.account_type === "admin" ? "👋 Founder" : user.account_type === "music_executive" ? "Music Executive" : "Composer"}
+                  </Badge>
+                  {user.location && (
+                    <span style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 12, fontFamily: DESIGN_SYSTEM.font.body }}>
+                      📍 {user.location}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Badges + bio */}
+            <div style={{ padding: '12px 28px 0' }}>
+              <ProfileBadges user={user} />
+              {user.bio && (
+                <p style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, lineHeight: 1.65, marginTop: 12, marginBottom: 0 }}>
+                  {user.bio}
+                </p>
+              )}
+            </div>
+
+            <div style={{ margin: '0 28px', paddingTop: 20, borderTop: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
                 <span style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13 }}>Email</span>
                 <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, fontWeight: 600 }}>{user.email}</span>
               </div>
-
-              {user.location && (
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-                  <span style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13 }}>Location</span>
-                  <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, fontWeight: 600 }}>{user.location}</span>
-                </div>
-              )}
 
               {(user.account_type === 'composer' || user.account_type === 'admin') && (
                 <>
@@ -300,7 +334,7 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
                   {(!user.sync_credits || user.sync_credits.length === 0) && (
                     <div style={{ marginBottom: 12 }}>
                       <span style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13, display: "block", marginBottom: 4 }}>Sync Credits</span>
-                      <button onClick={() => setEditing(true)} style={{ background: 'transparent', border: 'none', color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: "'Outfit', sans-serif" }}>+ Add your first sync credit</button>
+                      <button onClick={() => setEditing(true)} style={{ background: 'transparent', border: 'none', color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>+ Add your first sync credit</button>
                     </div>
                   )}
                 </>
@@ -344,7 +378,7 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
             <div style={{ marginTop: 24, paddingTop: 20, borderTop: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
                 <Bell size={16} color={DESIGN_SYSTEM.colors.text.secondary} />
-                <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: "'Outfit', sans-serif", margin: 0 }}>Email Notifications</h3>
+                <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", margin: 0 }}>Email Notifications</h3>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {Object.entries(emailPrefLabels)
@@ -362,7 +396,7 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                       background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
                       borderRadius: 10, padding: '12px 14px', cursor: 'pointer',
-                      fontFamily: "'Outfit', sans-serif", textAlign: 'left', width: '100%',
+                      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", textAlign: 'left', width: '100%',
                       opacity: savingEmailPrefs ? 0.7 : 1, transition: 'all 0.15s ease',
                     }}
                   >
@@ -386,17 +420,19 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
               </div>
             </div>
 
-            <button onClick={onSignOut} style={{ width: "100%", marginTop: 20, background: "transparent", color: DESIGN_SYSTEM.colors.accent.red, border: `1px solid ${DESIGN_SYSTEM.colors.accent.red}33`, borderRadius: 10, padding: "10px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Outfit', sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-              <LogOut size={15} /> Sign Out
-            </button>
-            <button onClick={onDeleteAccount} style={{ width: "100%", marginTop: 10, background: `${DESIGN_SYSTEM.colors.accent.red}12`, color: DESIGN_SYSTEM.colors.accent.red, border: `1px solid ${DESIGN_SYSTEM.colors.accent.red}55`, borderRadius: 10, padding: "10px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "'Outfit', sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-              <Trash2 size={15} /> Delete Account
-            </button>
+            <div style={{ padding: '0 28px 28px' }}>
+              <button onClick={onSignOut} style={{ width: "100%", marginTop: 20, background: "transparent", color: DESIGN_SYSTEM.colors.accent.red, border: `1px solid ${DESIGN_SYSTEM.colors.accent.red}33`, borderRadius: 10, padding: "10px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                <LogOut size={15} /> Sign Out
+              </button>
+              <button onClick={onDeleteAccount} style={{ width: "100%", marginTop: 10, background: `${DESIGN_SYSTEM.colors.accent.red}12`, color: DESIGN_SYSTEM.colors.accent.red, border: `1px solid ${DESIGN_SYSTEM.colors.accent.red}55`, borderRadius: 10, padding: "10px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                <Trash2 size={15} /> Delete Account
+              </button>
+            </div>
           </>
         ) : (
           <>
-            <div style={{ marginBottom: 20 }}>
-              <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 18, fontWeight: 700, fontFamily: "'Outfit', sans-serif", marginBottom: 16 }}>Edit Profile</h3>
+            <div style={{ marginBottom: 20, padding: 28 }}>
+              <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 18, fontWeight: 700, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", marginBottom: 16 }}>Edit Profile</h3>
 
               {/* Avatar Upload */}
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 20 }}>
@@ -408,12 +444,12 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
                   )}
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
-                  <label style={{ background: `${DESIGN_SYSTEM.colors.brand.primary}18`, color: DESIGN_SYSTEM.colors.brand.primary, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}33`, borderRadius: 8, padding: "6px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Outfit', sans-serif", display: "flex", alignItems: "center", gap: 6 }}>
+                  <label style={{ background: `${DESIGN_SYSTEM.colors.brand.primary}18`, color: DESIGN_SYSTEM.colors.brand.primary, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}33`, borderRadius: 8, padding: "6px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", display: "flex", alignItems: "center", gap: 6 }}>
                     <Upload size={14} /> Upload Photo
                     <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleAvatarChange} style={{ display: "none" }} />
                   </label>
                   {avatarPreview && (
-                    <button type="button" onClick={removeAvatar} style={{ background: `${DESIGN_SYSTEM.colors.accent.red}18`, color: DESIGN_SYSTEM.colors.accent.red, border: `1px solid ${DESIGN_SYSTEM.colors.accent.red}33`, borderRadius: 8, padding: "6px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Outfit', sans-serif", display: "flex", alignItems: "center", gap: 6 }}>
+                    <button type="button" onClick={removeAvatar} style={{ background: `${DESIGN_SYSTEM.colors.accent.red}18`, color: DESIGN_SYSTEM.colors.accent.red, border: `1px solid ${DESIGN_SYSTEM.colors.accent.red}33`, borderRadius: 8, padding: "6px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", display: "flex", alignItems: "center", gap: 6 }}>
                       <Trash2 size={14} /> Remove
                     </button>
                   )}
@@ -423,44 +459,44 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
                 <div>
                   <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>First Name *</label>
-                  <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} required style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box" }} />
+                  <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} required style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", boxSizing: "border-box" }} />
                 </div>
                 <div>
                   <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Last Name *</label>
-                  <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} required style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box" }} />
+                  <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} required style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", boxSizing: "border-box" }} />
                 </div>
               </div>
 
               <div style={{ marginBottom: 12 }}>
                 <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Bio</label>
-                <textarea value={bio} onChange={e => setBio(e.target.value)} rows={3} placeholder="Tell us about yourself..." style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", resize: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box" }} />
+                <textarea value={bio} onChange={e => setBio(e.target.value)} rows={3} placeholder="Tell us about yourself..." style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", resize: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", boxSizing: "border-box" }} />
               </div>
 
               <div style={{ marginBottom: 12 }}>
                 <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Location</label>
-                <select value={location} onChange={e => setLocation(e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box", marginBottom: location === 'Custom...' ? 8 : 0 }}>
+                <select value={location} onChange={e => setLocation(e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", boxSizing: "border-box", marginBottom: location === 'Custom...' ? 8 : 0 }}>
                   <option value="">Select Location...</option>
                   {locationOptions.map(loc => <option key={loc} value={loc}>{loc}</option>)}
                 </select>
                 {location === 'Custom...' && (
-                  <input type="text" value={customLocation} onChange={e => setCustomLocation(e.target.value)} placeholder="Enter your location..." style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box" }} />
+                  <input type="text" value={customLocation} onChange={e => setCustomLocation(e.target.value)} placeholder="Enter your location..." style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", boxSizing: "border-box" }} />
                 )}
               </div>
 
               {/* URLS FOR EVERYONE */}
               <div style={{ marginBottom: 12 }}>
                 <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Website URL</label>
-                <input type="text" value={websiteUrl} onChange={e => setWebsiteUrl(e.target.value)} placeholder="https://yourwebsite.com" style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box" }} />
+                <input type="text" value={websiteUrl} onChange={e => setWebsiteUrl(e.target.value)} placeholder="https://yourwebsite.com" style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", boxSizing: "border-box" }} />
               </div>
 
               <div style={{ marginBottom: 12 }}>
                 <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Spotify URL</label>
-                <input type="text" value={spotifyUrl} onChange={e => setSpotifyUrl(e.target.value)} placeholder="https://open.spotify.com/..." style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box" }} />
+                <input type="text" value={spotifyUrl} onChange={e => setSpotifyUrl(e.target.value)} placeholder="https://open.spotify.com/..." style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", boxSizing: "border-box" }} />
               </div>
 
               <div style={{ marginBottom: 12 }}>
                 <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>LinkedIn URL</label>
-                <input type="text" value={linkedInUrl} onChange={e => setLinkedInUrl(e.target.value)} placeholder="https://linkedin.com/in/..." style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box" }} />
+                <input type="text" value={linkedInUrl} onChange={e => setLinkedInUrl(e.target.value)} placeholder="https://linkedin.com/in/..." style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", boxSizing: "border-box" }} />
               </div>
 
               {/* COMPOSER SPECIFIC FIELDS */}
@@ -472,7 +508,7 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
                     {/* INSTAGRAM MOVED HERE */}
                     <div style={{ marginBottom: 12 }}>
                       <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Instagram URL</label>
-                      <input type="text" value={instagramUrl} onChange={e => setInstagramUrl(e.target.value)} placeholder="https://instagram.com/yourhandle" style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box" }} />
+                      <input type="text" value={instagramUrl} onChange={e => setInstagramUrl(e.target.value)} placeholder="https://instagram.com/yourhandle" style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", boxSizing: "border-box" }} />
                     </div>
                     
                     <div style={{ marginBottom: 12, padding: "12px", background: `${DESIGN_SYSTEM.colors.brand.primary}11`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}33`, borderRadius: 8 }}>
@@ -499,7 +535,7 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
 
                     <div style={{ marginBottom: 12 }}>
                       <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>PRO URL</label>
-                      <input type="text" value={proUrl} onChange={e => setProUrl(e.target.value)} placeholder="https://..." style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box" }} />
+                      <input type="text" value={proUrl} onChange={e => setProUrl(e.target.value)} placeholder="https://..." style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", boxSizing: "border-box" }} />
                     </div>
 
                     <div style={{ marginBottom: 12 }}>
@@ -515,7 +551,7 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                         <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600 }}>Sync Credits</label>
                         {syncCredits.length < 10 && (
-                          <button type="button" onClick={() => setSyncCredits(prev => [...prev, { project: '', platform: '', year: '' }])} style={{ background: `${DESIGN_SYSTEM.colors.brand.primary}18`, color: DESIGN_SYSTEM.colors.brand.primary, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}33`, borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <button type="button" onClick={() => setSyncCredits(prev => [...prev, { project: '', platform: '', year: '' }])} style={{ background: `${DESIGN_SYSTEM.colors.brand.primary}18`, color: DESIGN_SYSTEM.colors.brand.primary, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}33`, borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", display: 'flex', alignItems: 'center', gap: 4 }}>
                             <Plus size={12} /> Add Credit
                           </button>
                         )}
@@ -526,9 +562,9 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                           {syncCredits.map((credit, i) => (
                             <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: 6, alignItems: 'center', background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: '8px 10px' }}>
-                              <input type="text" value={credit.project} onChange={e => { const u = [...syncCredits]; u[i] = { ...u[i], project: e.target.value }; setSyncCredits(u); }} placeholder="Project name *" style={{ background: 'transparent', border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: '6px 8px', color: DESIGN_SYSTEM.colors.text.primary, fontSize: 12, outline: 'none', fontFamily: "'Outfit', sans-serif" }} />
-                              <input type="text" value={credit.platform} onChange={e => { const u = [...syncCredits]; u[i] = { ...u[i], platform: e.target.value }; setSyncCredits(u); }} placeholder="Platform / Network" style={{ background: 'transparent', border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: '6px 8px', color: DESIGN_SYSTEM.colors.text.primary, fontSize: 12, outline: 'none', fontFamily: "'Outfit', sans-serif" }} />
-                              <input type="text" value={credit.year} onChange={e => { const u = [...syncCredits]; u[i] = { ...u[i], year: e.target.value }; setSyncCredits(u); }} placeholder="Year" style={{ background: 'transparent', border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: '6px 8px', color: DESIGN_SYSTEM.colors.text.primary, fontSize: 12, outline: 'none', fontFamily: "'Outfit', sans-serif", width: 60 }} />
+                              <input type="text" value={credit.project} onChange={e => { const u = [...syncCredits]; u[i] = { ...u[i], project: e.target.value }; setSyncCredits(u); }} placeholder="Project name *" style={{ background: 'transparent', border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: '6px 8px', color: DESIGN_SYSTEM.colors.text.primary, fontSize: 12, outline: 'none', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }} />
+                              <input type="text" value={credit.platform} onChange={e => { const u = [...syncCredits]; u[i] = { ...u[i], platform: e.target.value }; setSyncCredits(u); }} placeholder="Platform / Network" style={{ background: 'transparent', border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: '6px 8px', color: DESIGN_SYSTEM.colors.text.primary, fontSize: 12, outline: 'none', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }} />
+                              <input type="text" value={credit.year} onChange={e => { const u = [...syncCredits]; u[i] = { ...u[i], year: e.target.value }; setSyncCredits(u); }} placeholder="Year" style={{ background: 'transparent', border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: '6px 8px', color: DESIGN_SYSTEM.colors.text.primary, fontSize: 12, outline: 'none', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", width: 60 }} />
                               <button type="button" onClick={() => setSyncCredits(prev => prev.filter((_, idx) => idx !== i))} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 4, color: DESIGN_SYSTEM.colors.text.muted, display: 'flex', alignItems: 'center' }}>
                                 <X size={14} />
                               </button>
@@ -540,7 +576,7 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
 
                     <div style={{ marginBottom: 12 }}>
                       <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Role</label>
-                      <select value={role} onChange={e => setRole(e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box" }}>
+                      <select value={role} onChange={e => setRole(e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", boxSizing: "border-box" }}>
                         <option value="">Select Role...</option>
                         {composerRoles.map(r => <option key={r} value={r}>{r}</option>)}
                       </select>
@@ -548,7 +584,7 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
 
                     <div style={{ marginBottom: 12 }}>
                       <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Instruments (Optional)</label>
-                      <input type="text" value={instruments} onChange={e => setInstruments(e.target.value)} placeholder="e.g., Piano, Guitar, Vocals" style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box" }} />
+                      <input type="text" value={instruments} onChange={e => setInstruments(e.target.value)} placeholder="e.g., Piano, Guitar, Vocals" style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", boxSizing: "border-box" }} />
                     </div>
 
                     <div style={{ marginBottom: 12 }}>
@@ -576,12 +612,12 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
                     
                     <div style={{ marginBottom: 12 }}>
                       <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Company</label>
-                      <input type="text" value={company} onChange={e => setCompany(e.target.value)} placeholder="e.g., Sony Music, Warner Chappell" style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box" }} />
+                      <input type="text" value={company} onChange={e => setCompany(e.target.value)} placeholder="e.g., Sony Music, Warner Chappell" style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", boxSizing: "border-box" }} />
                     </div>
 
                     <div style={{ marginBottom: 12 }}>
                       <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Job Title</label>
-                      <select value={jobTitle} onChange={e => setJobTitle(e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", boxSizing: "border-box" }}>
+                      <select value={jobTitle} onChange={e => setJobTitle(e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", boxSizing: "border-box" }}>
                         <option value="">Select Job Title...</option>
                         {executiveRoles.map(r => <option key={r} value={r}>{r}</option>)}
                       </select>
@@ -620,10 +656,10 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
             </div>
 
             <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={handleSave} disabled={saving || !firstName || !lastName} style={{ flex: 1, background: DESIGN_SYSTEM.colors.brand.primary, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 10, padding: "10px", fontWeight: 600, fontSize: 14, cursor: (saving || !firstName || !lastName) ? "not-allowed" : "pointer", fontFamily: "'Outfit', sans-serif", opacity: (saving || !firstName || !lastName) ? 0.6 : 1 }}>
+              <button onClick={handleSave} disabled={saving || !firstName || !lastName} style={{ flex: 1, background: DESIGN_SYSTEM.colors.brand.primary, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 10, padding: "10px", fontWeight: 600, fontSize: 14, cursor: (saving || !firstName || !lastName) ? "not-allowed" : "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", opacity: (saving || !firstName || !lastName) ? 0.6 : 1 }}>
                 {saving ? "Saving..." : "Save Changes"}
               </button>
-              <button onClick={() => setEditing(false)} style={{ background: "transparent", color: DESIGN_SYSTEM.colors.text.tertiary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 10, padding: "10px 20px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Outfit', sans-serif" }}>
+              <button onClick={() => setEditing(false)} style={{ background: "transparent", color: DESIGN_SYSTEM.colors.text.tertiary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 10, padding: "10px 20px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
                 Cancel
               </button>
             </div>

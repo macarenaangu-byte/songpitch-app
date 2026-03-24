@@ -199,10 +199,10 @@ const loadResponses = async (oppId) => {
   };
 
   return (
-    <div style={{ padding: isMobile ? '16px' : "32px 36px", minHeight: "100%", overflowY: "auto" }}>
+    <div className="page-enter" style={{ padding: isMobile ? '16px' : "32px 36px", minHeight: "100%", overflowY: "auto" }}>
       {!selectedOpp ? (
         <>
-          <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: isMobile ? 24 : 28, fontWeight: 800, fontFamily: "'Outfit', sans-serif", marginBottom: 8 }}>Responses</h1>
+          <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: isMobile ? 24 : 28, fontWeight: 800, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", marginBottom: 8 }}>Responses</h1>
           <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 14, marginBottom: 24 }}>View composer applications organized by opportunity</p>
 
           {loading ? (
@@ -210,7 +210,7 @@ const loadResponses = async (oppId) => {
           ) : opportunities.length === 0 ? (
             <div style={{ background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 16, padding: 40, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, textAlign: "center" }}>
               <FileText size={48} color={DESIGN_SYSTEM.colors.text.muted} style={{ margin: "0 auto 16px" }} />
-              <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: "'Outfit', sans-serif", marginBottom: 6 }}>Your inbox is ready</h3>
+              <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", marginBottom: 6 }}>Your inbox is ready</h3>
               <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13 }}>Post your first opportunity and watch applications roll in from talented composers!</p>
             </div>
           ) : (
@@ -228,7 +228,7 @@ const loadResponses = async (oppId) => {
                       <Briefcase size={22} color={DESIGN_SYSTEM.colors.brand.primary} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: "'Outfit', sans-serif", marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{opp.title}</h3>
+                      <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{opp.title}</h3>
                       <Badge color={opp.status === 'Open' ? DESIGN_SYSTEM.colors.accent.green : DESIGN_SYSTEM.colors.text.muted}>{opp.status}</Badge>
                     </div>
                   </div>
@@ -236,7 +236,7 @@ const loadResponses = async (oppId) => {
                   <div style={{ background: DESIGN_SYSTEM.colors.bg.primary, borderRadius: 10, padding: 12, marginTop: 12 }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                       <span style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13 }}>Applications</span>
-                      <span style={{ color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 20, fontWeight: 800, fontFamily: "'Outfit', sans-serif" }}>
+                      <span style={{ color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 20, fontWeight: 800, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
                         {opp.responses?.[0]?.count || 0}
                       </span>
                     </div>
@@ -253,11 +253,11 @@ const loadResponses = async (oppId) => {
       ) : (
         <>
           <div style={{ display: "flex", flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : "center", gap: 12, marginBottom: 24 }}>
-            <button onClick={goBack} style={{ background: DESIGN_SYSTEM.colors.bg.card, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 10, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 14, fontWeight: 600, fontFamily: "'Outfit', sans-serif" }}>
+            <button onClick={goBack} style={{ background: DESIGN_SYSTEM.colors.bg.card, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 10, padding: "8px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 14, fontWeight: 600, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
               <ArrowLeft size={16} /> Back
             </button>
             <div>
-              <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: isMobile ? 20 : 24, fontWeight: 800, fontFamily: "'Outfit', sans-serif" }}>{selectedOpp.title}</h1>
+              <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: isMobile ? 20 : 24, fontWeight: 800, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>{selectedOpp.title}</h1>
               <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13, marginTop: 2 }}>{responses.length} {responses.length === 1 ? 'Application' : 'Applications'}</p>
             </div>
           </div>
@@ -271,7 +271,7 @@ const loadResponses = async (oppId) => {
                   border: `1px solid ${reviewFilter === f ? (f === 'shortlisted' ? DESIGN_SYSTEM.colors.brand.primary : f === 'rejected' ? DESIGN_SYSTEM.colors.accent.red : DESIGN_SYSTEM.colors.border.light) : DESIGN_SYSTEM.colors.border.light}`,
                   borderRadius: 20, padding: '6px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
                   color: reviewFilter === f ? (f === 'shortlisted' ? DESIGN_SYSTEM.colors.brand.primary : f === 'rejected' ? DESIGN_SYSTEM.colors.accent.red : DESIGN_SYSTEM.colors.text.primary) : DESIGN_SYSTEM.colors.text.muted,
-                  fontFamily: "'Outfit', sans-serif", transition: 'all 0.2s',
+                  fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", transition: 'all 0.2s',
                 }}>
                   {f === 'all' ? `All (${responses.length})` : f === 'shortlisted' ? `Shortlisted (${responses.filter(r => shortlistedIds.has(r.id)).length})` : `Passed (${responses.filter(r => rejectedIds.has(r.id)).length})`}
                 </button>
@@ -284,7 +284,7 @@ const loadResponses = async (oppId) => {
           ) : responses.length === 0 ? (
             <div style={{ background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 16, padding: 40, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, textAlign: "center" }}>
               <MessageCircle size={48} color={DESIGN_SYSTEM.colors.text.muted} style={{ margin: "0 auto 16px" }} />
-              <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: "'Outfit', sans-serif", marginBottom: 6 }}>No applications yet</h3>
+              <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", marginBottom: 6 }}>No applications yet</h3>
               <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13 }}>Composers haven't applied to this opportunity yet. Check back later!</p>
             </div>
           ) : (
@@ -316,7 +316,7 @@ const loadResponses = async (oppId) => {
                         {/* Clickable Name */}
                         <h3
                           onClick={() => onViewProfile && onViewProfile(response.composer)}
-                          style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 18, fontWeight: 700, fontFamily: "'Outfit', sans-serif", cursor: onViewProfile ? "pointer" : "default", margin: 0 }}
+                          style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 18, fontWeight: 700, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", cursor: onViewProfile ? "pointer" : "default", margin: 0 }}
                           onMouseEnter={e => { if (onViewProfile) e.currentTarget.style.color = DESIGN_SYSTEM.colors.brand.primary; }}
                           onMouseLeave={e => { if (onViewProfile) e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.primary; }}
                         >
@@ -343,7 +343,7 @@ const loadResponses = async (oppId) => {
                         {onViewProfile && (
                           <button
                             onClick={() => onViewProfile(response.composer)}
-                            style={{ background: 'transparent', border: 'none', color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 4, fontFamily: "'Outfit', sans-serif" }}
+                            style={{ background: 'transparent', border: 'none', color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 4, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}
                           >
                             View Full Profile <ExternalLink size={12} />
                           </button>
@@ -351,7 +351,7 @@ const loadResponses = async (oppId) => {
                         {response.song?.verification_status === 'verified' && (
                           <button
                             onClick={() => setViewingRightsSong(response.song)}
-                            style={{ background: 'transparent', border: 'none', color: DESIGN_SYSTEM.colors.accent.green, fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 4, fontFamily: "'Outfit', sans-serif" }}
+                            style={{ background: 'transparent', border: 'none', color: DESIGN_SYSTEM.colors.accent.green, fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 4, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}
                           >
                             <CheckCircle size={12} /> View Rights
                           </button>
@@ -359,10 +359,10 @@ const loadResponses = async (oppId) => {
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                      <button onClick={() => toggleShortlist(response.id)} title={shortlistedIds.has(response.id) ? 'Remove from shortlist' : 'Shortlist'} style={{ background: shortlistedIds.has(response.id) ? `${DESIGN_SYSTEM.colors.brand.primary}22` : 'transparent', border: `1px solid ${shortlistedIds.has(response.id) ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, color: shortlistedIds.has(response.id) ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.text.muted, fontFamily: "'Outfit', sans-serif", transition: 'all 0.2s' }}>
+                      <button onClick={() => toggleShortlist(response.id)} title={shortlistedIds.has(response.id) ? 'Remove from shortlist' : 'Shortlist'} style={{ background: shortlistedIds.has(response.id) ? `${DESIGN_SYSTEM.colors.brand.primary}22` : 'transparent', border: `1px solid ${shortlistedIds.has(response.id) ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, color: shortlistedIds.has(response.id) ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.text.muted, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", transition: 'all 0.2s' }}>
                         <CheckCircle size={13} /> {shortlistedIds.has(response.id) ? 'Shortlisted' : 'Shortlist'}
                       </button>
-                      <button onClick={() => toggleRejected(response.id)} title={rejectedIds.has(response.id) ? 'Undo pass' : 'Pass'} style={{ background: rejectedIds.has(response.id) ? `${DESIGN_SYSTEM.colors.accent.red}18` : 'transparent', border: `1px solid ${rejectedIds.has(response.id) ? DESIGN_SYSTEM.colors.accent.red + '44' : DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, color: rejectedIds.has(response.id) ? DESIGN_SYSTEM.colors.accent.red : DESIGN_SYSTEM.colors.text.muted, fontFamily: "'Outfit', sans-serif", transition: 'all 0.2s' }}>
+                      <button onClick={() => toggleRejected(response.id)} title={rejectedIds.has(response.id) ? 'Undo pass' : 'Pass'} style={{ background: rejectedIds.has(response.id) ? `${DESIGN_SYSTEM.colors.accent.red}18` : 'transparent', border: `1px solid ${rejectedIds.has(response.id) ? DESIGN_SYSTEM.colors.accent.red + '44' : DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, color: rejectedIds.has(response.id) ? DESIGN_SYSTEM.colors.accent.red : DESIGN_SYSTEM.colors.text.muted, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", transition: 'all 0.2s' }}>
                         <XCircle size={13} /> {rejectedIds.has(response.id) ? 'Passed' : 'Pass'}
                       </button>
                     </div>
@@ -393,7 +393,7 @@ const loadResponses = async (oppId) => {
                           </div>
                           
                           <div style={{ flex: 1 }}>
-                            <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontWeight: 700, fontSize: 16, fontFamily: "'Outfit', sans-serif", marginBottom: 6 }}>
+                            <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontWeight: 700, fontSize: 16, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", marginBottom: 6 }}>
                               {response.song.title}
                             </div>
                             
@@ -411,7 +411,7 @@ const loadResponses = async (oppId) => {
                   )}
 
                   <button
-                    style={{ width: "100%", background: DESIGN_SYSTEM.colors.brand.primary, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 10, padding: "12px", fontWeight: 600, fontSize: 14, cursor: contactingId === response.composer_id ? "not-allowed" : "pointer", fontFamily: "'Outfit', sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: contactingId === response.composer_id ? 0.7 : 1, transition: "opacity 0.2s" }}
+                    style={{ width: "100%", background: DESIGN_SYSTEM.colors.brand.primary, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 10, padding: "12px", fontWeight: 600, fontSize: 14, cursor: contactingId === response.composer_id ? "not-allowed" : "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: contactingId === response.composer_id ? 0.7 : 1, transition: "opacity 0.2s" }}
                     onClick={() => handleContactComposer(response.composer_id)}
                     disabled={contactingId === response.composer_id}
                   >

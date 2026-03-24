@@ -120,7 +120,7 @@ export function VerifiedRightsModal({ open, onClose, song }) {
           <div>
             <h2 style={{
               color: DESIGN_SYSTEM.colors.text.primary, fontSize: DESIGN_SYSTEM.fontSize.xl,
-              fontWeight: 800, fontFamily: "'Outfit', sans-serif", margin: 0, marginBottom: 6,
+              fontWeight: 800, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", margin: 0, marginBottom: 6,
             }}>
               {song?.title || 'Untitled'}
             </h2>

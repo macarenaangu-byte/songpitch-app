@@ -1,8 +1,9 @@
 import { LegalPageLayout } from './TermsOfServicePage';
+import { DESIGN_SYSTEM } from '../constants/designSystem';
 
 export function DMCAPage({ onBack }) {
-  const h2Style = { fontSize: 22, fontWeight: 600, color: '#fff', marginTop: 36, marginBottom: 12 };
-  const h3Style = { fontSize: 17, fontWeight: 600, color: '#fff', marginTop: 24, marginBottom: 8 };
+  const h2Style = { fontSize: 22, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.primary, marginTop: 36, marginBottom: 12 };
+  const h3Style = { fontSize: 17, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.primary, marginTop: 24, marginBottom: 8 };
   return (
     <LegalPageLayout title="DMCA & Copyright Policy" onBack={onBack}>
       <p>SongPitch respects the intellectual property rights of others and expects its users to do the same. In accordance with the Digital Millennium Copyright Act (DMCA), we will respond promptly to claims of copyright infringement committed using our platform.</p>

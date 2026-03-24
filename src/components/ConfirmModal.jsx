@@ -10,14 +10,16 @@ export function ConfirmModal({ open, title, message, onConfirm, onCancel }) {
       left: 0,
       right: 0,
       bottom: 0,
-      background: 'rgba(0,0,0,0.8)',
+      background: 'rgba(4,5,14,0.78)',
+      backdropFilter: 'blur(8px)',
+      WebkitBackdropFilter: 'blur(8px)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       zIndex: 1000,
       padding: 20,
     }}>
-      <div style={{
+      <div className="modal-enter" style={{
         background: DESIGN_SYSTEM.colors.bg.card,
         borderRadius: 20,
         padding: 28,
@@ -29,7 +31,7 @@ export function ConfirmModal({ open, title, message, onConfirm, onCancel }) {
           color: DESIGN_SYSTEM.colors.text.primary,
           fontSize: 18,
           fontWeight: 700,
-          fontFamily: "'Outfit', sans-serif",
+          fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
           marginBottom: 12,
         }}>
           {title}
@@ -38,7 +40,7 @@ export function ConfirmModal({ open, title, message, onConfirm, onCancel }) {
           color: DESIGN_SYSTEM.colors.text.secondary,
           fontSize: 14,
           lineHeight: 1.5,
-          fontFamily: "'Outfit', sans-serif",
+          fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
           marginBottom: 24,
         }}>
           {message}
@@ -55,7 +57,7 @@ export function ConfirmModal({ open, title, message, onConfirm, onCancel }) {
               fontWeight: 600,
               fontSize: 14,
               cursor: 'pointer',
-              fontFamily: "'Outfit', sans-serif",
+              fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
             }}
           >
             Cancel
@@ -71,7 +73,7 @@ export function ConfirmModal({ open, title, message, onConfirm, onCancel }) {
               fontWeight: 600,
               fontSize: 14,
               cursor: 'pointer',
-              fontFamily: "'Outfit', sans-serif",
+              fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
             }}
           >
             Confirm

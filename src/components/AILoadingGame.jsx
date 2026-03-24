@@ -68,7 +68,7 @@ export function AILoadingGame() {
       background: 'rgba(10, 10, 12, 0.85)', backdropFilter: 'blur(8px)', 
       zIndex: 9999, display: 'flex', flexDirection: 'column', 
       alignItems: 'center', justifyContent: 'center', overflow: 'hidden', 
-      fontFamily: "'Outfit', sans-serif" 
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" 
     }}>
 
       {/* The Central UI Container */}

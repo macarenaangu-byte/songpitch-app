@@ -3,7 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 
 export function LegalPageLayout({ title, onBack, children }) {
   return (
-    <div style={{ minHeight: '100vh', background: DESIGN_SYSTEM.colors.bg.primary, fontFamily: "'Outfit', sans-serif", color: DESIGN_SYSTEM.colors.text.primary }}>
+    <div style={{ minHeight: '100vh', background: DESIGN_SYSTEM.colors.bg.primary, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", color: DESIGN_SYSTEM.colors.text.primary }}>
       <div style={{ padding: '24px 48px', display: 'flex', alignItems: 'center', gap: 16, borderBottom: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
         <button onClick={onBack} style={{ background: 'none', border: 'none', color: DESIGN_SYSTEM.colors.text.secondary, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, padding: 0 }}>
           <ArrowLeft size={16} /> Back

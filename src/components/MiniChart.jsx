@@ -47,7 +47,7 @@ export function MiniChart({ data = [], type = 'line', color = DESIGN_SYSTEM.colo
             );
           })}
         </svg>
-        {label && <div style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 10, marginTop: 2, fontFamily: "'Outfit', sans-serif" }}>{label}</div>}
+        {label && <div style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 10, marginTop: 2, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>{label}</div>}
       </div>
     );
   }
@@ -89,7 +89,7 @@ export function MiniChart({ data = [], type = 'line', color = DESIGN_SYSTEM.colo
           />
         )}
       </svg>
-      {label && <div style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 10, marginTop: 2, fontFamily: "'Outfit', sans-serif" }}>{label}</div>}
+      {label && <div style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 10, marginTop: 2, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>{label}</div>}
     </div>
   );
 }
@@ -106,7 +106,7 @@ export function HorizontalBarChart({ items = [], maxWidth = 200 }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       {items.map((item, i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 11, width: 80, textAlign: 'right', flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'Outfit', sans-serif" }}>
+          <span style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 11, width: 80, textAlign: 'right', flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
             {item.label}
           </span>
           <div style={{ flex: 1, maxWidth, height: 14, background: DESIGN_SYSTEM.colors.bg.primary, borderRadius: 3, overflow: 'hidden' }}>
@@ -119,7 +119,7 @@ export function HorizontalBarChart({ items = [], maxWidth = 200 }) {
               minWidth: item.value > 0 ? 4 : 0,
             }} />
           </div>
-          <span style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 11, width: 30, fontWeight: 600, fontFamily: "'Outfit', sans-serif" }}>
+          <span style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 11, width: 30, fontWeight: 600, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
             {item.value}
           </span>
         </div>

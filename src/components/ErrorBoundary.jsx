@@ -50,7 +50,7 @@ export class ErrorBoundary extends React.Component {
               color: DESIGN_SYSTEM.colors.text.primary,
               fontSize: 24,
               fontWeight: DESIGN_SYSTEM.fontWeight.bold,
-              fontFamily: "'Outfit', sans-serif",
+              fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
               marginBottom: 12,
             }}>
               Something went wrong
@@ -74,7 +74,7 @@ export class ErrorBoundary extends React.Component {
                 padding: '14px 28px',
                 fontSize: DESIGN_SYSTEM.fontSize.md,
                 fontWeight: DESIGN_SYSTEM.fontWeight.semibold,
-                fontFamily: "'Outfit', sans-serif",
+                fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -102,7 +102,7 @@ export class ErrorBoundary extends React.Component {
                 padding: '14px 28px',
                 fontSize: DESIGN_SYSTEM.fontSize.md,
                 fontWeight: DESIGN_SYSTEM.fontWeight.semibold,
-                fontFamily: "'Outfit', sans-serif",
+                fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                 cursor: 'pointer',
                 transition: `all ${DESIGN_SYSTEM.transition.fast}`,
               }}

@@ -8,10 +8,14 @@ import { friendlyError, insertNotification, insertNotificationBatch } from '../l
 import { Avatar } from '../components/Avatar';
 import { Badge } from '../components/Badge';
 import { ConfirmModal } from '../components/ConfirmModal';
-import { LoadingOpportunityCard } from '../components/LoadingCards';
+import { OpportunityGridSkeleton, OpportunityCardSkeleton } from '../components/Skeleton';
 import { FilterChips } from '../components/FilterChips';
+import { useTier } from '../hooks/useTier';
+import UpgradeModal from '../components/UpgradeModal';
 
 export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = false }) {
+  const { withinLimit, upgradeMessage } = useTier(userProfile);
+  const [upgradeModal, setUpgradeModal] = useState({ open: false, feature: '' });
   const [opportunities, setOpportunities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -255,6 +259,16 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // ── Tier gate: opportunity posting limit (execs only, not edits) ──────────
+    if (!editingOpp) {
+      const oppCheck = withinLimit('opportunity');
+      if (!oppCheck.allowed) {
+        setUpgradeModal({ open: true, feature: upgradeMessage('opportunity') });
+        return;
+      }
+    }
+
     setSubmitting(true);
 
     try {
@@ -309,6 +323,9 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
       resetForm();
       loadOpportunities();
       showToast(editingOpp ? "Opportunity updated!" : "Opportunity posted!", "success");
+      if (!editingOpp) {
+        await supabase.rpc('increment_usage', { p_user_id: userProfile.id, p_action: 'opportunity' });
+      }
     } catch (err) {
       showToast(friendlyError(err), "error");
     } finally {
@@ -689,30 +706,49 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
     });
 
   return (
-    <div style={{ padding: isMobile ? '16px' : "32px 36px", minHeight: "100%", overflowY: "auto" }}>
+    <div className="page-enter" style={{ padding: isMobile ? '16px' : "32px 36px", minHeight: "100%", overflowY: "auto" }}>
+
+      <UpgradeModal
+        isOpen={upgradeModal.open}
+        onClose={() => setUpgradeModal({ open: false, feature: '' })}
+        feature={upgradeModal.feature}
+        userProfile={userProfile}
+        defaultTier={userProfile?.subscription_tier === 'basic' ? 'pro' : 'basic'}
+      />
+
       <div style={{ display: "flex", flexDirection: isMobile ? 'column' : 'row', justifyContent: "space-between", alignItems: isMobile ? 'flex-start' : "center", marginBottom: 24, gap: isMobile ? 12 : 0 }}>
         <div>
-          <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: isMobile ? 24 : 28, fontWeight: 800, fontFamily: "'Outfit', sans-serif" }}>
+          <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: isMobile ? 24 : 28, fontWeight: 800, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
             {(userProfile.account_type === 'music_executive' || userProfile.account_type === 'admin') ? 'My Opportunities' : 'Browse Opportunities'}
           </h1>
           <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 14, marginTop: 4 }}>
             {(userProfile.account_type === 'music_executive' || userProfile.account_type === 'admin') ? 'Manage your posted projects' : 'Find projects that match your skills'}
           </p>
         </div>
-        {(userProfile.account_type === 'music_executive' || userProfile.account_type === 'admin') && (
-          <button onClick={() => { resetForm(); setShowForm(!showForm); }} style={{ background: DESIGN_SYSTEM.colors.brand.primary, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 10, padding: "9px 18px", fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontFamily: "'Outfit', sans-serif" }}>
-            <Plus size={15} /> Post Opportunity
-          </button>
-        )}
+        {(userProfile.account_type === 'music_executive' || userProfile.account_type === 'admin') && (() => {
+          const oppLimit = withinLimit('opportunity');
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+              <button onClick={() => { resetForm(); setShowForm(!showForm); }} style={{ background: DESIGN_SYSTEM.colors.brand.primary, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 10, padding: "9px 18px", fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+                <Plus size={15} /> Post Opportunity
+              </button>
+              {oppLimit.max !== null && (
+                <span style={{ fontSize: 11, color: oppLimit.remaining === 0 ? '#f87171' : '#7A7468' }}>
+                  {oppLimit.used}/{oppLimit.max} posts this month
+                </span>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Search and Filter */}
       <div style={{ display: "flex", flexDirection: isMobile ? 'column' : 'row', gap: 12, marginBottom: 20 }}>
         <div style={{ position: "relative", flex: 1 }}>
           <Search size={16} color={DESIGN_SYSTEM.colors.text.muted} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }} />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search opportunities..." style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.card, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 10, padding: "10px 16px 10px 40px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "'Outfit', sans-serif" }} />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search opportunities..." style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.card, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 10, padding: "10px 16px 10px 40px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }} />
         </div>
-        <select value={filterGenre} onChange={e => setFilterGenre(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.card, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 10, padding: "10px 16px", color: filterGenre ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif", minWidth: 150 }}>
+        <select value={filterGenre} onChange={e => setFilterGenre(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.card, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 10, padding: "10px 16px", color: filterGenre ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", minWidth: 150 }}>
           <option value="">All Genres</option>
           {availableGenres.map(g => <option key={g} value={g}>{g}</option>)}
         </select>
@@ -724,7 +760,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                 background: sortBy === 'match' ? DESIGN_SYSTEM.colors.brand.primary : 'transparent',
                 color: sortBy === 'match' ? '#fff' : DESIGN_SYSTEM.colors.text.muted,
                 border: 'none', padding: '10px 14px', fontSize: 13, fontWeight: 600,
-                cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
+                cursor: 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                 transition: 'all 0.2s',
               }}
             >
@@ -736,7 +772,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                 background: sortBy === 'newest' ? DESIGN_SYSTEM.colors.brand.primary : 'transparent',
                 color: sortBy === 'newest' ? '#fff' : DESIGN_SYSTEM.colors.text.muted,
                 border: 'none', padding: '10px 14px', fontSize: 13, fontWeight: 600,
-                cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
+                cursor: 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                 transition: 'all 0.2s',
               }}
             >
@@ -759,7 +795,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
       {showForm && (userProfile.account_type === 'music_executive' || userProfile.account_type === 'admin') && (
         <div style={{ background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 16, padding: 22, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}33`, marginBottom: 20 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: "'Outfit', sans-serif" }}>{editingOpp ? "Edit Opportunity" : "Post New Opportunity"}</h3>
+            <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>{editingOpp ? "Edit Opportunity" : "Post New Opportunity"}</h3>
             <button
               onClick={resetForm}
               style={{ background: 'none', border: 'none', cursor: 'pointer' }}
@@ -770,9 +806,9 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
             </button>
           </div>
           <form onSubmit={handleSubmit}>
-            <input type="text" placeholder="Title *" value={title} onChange={e => setTitle(e.target.value)} required style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", marginBottom: 12, boxSizing: "border-box", fontFamily: "'Outfit', sans-serif" }} />
+            <input type="text" placeholder="Title *" value={title} onChange={e => setTitle(e.target.value)} required style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", marginBottom: 12, boxSizing: "border-box", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }} />
             <div style={{ position: "relative", marginBottom: 12 }}>
-              <textarea placeholder="Description * (What are you looking for? Include style references, tempo, instrumentation needs...)" value={description} onChange={e => setDescription(e.target.value)} required rows={4} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", paddingRight: 110, color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", resize: "none", boxSizing: "border-box", fontFamily: "'Outfit', sans-serif" }} />
+              <textarea placeholder="Description * (What are you looking for? Include style references, tempo, instrumentation needs...)" value={description} onChange={e => setDescription(e.target.value)} required rows={4} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", paddingRight: 110, color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", resize: "none", boxSizing: "border-box", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }} />
               <button
                 type="button"
                 onClick={() => { setShowAIBrief(true); setAiResult(null); }}
@@ -781,7 +817,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                   background: `linear-gradient(135deg, ${DESIGN_SYSTEM.colors.brand.purple}, #6366f1)`,
                   color: "#fff", border: "none", borderRadius: 20,
                   padding: "5px 12px", fontSize: 12, fontWeight: 600,
-                  cursor: "pointer", fontFamily: "'Outfit', sans-serif",
+                  cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                   display: "flex", alignItems: "center", gap: 4,
                   boxShadow: "0 2px 8px rgba(139, 92, 246, 0.3)",
                   transition: "transform 0.15s, box-shadow 0.15s",
@@ -794,18 +830,18 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
               </button>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
-              <select value={projectType} onChange={e => setProjectType(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: projectType ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif" }}>
+              <select value={projectType} onChange={e => setProjectType(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: projectType ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
                 <option value="">Project Type</option>
                 {projectTypeOptions.map(p => <option key={p} value={p}>{p}</option>)}
               </select>
-              <select value={budget} onChange={e => setBudget(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: budget ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif" }}>
+              <select value={budget} onChange={e => setBudget(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: budget ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
                 <option value="">Budget Range</option>
                 {budgetOptions.map(b => <option key={b} value={b}>{b}</option>)}
               </select>
-              <input type="date" placeholder="Deadline" value={deadline} onChange={e => setDeadline(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif" }} />
+              <input type="date" placeholder="Deadline" value={deadline} onChange={e => setDeadline(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }} />
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12, marginBottom: 12 }}>
-              <select value={vocalPreference} onChange={e => setVocalPreference(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: vocalPreference ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif" }}>
+              <select value={vocalPreference} onChange={e => setVocalPreference(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: vocalPreference ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
                 <option value="">Vocal Preference</option>
                 {vocalOptions.map(v => <option key={v} value={v}>{v}</option>)}
               </select>
@@ -814,7 +850,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
               <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 8 }}>Genres</label>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {availableGenres.map(g => (
-                  <button key={g} type="button" onClick={() => toggleGenre(g)} style={{ background: genres.includes(g) ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.bg.primary, color: genres.includes(g) ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.tertiary, border: `1px solid ${genres.includes(g) ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.border.light}`, borderRadius: 20, padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Outfit', sans-serif" }}>
+                  <button key={g} type="button" onClick={() => toggleGenre(g)} style={{ background: genres.includes(g) ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.bg.primary, color: genres.includes(g) ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.tertiary, border: `1px solid ${genres.includes(g) ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.border.light}`, borderRadius: 20, padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
                     {g}
                   </button>
                 ))}
@@ -824,17 +860,17 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
               <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 8 }}>Mood / Vibe</label>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {oppMoodOptions.map(m => (
-                  <button key={m} type="button" onClick={() => toggleMood(m)} style={{ background: moods.includes(m) ? DESIGN_SYSTEM.colors.brand.purple : DESIGN_SYSTEM.colors.bg.primary, color: moods.includes(m) ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.tertiary, border: `1px solid ${moods.includes(m) ? DESIGN_SYSTEM.colors.brand.purple : DESIGN_SYSTEM.colors.border.light}`, borderRadius: 20, padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Outfit', sans-serif" }}>
+                  <button key={m} type="button" onClick={() => toggleMood(m)} style={{ background: moods.includes(m) ? DESIGN_SYSTEM.colors.brand.purple : DESIGN_SYSTEM.colors.bg.primary, color: moods.includes(m) ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.tertiary, border: `1px solid ${moods.includes(m) ? DESIGN_SYSTEM.colors.brand.purple : DESIGN_SYSTEM.colors.border.light}`, borderRadius: 20, padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
                     {m}
                   </button>
                 ))}
               </div>
             </div>
             <div style={{ display: "flex", gap: 10 }}>
-              <button type="submit" disabled={loading} style={{ background: DESIGN_SYSTEM.colors.brand.primary, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 8, padding: "8px 20px", fontWeight: 600, fontSize: 14, cursor: loading ? "not-allowed" : "pointer", fontFamily: "'Outfit', sans-serif", opacity: loading ? 0.6 : 1 }}>
+              <button type="submit" disabled={loading} style={{ background: DESIGN_SYSTEM.colors.brand.primary, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 8, padding: "8px 20px", fontWeight: 600, fontSize: 14, cursor: loading ? "not-allowed" : "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", opacity: loading ? 0.6 : 1 }}>
                 {loading ? "Saving..." : editingOpp ? "Update Opportunity" : "Post Opportunity"}
               </button>
-              <button type="button" onClick={resetForm} style={{ background: "transparent", color: DESIGN_SYSTEM.colors.text.tertiary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "8px 16px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Outfit', sans-serif" }}>Cancel</button>
+              <button type="button" onClick={resetForm} style={{ background: "transparent", color: DESIGN_SYSTEM.colors.text.tertiary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "8px 16px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>Cancel</button>
             </div>
           </form>
         </div>
@@ -842,14 +878,12 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
 
       {/* Opportunities List */}
       {loading && opportunities.length === 0 ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {Array.from({ length: 4 }).map((_, i) => (<LoadingOpportunityCard key={i} />))}
-        </div>
+        <OpportunityGridSkeleton count={4} />
       ) : filtered.length === 0 ? (
         <div style={{ display: 'flex', gap: 24, alignItems: 'center', padding: 24 }}>
           <div style={{ flex: '0 0 320px', background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 16, padding: 24, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, textAlign: 'left' }}>
             <Briefcase size={48} color={DESIGN_SYSTEM.colors.text.muted} style={{ marginBottom: 12 }} />
-            <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 18, fontWeight: 800, fontFamily: "'Outfit', sans-serif", marginBottom: 8 }}>
+            <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 18, fontWeight: 800, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", marginBottom: 8 }}>
               {(userProfile.account_type === 'music_executive' || userProfile.account_type === 'admin') ? 'Ready to find your sound?' : 'New opportunities are on the way!'}
             </h3>
             <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13, marginBottom: 16 }}>
@@ -866,27 +900,27 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
           </div>
           <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
             {Array.from({ length: 3 }).map((_, i) => (
-              <LoadingOpportunityCard key={i} />
+              <OpportunityCardSkeleton key={i} />
             ))}
           </div>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {filtered.map(opp => (
-            <div key={opp.id} style={{ background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 16, padding: 20, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, transition: "all 0.2s" }}
+            <div key={opp.id} className="card-hover" style={{ background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 16, padding: 20, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, transition: "all 0.2s" }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.brand.primary; e.currentTarget.style.background = DESIGN_SYSTEM.colors.bg.hover; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.border.light; e.currentTarget.style.background = DESIGN_SYSTEM.colors.bg.card; }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 12 }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                    <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 18, fontWeight: 700, fontFamily: "'Outfit', sans-serif", margin: 0 }}>{opp.title}</h3>
+                    <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 18, fontWeight: 700, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", margin: 0 }}>{opp.title}</h3>
                     {isComposer && opp.matchScore >= 75 && (
                       <span style={{
                         background: `${DESIGN_SYSTEM.colors.accent.green}20`,
                         color: DESIGN_SYSTEM.colors.accent.green,
                         padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700,
-                        fontFamily: "'Outfit', sans-serif", whiteSpace: 'nowrap',
+                        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", whiteSpace: 'nowrap',
                         border: `1px solid ${DESIGN_SYSTEM.colors.accent.green}33`,
                       }}>
                         Great Match
@@ -897,7 +931,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                         background: `${DESIGN_SYSTEM.colors.accent.amber}20`,
                         color: DESIGN_SYSTEM.colors.accent.amber,
                         padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700,
-                        fontFamily: "'Outfit', sans-serif", whiteSpace: 'nowrap',
+                        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", whiteSpace: 'nowrap',
                         border: `1px solid ${DESIGN_SYSTEM.colors.accent.amber}33`,
                       }}>
                         Good Match
@@ -927,7 +961,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                       value={opp.status}
                       onChange={(e) => handleStatusChange(opp, e.target.value)}
                       onClick={(e) => e.stopPropagation()}
-                      style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: '4px 8px', color: opp.status === 'Open' ? DESIGN_SYSTEM.colors.accent.green : opp.status === 'Filled' ? DESIGN_SYSTEM.colors.brand.blue : DESIGN_SYSTEM.colors.text.muted, fontSize: 12, fontWeight: 600, fontFamily: "'Outfit', sans-serif", outline: 'none', cursor: 'pointer' }}
+                      style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: '4px 8px', color: opp.status === 'Open' ? DESIGN_SYSTEM.colors.accent.green : opp.status === 'Filled' ? DESIGN_SYSTEM.colors.brand.blue : DESIGN_SYSTEM.colors.text.muted, fontSize: 12, fontWeight: 600, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", outline: 'none', cursor: 'pointer' }}
                       aria-label="Change status"
                     >
                       <option value="Open">Open</option>
@@ -962,12 +996,17 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                     <span style={{ color: DESIGN_SYSTEM.colors.accent.green, fontSize: 12, fontWeight: 600 }}>{opp.budget}</span>
                   </div>
                 )}
-                {opp.deadline && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, background: `${DESIGN_SYSTEM.colors.accent.amber}18`, border: `1px solid ${DESIGN_SYSTEM.colors.accent.amber}33`, borderRadius: 8, padding: "6px 12px" }}>
-                    <Calendar size={14} color={DESIGN_SYSTEM.colors.accent.amber} />
-                    <span style={{ color: DESIGN_SYSTEM.colors.accent.amber, fontSize: 12, fontWeight: 600 }}>{new Date(opp.deadline).toLocaleDateString()}</span>
-                  </div>
-                )}
+                {opp.deadline && (() => {
+                  const daysLeft = Math.ceil((new Date(opp.deadline) - new Date()) / 86400000);
+                  const color = daysLeft <= 3 ? DESIGN_SYSTEM.colors.accent.red : DESIGN_SYSTEM.colors.accent.amber;
+                  const label = daysLeft <= 0 ? 'Deadline passed' : daysLeft === 1 ? '1 day left' : daysLeft <= 7 ? `${daysLeft} days left` : new Date(opp.deadline).toLocaleDateString();
+                  return (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, background: `${color}18`, border: `1px solid ${color}33`, borderRadius: 8, padding: "6px 12px" }}>
+                      <Calendar size={14} color={color} />
+                      <span style={{ color, fontSize: 12, fontWeight: 600 }}>{label}</span>
+                    </div>
+                  );
+                })()}
                 {opp.isExpired
                   ? <Badge color={DESIGN_SYSTEM.colors.text.muted}>Expired</Badge>
                   : <Badge color={opp.status === 'Open' ? DESIGN_SYSTEM.colors.accent.green : DESIGN_SYSTEM.colors.text.muted}>{opp.status}</Badge>
@@ -1001,23 +1040,23 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
               {userProfile.account_type === 'composer' && (
                 appliedOpportunities.has(opp.id) ? (
                   <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                    <div style={{ flex: 1, background: `${DESIGN_SYSTEM.colors.accent.green}22`, border: `1px solid ${DESIGN_SYSTEM.colors.accent.green}33`, borderRadius: 10, padding: "10px", color: DESIGN_SYSTEM.colors.accent.green, fontWeight: 600, fontSize: 14, fontFamily: "'Outfit', sans-serif", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                    <div style={{ flex: 1, background: `${DESIGN_SYSTEM.colors.accent.green}22`, border: `1px solid ${DESIGN_SYSTEM.colors.accent.green}33`, borderRadius: 10, padding: "10px", color: DESIGN_SYSTEM.colors.accent.green, fontWeight: 600, fontSize: 14, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
                       <CheckCircle size={16} />
                       {applicationStatuses[opp.id] === 'shortlisted' ? '⭐ Shortlisted' :
                        applicationStatuses[opp.id] === 'rejected' ? 'Passed' :
                        'Applied'}
                     </div>
-                    <button onClick={() => openApplyModal(opp)} style={{ background: `${DESIGN_SYSTEM.colors.brand.primary}22`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}33`, borderRadius: 10, padding: "10px 16px", color: DESIGN_SYSTEM.colors.brand.primary, fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Outfit', sans-serif", display: "flex", alignItems: "center", gap: 5 }}>
+                    <button onClick={() => openApplyModal(opp)} style={{ background: `${DESIGN_SYSTEM.colors.brand.primary}22`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}33`, borderRadius: 10, padding: "10px 16px", color: DESIGN_SYSTEM.colors.brand.primary, fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", display: "flex", alignItems: "center", gap: 5 }}>
                       <Edit size={13} /> Edit
                     </button>
-                    <button onClick={() => handleWithdraw(opp)} style={{ background: `${DESIGN_SYSTEM.colors.accent.red}15`, border: `1px solid ${DESIGN_SYSTEM.colors.accent.red}33`, borderRadius: 10, padding: "10px 14px", color: DESIGN_SYSTEM.colors.accent.red, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "'Outfit', sans-serif", display: "flex", alignItems: "center", gap: 5 }}
+                    <button onClick={() => handleWithdraw(opp)} style={{ background: `${DESIGN_SYSTEM.colors.accent.red}15`, border: `1px solid ${DESIGN_SYSTEM.colors.accent.red}33`, borderRadius: 10, padding: "10px 14px", color: DESIGN_SYSTEM.colors.accent.red, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", display: "flex", alignItems: "center", gap: 5 }}
                       title="Withdraw application"
                     >
                       <XCircle size={14} /> Withdraw
                     </button>
                   </div>
                 ) : (
-                  <button onClick={() => openApplyModal(opp)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.brand.primary, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 10, padding: "10px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Outfit', sans-serif", marginTop: 12 }}>
+                  <button onClick={() => openApplyModal(opp)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.brand.primary, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 10, padding: "10px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", marginTop: 12 }}>
                     Apply to Opportunity
                   </button>
                 )
@@ -1042,7 +1081,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
               fontSize: 14,
               fontWeight: 600,
               cursor: loadingMore ? 'default' : 'pointer',
-              fontFamily: "'Outfit', sans-serif",
+              fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
               transition: `all ${DESIGN_SYSTEM.transition.fast}`,
               display: 'inline-flex',
               alignItems: 'center',
@@ -1061,7 +1100,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
         <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
           <div style={{ background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 20, padding: 28, maxWidth: 540, width: "100%", border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, maxHeight: "90vh", overflowY: "auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h2 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 22, fontWeight: 800, fontFamily: "'Outfit', sans-serif" }}>
+              <h2 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 22, fontWeight: 800, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
                 {appliedOpportunities.has(applyingTo?.id) ? "Edit Application" : "Apply to Opportunity"}
               </h2>
               <button
@@ -1075,7 +1114,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
             </div>
 
             <div style={{ background: DESIGN_SYSTEM.colors.bg.primary, borderRadius: 12, padding: 16, marginBottom: 20, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
-              <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: "'Outfit', sans-serif", marginBottom: 6 }}>{applyingTo?.title}</h3>
+              <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", marginBottom: 6 }}>{applyingTo?.title}</h3>
               <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13, lineHeight: 1.5 }}>{applyingTo?.description}</p>
             </div>
 
@@ -1096,7 +1135,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                       style={{
                         flex: 1, background: pitchTone === key ? `${DESIGN_SYSTEM.colors.brand.purple}22` : DESIGN_SYSTEM.colors.bg.primary,
                         border: `1px solid ${pitchTone === key ? DESIGN_SYSTEM.colors.brand.purple : DESIGN_SYSTEM.colors.border.light}`,
-                        borderRadius: 8, padding: '8px 6px', cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
+                        borderRadius: 8, padding: '8px 6px', cursor: 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                         transition: 'all 0.15s',
                       }}
                     >
@@ -1114,7 +1153,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                     type="button"
                     onClick={generatePitch}
                     disabled={pitchLoading}
-                    style={{ background: `${DESIGN_SYSTEM.colors.brand.purple}20`, color: DESIGN_SYSTEM.colors.brand.purple || '#a855f7', border: `1px solid ${DESIGN_SYSTEM.colors.brand.purple || '#a855f7'}44`, borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 600, cursor: pitchLoading ? 'not-allowed' : 'pointer', fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: 4, opacity: pitchLoading ? 0.6 : 1 }}
+                    style={{ background: `${DESIGN_SYSTEM.colors.brand.purple}20`, color: DESIGN_SYSTEM.colors.brand.purple || '#a855f7', border: `1px solid ${DESIGN_SYSTEM.colors.brand.purple || '#a855f7'}44`, borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 600, cursor: pitchLoading ? 'not-allowed' : 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", display: 'flex', alignItems: 'center', gap: 4, opacity: pitchLoading ? 0.6 : 1 }}
                   >
                     ✨ {pitchLoading ? (applyMessage?.trim().length > 10 ? 'Polishing...' : 'Generating...') : (applyMessage?.trim().length > 10 ? 'Polish My Pitch' : 'AI Help')}
                   </button>
@@ -1125,10 +1164,10 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                   required
                   placeholder="Tell them why you're perfect for this project..."
                   rows={4}
-                  style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "12px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", resize: "none", boxSizing: "border-box", fontFamily: "'Outfit', sans-serif" }}
+                  style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "12px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", resize: "none", boxSizing: "border-box", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}
                 />
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
-                  <span style={{ fontSize: 11, color: applyMessage.trim().split(/\s+/).filter(Boolean).length > 100 ? DESIGN_SYSTEM.colors.accent.red : DESIGN_SYSTEM.colors.text.muted, fontFamily: "'Outfit', sans-serif" }}>
+                  <span style={{ fontSize: 11, color: applyMessage.trim().split(/\s+/).filter(Boolean).length > 100 ? DESIGN_SYSTEM.colors.accent.red : DESIGN_SYSTEM.colors.text.muted, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
                     {applyMessage.trim().split(/\s+/).filter(Boolean).length} / 100 words
                   </span>
                 </div>
@@ -1148,7 +1187,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                       <button
                         type="button"
                         onClick={() => { setApplyMessage(pitchSuggestion); setPitchSuggestion(""); setPitchMetaNote(""); }}
-                        style={{ background: DESIGN_SYSTEM.colors.brand.primary, color: '#fff', border: 'none', borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Outfit', sans-serif" }}
+                        style={{ background: DESIGN_SYSTEM.colors.brand.primary, color: '#fff', border: 'none', borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}
                       >
                         Use This
                       </button>
@@ -1156,7 +1195,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                         type="button"
                         onClick={generatePitch}
                         disabled={pitchLoading}
-                        style={{ background: 'transparent', color: DESIGN_SYSTEM.colors.text.muted, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Outfit', sans-serif" }}
+                        style={{ background: 'transparent', color: DESIGN_SYSTEM.colors.text.muted, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}
                       >
                         Try Again
                       </button>
@@ -1193,7 +1232,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                             {selectedSongId === song.id && <Check size={12} color={DESIGN_SYSTEM.colors.text.primary} />}
                           </div>
                           <div style={{ flex: 1 }}>
-                            <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, fontWeight: 600, fontFamily: "'Outfit', sans-serif" }}>{song.title}</div>
+                            <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, fontWeight: 600, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>{song.title}</div>
                             <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, marginTop: 2 }}>
                               {song.genre && `${song.genre} \u2022 `}
                               {song.duration || "Unknown duration"}
@@ -1210,14 +1249,14 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                 <button
                   type="submit"
                   disabled={submitting || composerSongs.length === 0}
-                  style={{ flex: 1, background: DESIGN_SYSTEM.colors.brand.primary, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 10, padding: "12px", fontWeight: 600, fontSize: 15, cursor: (submitting || composerSongs.length === 0) ? "not-allowed" : "pointer", fontFamily: "'Outfit', sans-serif", opacity: (submitting || composerSongs.length === 0) ? 0.6 : 1 }}
+                  style={{ flex: 1, background: DESIGN_SYSTEM.colors.brand.primary, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 10, padding: "12px", fontWeight: 600, fontSize: 15, cursor: (submitting || composerSongs.length === 0) ? "not-allowed" : "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", opacity: (submitting || composerSongs.length === 0) ? 0.6 : 1 }}
                 >
                   {submitting ? (appliedOpportunities.has(applyingTo?.id) ? "Updating..." : "Submitting...") : (appliedOpportunities.has(applyingTo?.id) ? "Update Application" : "Submit Application")}
                 </button>
                 <button
                   type="button"
                   onClick={resetApplyModal}
-                  style={{ background: "transparent", color: DESIGN_SYSTEM.colors.text.tertiary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 10, padding: "12px 20px", fontWeight: 600, fontSize: 15, cursor: "pointer", fontFamily: "'Outfit', sans-serif" }}
+                  style={{ background: "transparent", color: DESIGN_SYSTEM.colors.text.tertiary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 10, padding: "12px 20px", fontWeight: 600, fontSize: 15, cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}
                 >
                   Cancel
                 </button>
@@ -1251,10 +1290,10 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                 fontSize: 18,
               }}>AI</div>
               <div>
-                <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 17, fontWeight: 700, margin: 0, fontFamily: "'Outfit', sans-serif" }}>
+                <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 17, fontWeight: 700, margin: 0, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
                   AI Brief Writer
                 </h3>
-                <p style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 12, margin: 0, fontFamily: "'Outfit', sans-serif" }}>
+                <p style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 12, margin: 0, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
                   Describe your project and let AI craft the perfect brief
                 </p>
               </div>
@@ -1274,7 +1313,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                     borderRadius: 12, padding: '14px 16px',
                     color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14,
                     outline: 'none', resize: 'none', boxSizing: 'border-box',
-                    fontFamily: "'Outfit', sans-serif", lineHeight: 1.5,
+                    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", lineHeight: 1.5,
                   }}
                   autoFocus
                   disabled={aiLoading}
@@ -1291,7 +1330,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                       color: '#fff', border: 'none', borderRadius: 10,
                       padding: '12px', fontWeight: 600, fontSize: 15,
                       cursor: aiLoading || aiNotes.trim().length < 10 ? 'not-allowed' : 'pointer',
-                      fontFamily: "'Outfit', sans-serif",
+                      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                       opacity: aiLoading || aiNotes.trim().length < 10 ? 0.5 : 1,
                       transition: 'opacity 0.2s',
                     }}
@@ -1311,7 +1350,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                       border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
                       borderRadius: 10, padding: '12px 20px', fontWeight: 600, fontSize: 15,
                       cursor: aiLoading ? 'not-allowed' : 'pointer',
-                      fontFamily: "'Outfit', sans-serif",
+                      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                     }}
                   >
                     Cancel
@@ -1325,7 +1364,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
               <>
                 {/* Generated Description */}
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 6, fontFamily: "'Outfit', sans-serif", textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 6, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Generated Description
                   </label>
                   <div style={{
@@ -1333,7 +1372,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                     border: `1px solid ${DESIGN_SYSTEM.colors.brand.purple}33`,
                     borderRadius: 10, padding: '12px 14px',
                     color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14,
-                    lineHeight: 1.6, fontFamily: "'Outfit', sans-serif",
+                    lineHeight: 1.6, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                   }}>
                     {aiResult.description}
                   </div>
@@ -1342,7 +1381,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                 {/* Suggested Genres */}
                 {aiResult.genres?.length > 0 && (
                   <div style={{ marginBottom: 12 }}>
-                    <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 6, fontFamily: "'Outfit', sans-serif", textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 6, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                       Suggested Genres
                     </label>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -1350,7 +1389,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                         <span key={g} style={{
                           background: DESIGN_SYSTEM.colors.brand.primary,
                           color: '#fff', borderRadius: 20, padding: '4px 12px',
-                          fontSize: 12, fontWeight: 600, fontFamily: "'Outfit', sans-serif",
+                          fontSize: 12, fontWeight: 600, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                         }}>{g}</span>
                       ))}
                     </div>
@@ -1360,7 +1399,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                 {/* Suggested Moods */}
                 {aiResult.moods?.length > 0 && (
                   <div style={{ marginBottom: 12 }}>
-                    <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 6, fontFamily: "'Outfit', sans-serif", textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 6, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                       Suggested Moods
                     </label>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -1368,7 +1407,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                         <span key={m} style={{
                           background: DESIGN_SYSTEM.colors.brand.purple,
                           color: '#fff', borderRadius: 20, padding: '4px 12px',
-                          fontSize: 12, fontWeight: 600, fontFamily: "'Outfit', sans-serif",
+                          fontSize: 12, fontWeight: 600, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                         }}>{m}</span>
                       ))}
                     </div>
@@ -1378,13 +1417,13 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                 {/* Suggested Project Type */}
                 {aiResult.project_type && (
                   <div style={{ marginBottom: 16 }}>
-                    <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 6, fontFamily: "'Outfit', sans-serif", textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 6, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                       Suggested Project Type
                     </label>
                     <span style={{
                       background: DESIGN_SYSTEM.colors.brand.blue || '#2D7FF9',
                       color: '#fff', borderRadius: 20, padding: '4px 12px',
-                      fontSize: 12, fontWeight: 600, fontFamily: "'Outfit', sans-serif",
+                      fontSize: 12, fontWeight: 600, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                     }}>{aiResult.project_type}</span>
                   </div>
                 )}
@@ -1398,7 +1437,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                       background: DESIGN_SYSTEM.colors.brand.primary,
                       color: '#fff', border: 'none', borderRadius: 10,
                       padding: '12px', fontWeight: 600, fontSize: 15,
-                      cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
+                      cursor: 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                     }}
                   >
                     Apply to Form
@@ -1409,7 +1448,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                       background: 'transparent', color: DESIGN_SYSTEM.colors.text.tertiary,
                       border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
                       borderRadius: 10, padding: '12px 20px', fontWeight: 600, fontSize: 15,
-                      cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
+                      cursor: 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                     }}
                   >
                     Try Again
@@ -1420,7 +1459,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
                       background: 'transparent', color: DESIGN_SYSTEM.colors.text.tertiary,
                       border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
                       borderRadius: 10, padding: '12px 16px', fontWeight: 600, fontSize: 15,
-                      cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
+                      cursor: 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                     }}
                   >
                     Cancel

@@ -72,7 +72,7 @@ function NotificationItem({ notification, onClick, onDismiss }) {
         style={{
           background: 'transparent',
           border: 'none',
-          color: '#9CA3AF',
+          color: DESIGN_SYSTEM.colors.text.secondary,
           cursor: 'pointer',
           padding: 4,
           borderRadius: 6,
@@ -81,7 +81,7 @@ function NotificationItem({ notification, onClick, onDismiss }) {
           transition: 'all 0.15s ease',
         }}
         onMouseEnter={e => { e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.primary; e.currentTarget.style.background = DESIGN_SYSTEM.colors.bg.hover; }}
-        onMouseLeave={e => { e.currentTarget.style.color = '#9CA3AF'; e.currentTarget.style.background = 'transparent'; }}
+        onMouseLeave={e => { e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.secondary; e.currentTarget.style.background = 'transparent'; }}
         title="Dismiss"
       >
         <X size={14} />
@@ -109,7 +109,7 @@ export function NotificationPanel({ notifications, loading, onMarkAllRead, onNot
       borderRadius: DESIGN_SYSTEM.radius.md,
       boxShadow: DESIGN_SYSTEM.shadow.xl,
       zIndex: 1000, display: 'flex', flexDirection: 'column',
-      fontFamily: "'Outfit', sans-serif",
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
     }}>
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -125,7 +125,7 @@ export function NotificationPanel({ notifications, loading, onMarkAllRead, onNot
             background: 'transparent', border: 'none',
             color: DESIGN_SYSTEM.colors.brand.primary,
             fontSize: DESIGN_SYSTEM.fontSize.xs, fontWeight: DESIGN_SYSTEM.fontWeight.medium,
-            cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
+            cursor: 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
           }}>
             Mark all as read
           </button>

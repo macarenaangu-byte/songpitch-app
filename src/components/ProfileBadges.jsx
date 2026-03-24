@@ -40,7 +40,7 @@ export function ProfileBadges({ user }) {
             background: `${def.color}15`, color: def.color,
             border: `1px solid ${def.color}33`, borderRadius: 20,
             padding: '3px 10px', fontSize: 11, fontWeight: 600,
-            fontFamily: "'Outfit', sans-serif",
+            fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
           }}>
             <span style={{ fontSize: 12 }}>{def.icon}</span> {def.label}
           </span>

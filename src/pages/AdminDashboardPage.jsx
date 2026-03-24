@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Users, Music, Briefcase, MessageCircle, FileText, Search, Eye, EyeOff, Shield, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { supabase } from '../lib/supabase';
-import { showToast } from '../lib/toast';
+import { showToast } from '../utils/toast';
 import { friendlyError, insertNotification } from '../lib/utils';
 import { StatCard } from '../components/StatCard';
 import { MiniChart, HorizontalBarChart } from '../components/MiniChart';
@@ -51,7 +51,7 @@ export function AdminDashboardPage({ stats, userProfile, onNavigate, onViewProfi
       setUsersTotal(count || 0);
       setUsersPage(page);
     } catch (err) {
-      showToast(friendlyError(err), 'error');
+      showToast.error(friendlyError(err));
     } finally {
       setUsersLoading(false);
     }
@@ -99,9 +99,9 @@ export function AdminDashboardPage({ stats, userProfile, onNavigate, onViewProfi
         .eq('id', user.id);
       if (error) throw error;
       setUsers(prev => prev.map(u => u.id === user.id ? { ...u, is_deleted: newStatus } : u));
-      showToast(newStatus ? 'User suspended' : 'User reactivated', 'success');
+      showToast.success(newStatus ? 'User suspended' : 'User reactivated');
     } catch (err) {
-      showToast(friendlyError(err), 'error');
+      showToast.error(friendlyError(err));
     } finally {
       setSuspendingId(null);
     }
@@ -131,9 +131,10 @@ export function AdminDashboardPage({ stats, userProfile, onNavigate, onViewProfi
       );
 
       setPendingSongs(prev => prev.filter(s => s.id !== song.id));
-      showToast(action === 'approve' ? 'Song approved!' : 'Song rejected', action === 'approve' ? 'success' : 'info');
+      if (action === 'approve') showToast.success('Song approved!');
+      else showToast.info('Song rejected');
     } catch (err) {
-      showToast(friendlyError(err), 'error');
+      showToast.error(friendlyError(err));
     } finally {
       setVerifyingId(null);
     }
@@ -146,7 +147,7 @@ export function AdminDashboardPage({ stats, userProfile, onNavigate, onViewProfi
     border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
     borderRadius: 8, padding: '8px 12px',
     color: DESIGN_SYSTEM.colors.text.primary,
-    fontSize: 13, fontFamily: "'Outfit', sans-serif",
+    fontSize: 13, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
     outline: 'none',
   };
 
@@ -176,7 +177,7 @@ export function AdminDashboardPage({ stats, userProfile, onNavigate, onViewProfi
           <Shield size={20} color={DESIGN_SYSTEM.colors.brand.purple} />
         </div>
         <div>
-          <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: isMobile ? 24 : 28, fontWeight: 800, fontFamily: "'Outfit', sans-serif", margin: 0 }}>Admin Dashboard</h1>
+          <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: isMobile ? 24 : 28, fontWeight: 800, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", margin: 0 }}>Admin Dashboard</h1>
           <p style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, margin: 0 }}>Platform overview & management</p>
         </div>
       </div>
@@ -197,8 +198,8 @@ export function AdminDashboardPage({ stats, userProfile, onNavigate, onViewProfi
           {analytics.signupsWeek && (
             <div style={{ background: DESIGN_SYSTEM.colors.bg.card, borderRadius: DESIGN_SYSTEM.radius.lg, padding: '16px 20px', border: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <span style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, fontFamily: "'Outfit', sans-serif" }}>Signups This Week</span>
-                <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 20, fontWeight: 700, fontFamily: "'Outfit', sans-serif" }}>{analytics.signupsWeek.reduce((a, b) => a + b, 0)}</span>
+                <span style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>Signups This Week</span>
+                <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 20, fontWeight: 700, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>{analytics.signupsWeek.reduce((a, b) => a + b, 0)}</span>
               </div>
               <MiniChart data={analytics.signupsWeek} type="line" color={DESIGN_SYSTEM.colors.brand.purple} width={200} height={44} />
             </div>
@@ -208,8 +209,8 @@ export function AdminDashboardPage({ stats, userProfile, onNavigate, onViewProfi
           {analytics.songsWeek && (
             <div style={{ background: DESIGN_SYSTEM.colors.bg.card, borderRadius: DESIGN_SYSTEM.radius.lg, padding: '16px 20px', border: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <span style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, fontFamily: "'Outfit', sans-serif" }}>New Songs This Week</span>
-                <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 20, fontWeight: 700, fontFamily: "'Outfit', sans-serif" }}>{analytics.songsWeek.reduce((a, b) => a + b, 0)}</span>
+                <span style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>New Songs This Week</span>
+                <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 20, fontWeight: 700, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>{analytics.songsWeek.reduce((a, b) => a + b, 0)}</span>
               </div>
               <MiniChart data={analytics.songsWeek} type="bar" color={DESIGN_SYSTEM.colors.brand.primary} width={200} height={44} />
             </div>
@@ -218,7 +219,7 @@ export function AdminDashboardPage({ stats, userProfile, onNavigate, onViewProfi
           {/* Genre Distribution */}
           {analytics.genreDistribution && analytics.genreDistribution.length > 0 && (
             <div style={{ background: DESIGN_SYSTEM.colors.bg.card, borderRadius: DESIGN_SYSTEM.radius.lg, padding: '16px 20px', border: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
-              <span style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, fontFamily: "'Outfit', sans-serif", display: 'block', marginBottom: 10 }}>Top Genres</span>
+              <span style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", display: 'block', marginBottom: 10 }}>Top Genres</span>
               <HorizontalBarChart items={analytics.genreDistribution.map((g, i) => ({ ...g, color: [DESIGN_SYSTEM.colors.brand.primary, DESIGN_SYSTEM.colors.brand.purple, DESIGN_SYSTEM.colors.brand.accent, DESIGN_SYSTEM.colors.brand.blue, DESIGN_SYSTEM.colors.accent.amber][i % 5] }))} maxWidth={140} />
             </div>
           )}
@@ -228,7 +229,7 @@ export function AdminDashboardPage({ stats, userProfile, onNavigate, onViewProfi
       {/* Section 2: User Management */}
       <div style={cardStyle}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', gap: 12, marginBottom: 16 }}>
-          <h2 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 18, fontWeight: 700, fontFamily: "'Outfit', sans-serif", margin: 0 }}>
+          <h2 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 18, fontWeight: 700, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", margin: 0 }}>
             User Management <span style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, fontWeight: 500 }}>({usersTotal})</span>
           </h2>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -260,7 +261,7 @@ export function AdminDashboardPage({ stats, userProfile, onNavigate, onViewProfi
             <thead>
               <tr>
                 {['User', 'Type', 'Location', 'Joined', 'Status', 'Actions'].map(h => (
-                  <th key={h} style={{ textAlign: 'left', padding: '10px 12px', color: DESIGN_SYSTEM.colors.text.muted, fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, fontFamily: "'Outfit', sans-serif", whiteSpace: 'nowrap' }}>
+                  <th key={h} style={{ textAlign: 'left', padding: '10px 12px', color: DESIGN_SYSTEM.colors.text.muted, fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", whiteSpace: 'nowrap' }}>
                     {h}
                   </th>
                 ))}
@@ -273,7 +274,7 @@ export function AdminDashboardPage({ stats, userProfile, onNavigate, onViewProfi
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <Avatar name={`${u.first_name} ${u.last_name}`} color={u.avatar_color} avatarUrl={u.avatar_url} size={32} />
                       <div>
-                        <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, fontWeight: 600, fontFamily: "'Outfit', sans-serif" }}>{u.first_name} {u.last_name}</div>
+                        <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, fontWeight: 600, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>{u.first_name} {u.last_name}</div>
                       </div>
                     </div>
                   </td>
@@ -290,7 +291,7 @@ export function AdminDashboardPage({ stats, userProfile, onNavigate, onViewProfi
                       padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600,
                       background: u.is_deleted ? `${DESIGN_SYSTEM.colors.accent.red}15` : `${DESIGN_SYSTEM.colors.brand.primary}15`,
                       color: u.is_deleted ? DESIGN_SYSTEM.colors.accent.red : DESIGN_SYSTEM.colors.brand.primary,
-                      fontFamily: "'Outfit', sans-serif",
+                      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                     }}>
                       {u.is_deleted ? 'Suspended' : 'Active'}
                     </span>
@@ -299,7 +300,7 @@ export function AdminDashboardPage({ stats, userProfile, onNavigate, onViewProfi
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button
                         onClick={() => onViewProfile && onViewProfile(u)}
-                        style={{ background: 'none', border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: '4px 10px', color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: 4 }}
+                        style={{ background: 'none', border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: '4px 10px', color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", display: 'flex', alignItems: 'center', gap: 4 }}
                       >
                         <Eye size={12} /> View
                       </button>
@@ -308,7 +309,7 @@ export function AdminDashboardPage({ stats, userProfile, onNavigate, onViewProfi
                         disabled={suspendingId === u.id}
                         style={{
                           background: 'none', borderRadius: 6, padding: '4px 10px',
-                          fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
+                          fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                           display: 'flex', alignItems: 'center', gap: 4,
                           border: `1px solid ${u.is_deleted ? DESIGN_SYSTEM.colors.brand.primary + '44' : DESIGN_SYSTEM.colors.accent.red + '44'}`,
                           color: u.is_deleted ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.accent.red,
@@ -341,7 +342,7 @@ export function AdminDashboardPage({ stats, userProfile, onNavigate, onViewProfi
               display: 'block', width: '100%', marginTop: 12, padding: '10px',
               background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
               borderRadius: 8, color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600,
-              cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
+              cursor: 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
             }}
           >
             {usersLoading ? 'Loading...' : `Load More (${usersTotal - users.length} remaining)`}
@@ -353,7 +354,7 @@ export function AdminDashboardPage({ stats, userProfile, onNavigate, onViewProfi
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: DESIGN_SYSTEM.spacing.md }}>
         {/* Recent Opportunities */}
         <div style={cardStyle}>
-          <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: "'Outfit', sans-serif", marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
             <Briefcase size={16} color={DESIGN_SYSTEM.colors.brand.accent} /> Recent Opportunities
           </h3>
           {contentLoading ? (
@@ -369,7 +370,7 @@ export function AdminDashboardPage({ stats, userProfile, onNavigate, onViewProfi
                   style={{
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                     background: 'none', border: 'none', padding: '8px 4px', cursor: 'pointer',
-                    borderRadius: 6, fontFamily: "'Outfit', sans-serif", textAlign: 'left', width: '100%',
+                    borderRadius: 6, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", textAlign: 'left', width: '100%',
                   }}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -387,7 +388,7 @@ export function AdminDashboardPage({ stats, userProfile, onNavigate, onViewProfi
 
         {/* Pending Verification Songs */}
         <div style={cardStyle}>
-          <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: "'Outfit', sans-serif", marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
             <AlertCircle size={16} color={DESIGN_SYSTEM.colors.accent.amber} /> Pending Verification
           </h3>
           {contentLoading ? (
@@ -415,7 +416,7 @@ export function AdminDashboardPage({ stats, userProfile, onNavigate, onViewProfi
                       onClick={() => handleVerifySong(song, 'approve')}
                       disabled={verifyingId === song.id}
                       title="Approve"
-                      style={{ background: `${DESIGN_SYSTEM.colors.brand.primary}18`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}44`, borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Outfit', sans-serif", color: DESIGN_SYSTEM.colors.brand.primary, display: 'flex', alignItems: 'center', gap: 4, opacity: verifyingId === song.id ? 0.5 : 1 }}
+                      style={{ background: `${DESIGN_SYSTEM.colors.brand.primary}18`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}44`, borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", color: DESIGN_SYSTEM.colors.brand.primary, display: 'flex', alignItems: 'center', gap: 4, opacity: verifyingId === song.id ? 0.5 : 1 }}
                     >
                       <CheckCircle size={12} /> Approve
                     </button>
@@ -423,7 +424,7 @@ export function AdminDashboardPage({ stats, userProfile, onNavigate, onViewProfi
                       onClick={() => handleVerifySong(song, 'reject')}
                       disabled={verifyingId === song.id}
                       title="Reject"
-                      style={{ background: `${DESIGN_SYSTEM.colors.accent.red}15`, border: `1px solid ${DESIGN_SYSTEM.colors.accent.red}44`, borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Outfit', sans-serif", color: DESIGN_SYSTEM.colors.accent.red, display: 'flex', alignItems: 'center', gap: 4, opacity: verifyingId === song.id ? 0.5 : 1 }}
+                      style={{ background: `${DESIGN_SYSTEM.colors.accent.red}15`, border: `1px solid ${DESIGN_SYSTEM.colors.accent.red}44`, borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", color: DESIGN_SYSTEM.colors.accent.red, display: 'flex', alignItems: 'center', gap: 4, opacity: verifyingId === song.id ? 0.5 : 1 }}
                     >
                       <XCircle size={12} /> Reject
                     </button>

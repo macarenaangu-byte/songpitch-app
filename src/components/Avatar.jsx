@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 
-export function Avatar({ name, color, size = 40, avatarUrl }) {
+export function Avatar({ name, color, size = 40, avatarUrl, border }) {
   const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
@@ -24,7 +24,7 @@ export function Avatar({ name, color, size = 40, avatarUrl }) {
           objectFit: "cover",
           flexShrink: 0,
           boxShadow: DESIGN_SYSTEM.shadow.sm,
-          border: '2px solid rgba(255,255,255,0.1)',
+          border: border || '2px solid rgba(255,255,255,0.1)',
         }}
       />
     );
@@ -43,9 +43,9 @@ export function Avatar({ name, color, size = 40, avatarUrl }) {
       fontWeight: DESIGN_SYSTEM.fontWeight.bold,
       fontSize: size * 0.38,
       flexShrink: 0,
-      fontFamily: "'Outfit', sans-serif",
+      fontFamily: DESIGN_SYSTEM.font.body,
       boxShadow: DESIGN_SYSTEM.shadow.sm,
-      border: '2px solid rgba(255,255,255,0.1)',
+      border: border || '2px solid rgba(255,255,255,0.1)',
     }}>
       {initials}
     </div>

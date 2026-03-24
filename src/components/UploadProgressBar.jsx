@@ -21,14 +21,14 @@ export function UploadProgressBar({ progress, fileName, totalFiles, currentFile 
           color: DESIGN_SYSTEM.colors.text.secondary,
           fontSize: DESIGN_SYSTEM.fontSize.sm,
           fontWeight: DESIGN_SYSTEM.fontWeight.medium,
-          fontFamily: "'Outfit', sans-serif",
+          fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
         }}>{label}</span>
         <span style={{
           marginLeft: 'auto',
           color: DESIGN_SYSTEM.colors.brand.primary,
           fontSize: DESIGN_SYSTEM.fontSize.sm,
           fontWeight: DESIGN_SYSTEM.fontWeight.bold,
-          fontFamily: "'Outfit', sans-serif",
+          fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
         }}>{progress}%</span>
       </div>
       <div style={{

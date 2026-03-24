@@ -2,12 +2,16 @@ import { useState, useEffect, useRef } from "react";
 import { Search, MessageCircle, Send, Pin, ArrowLeft } from "lucide-react";
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { supabase } from '../lib/supabase';
-import { showToast } from '../lib/toast';
+import { showToast } from '../utils/toast';
 import { friendlyError, insertNotification } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
-import { LoadingMessageItem } from '../components/LoadingCards';
+import { MessageListSkeleton } from '../components/Skeleton';
+import { useTier } from '../hooks/useTier';
+import UpgradeModal from '../components/UpgradeModal';
 
 export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToken, onBadgeRefresh, onActiveConversationChange, isMobile = false }) {
+  const { withinLimit, upgradeMessage } = useTier(userProfile);
+  const [upgradeModal, setUpgradeModal] = useState({ open: false, feature: '' });
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -165,7 +169,9 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
           ),
           messages (
             content,
-            created_at
+            created_at,
+            is_read,
+            sender_id
           )
         `)
         .or(`user1_id.eq.${userProfile.id},user2_id.eq.${userProfile.id}`)
@@ -176,14 +182,15 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
       // Format conversations to show the OTHER person
       const formatted = (data || []).map(conv => {
         const otherUser = conv.user1.id === userProfile.id ? conv.user2 : conv.user1;
-        const lastMessage = (conv.messages || [])
-          .slice()
-          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+        const sortedMsgs = (conv.messages || []).slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        const lastMessage = sortedMsgs[0];
+        const unreadCount = (conv.messages || []).filter(m => m.sender_id !== userProfile.id && !m.is_read).length;
         return {
           ...conv,
           otherUser,
           lastMessage: lastMessage?.content || "No messages yet",
-          lastMessageTime: lastMessage?.created_at
+          lastMessageTime: lastMessage?.created_at,
+          unreadCount,
         };
       });
 
@@ -240,7 +247,7 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
         });
       }
     } catch (err) {
-      showToast(friendlyError(err), 'error');
+      showToast.error(friendlyError(err));
     }
   };
 
@@ -258,6 +265,13 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
       let conversationId = existingConv?.id;
 
       if (!conversationId) {
+        // ── Tier gate: only new conversations count against the contact limit ──
+        const contactCheck = withinLimit('contact');
+        if (!contactCheck.allowed) {
+          setUpgradeModal({ open: true, feature: upgradeMessage('contact') });
+          return;
+        }
+
         const { data: created, error: createError } = await supabase
           .from('conversations')
           .insert([{ user1_id: userProfile.id, user2_id: targetUserId }])
@@ -266,13 +280,16 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
 
         if (createError) throw createError;
         conversationId = created?.id;
+
+        // Increment contact counter after successful new conversation
+        await supabase.rpc('increment_usage', { p_user_id: userProfile.id, p_action: 'contact' });
       }
 
       const updated = await loadConversations();
       const targetConv = (updated || []).find(c => c.id === conversationId) || (updated || []).find(c => c.otherUser?.id === targetUserId);
       if (targetConv) setSelectedConversation(targetConv);
     } catch (err) {
-      showToast(friendlyError(err), 'error');
+      showToast.error(friendlyError(err));
     }
   };
 
@@ -351,7 +368,7 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
         );
       }
     } catch (err) {
-      showToast(friendlyError(err), "error");
+      showToast.error(friendlyError(err));
     } finally {
       setSending(false);
     }
@@ -373,12 +390,21 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
   };
 
   return (
-    <div style={{ display: "flex", height: "calc(100vh - 0px)", background: DESIGN_SYSTEM.colors.bg.secondary }}>
+    <div className="page-enter" style={{ display: "flex", height: "calc(100vh - 0px)", background: DESIGN_SYSTEM.colors.bg.secondary }}>
+
+      <UpgradeModal
+        isOpen={upgradeModal.open}
+        onClose={() => setUpgradeModal({ open: false, feature: '' })}
+        feature={upgradeModal.feature}
+        userProfile={userProfile}
+        defaultTier={userProfile?.subscription_tier === 'basic' ? 'pro' : 'basic'}
+      />
+
       {/* Conversations List — hidden on mobile when a conversation is selected */}
       {!(isMobile && selectedConversation) && (
       <div style={{ width: isMobile ? '100%' : 320, background: DESIGN_SYSTEM.colors.bg.secondary, borderRight: isMobile ? 'none' : `1px solid ${DESIGN_SYSTEM.colors.border.light}`, display: "flex", flexDirection: "column" }}>
         <div style={{ padding: "24px 20px 16px", borderBottom: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
-          <h2 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 22, fontWeight: 800, fontFamily: "'Outfit', sans-serif" }}>Messages</h2>
+          <h2 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 22, fontWeight: 800, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>Messages</h2>
           <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13, marginTop: 4, marginBottom: 12 }}>
             {conversations.length} {conversations.length === 1 ? 'conversation' : 'conversations'}
           </p>
@@ -399,7 +425,7 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
                   fontSize: 13,
                   outline: "none",
                   boxSizing: "border-box",
-                  fontFamily: "'Outfit', sans-serif",
+                  fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                 }}
               />
             </div>
@@ -408,11 +434,14 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
 
         <div style={{ flex: 1, overflowY: "auto" }}>
           {loading ? (
-            <div style={{ padding: 40, textAlign: "center", color: DESIGN_SYSTEM.colors.text.muted }}>Loading...</div>
+            <MessageListSkeleton count={6} />
           ) : conversations.length === 0 ? (
-            <div style={{ padding: 40, textAlign: "center" }}>
-              <MessageCircle size={48} color={DESIGN_SYSTEM.colors.text.muted} style={{ margin: "0 auto 16px" }} />
-              <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13 }}>Your first conversation is just a click away — explore profiles or respond to an opportunity!</p>
+            <div style={{ padding: '48px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 64, height: 64, borderRadius: '50%', background: `${DESIGN_SYSTEM.colors.brand.primary}12`, border: `1.5px dashed ${DESIGN_SYSTEM.colors.brand.primary}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
+                <MessageCircle size={28} color={DESIGN_SYSTEM.colors.brand.primary} strokeWidth={1.5} />
+              </div>
+              <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 15, fontWeight: 600, fontFamily: DESIGN_SYSTEM.font.body }}>No conversations yet</div>
+              <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13, lineHeight: 1.6, maxWidth: 220, margin: 0 }}>Browse the Roster or respond to an Opportunity to start a conversation.</p>
             </div>
           ) : (
             (() => {
@@ -433,7 +462,7 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
                   padding: "16px 20px",
                   borderBottom: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
                   cursor: "pointer",
-                  background: selectedConversation?.id === conv.id ? DESIGN_SYSTEM.colors.bg.card : "transparent",
+                  background: selectedConversation?.id === conv.id ? DESIGN_SYSTEM.colors.bg.card : conv.unreadCount > 0 ? `${DESIGN_SYSTEM.colors.brand.primary}08` : "transparent",
                   transition: "background 0.2s"
                 }}
                 onMouseEnter={e => { if (selectedConversation?.id !== conv.id) e.currentTarget.style.background = DESIGN_SYSTEM.colors.bg.hover; }}
@@ -442,8 +471,11 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
                   <Avatar name={`${conv.otherUser.first_name} ${conv.otherUser.last_name}`} color={conv.otherUser.avatar_color} avatarUrl={conv.otherUser.avatar_url} size={40} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, fontWeight: 600, fontFamily: "'Outfit', sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, fontWeight: conv.unreadCount > 0 ? 700 : 600, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{conv.otherUser.first_name} {conv.otherUser.last_name}</span>
+                      {conv.unreadCount > 0 && (
+                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: DESIGN_SYSTEM.colors.brand.primary, flexShrink: 0, display: 'inline-block', boxShadow: `0 0 5px ${DESIGN_SYSTEM.colors.brand.primary}80` }} />
+                      )}
                       {conv.otherUser.account_type === 'admin' && (
                         <span style={{
                           fontSize: 10,
@@ -488,7 +520,7 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
                   </button>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1 }}>
+                  <div style={{ color: conv.unreadCount > 0 ? DESIGN_SYSTEM.colors.text.secondary : DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, fontWeight: conv.unreadCount > 0 ? 500 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1 }}>
                     {conv.lastMessage}
                   </div>
                   {conv.lastMessageTime && (
@@ -545,7 +577,7 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
                 size={48}
               />
               <div>
-                <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 18, fontWeight: 700, fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
+                <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 18, fontWeight: 700, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
                   <span>{selectedConversation.otherUser.first_name} {selectedConversation.otherUser.last_name}</span>
                   {selectedConversation.otherUser.account_type === 'admin' && (
                     <span style={{
@@ -572,13 +604,15 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
           {/* Messages */}
           <div style={{ flex: 1, overflowY: "auto", padding: "24px", display: "flex", flexDirection: "column", gap: 16 }}>
             {loading && messages.length === 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {Array.from({ length: 6 }).map((_, i) => (<LoadingMessageItem key={i} />))}
-              </div>
+              <MessageListSkeleton count={6} />
             ) : messages.length === 0 ? (
-                <div style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, textAlign: 'center', marginTop: 8 }}>
-                  No messages yet.
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, margin: 'auto', paddingTop: 32 }}>
+                <div style={{ width: 52, height: 52, borderRadius: '50%', background: `${DESIGN_SYSTEM.colors.brand.primary}12`, border: `1.5px dashed ${DESIGN_SYSTEM.colors.brand.primary}35`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <MessageCircle size={24} color={DESIGN_SYSTEM.colors.brand.primary} strokeWidth={1.5} />
                 </div>
+                <div style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 14, fontWeight: 600, fontFamily: DESIGN_SYSTEM.font.body }}>Start the conversation</div>
+                <div style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, fontFamily: DESIGN_SYSTEM.font.body }}>Say hello to {selectedConversation.otherUser.first_name} 👋</div>
+              </div>
               ) : (
                 messages.map(msg => {
                 const isMe = msg.sender_id === userProfile.id;
@@ -600,7 +634,7 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
                         borderRadius: isMe ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
                         fontSize: 14,
                         lineHeight: 1.5,
-                        fontFamily: "'Outfit', sans-serif"
+                        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
                       }}>
                         {msg.content}
                       </div>
@@ -646,7 +680,7 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
                   color: DESIGN_SYSTEM.colors.text.primary,
                   fontSize: 14,
                   outline: "none",
-                  fontFamily: "'Outfit', sans-serif"
+                  fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
                 }}
               />
               <button
@@ -661,7 +695,7 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
                   fontWeight: 600,
                   fontSize: 14,
                   cursor: (sending || !messageText.trim()) ? "not-allowed" : "pointer",
-                  fontFamily: "'Outfit', sans-serif",
+                  fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                   opacity: (sending || !messageText.trim()) ? 0.6 : 1,
                   display: "flex",
                   alignItems: "center",
@@ -674,11 +708,13 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
           </div>
         </div>
       ) : !isMobile ? (
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: DESIGN_SYSTEM.colors.text.muted }}>
-          <div style={{ textAlign: "center" }}>
-            <MessageCircle size={64} color={DESIGN_SYSTEM.colors.text.muted} style={{ margin: "0 auto 20px" }} />
-            <h3 style={{ fontSize: 18, fontWeight: 700, fontFamily: "'Outfit', sans-serif", marginBottom: 8 }}>Select a conversation</h3>
-            <p style={{ fontSize: 14 }}>Choose a conversation from the left to start messaging</p>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
+          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 80, height: 80, borderRadius: '50%', background: `${DESIGN_SYSTEM.colors.brand.primary}10`, border: `1.5px dashed ${DESIGN_SYSTEM.colors.brand.primary}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
+              <MessageCircle size={36} color={DESIGN_SYSTEM.colors.brand.primary} strokeWidth={1.5} />
+            </div>
+            <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 18, fontWeight: 600, fontFamily: DESIGN_SYSTEM.font.display, letterSpacing: '0.01em' }}>Your messages</div>
+            <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 14, maxWidth: 260, lineHeight: 1.6, margin: 0, fontFamily: DESIGN_SYSTEM.font.body }}>Select a conversation from the list to read and reply.</p>
           </div>
         </div>
       ) : null}

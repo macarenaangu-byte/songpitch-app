@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, ChevronRight, ChevronDown, Users } from 'lucide-react';
+import { Search, ChevronRight, ChevronDown, Users, Shield, Music } from 'lucide-react';
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { GENRE_OPTIONS } from '../constants/genres';
 import { supabase } from '../lib/supabase';
@@ -115,7 +115,7 @@ export function RosterPage({ accountType, onViewProfile, isMobile = false }) {
         color: DESIGN_SYSTEM.colors.text.primary,
         fontSize: isMobile ? 24 : DESIGN_SYSTEM.fontSize.xxl,
         fontWeight: DESIGN_SYSTEM.fontWeight.extrabold,
-        fontFamily: "'Outfit', sans-serif",
+        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
         marginBottom: DESIGN_SYSTEM.spacing.xs
       }}>
         {isAdmin ? 'Browse Users' : accountType === 'music_executive' ? 'Discover Composers' : 'Music Executives'}
@@ -150,7 +150,7 @@ export function RosterPage({ accountType, onViewProfile, isMobile = false }) {
                 cursor: 'pointer',
                 fontSize: DESIGN_SYSTEM.fontSize.sm,
                 fontWeight: adminViewMode === tab.key ? DESIGN_SYSTEM.fontWeight.bold : DESIGN_SYSTEM.fontWeight.medium,
-                fontFamily: "'Outfit', sans-serif",
+                fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                 background: adminViewMode === tab.key ? DESIGN_SYSTEM.colors.brand.primary : 'transparent',
                 color: adminViewMode === tab.key ? '#fff' : DESIGN_SYSTEM.colors.text.secondary,
                 transition: DESIGN_SYSTEM.transition.fast,
@@ -179,21 +179,21 @@ export function RosterPage({ accountType, onViewProfile, isMobile = false }) {
               fontSize: DESIGN_SYSTEM.fontSize.md,
               outline: "none",
               boxSizing: "border-box",
-              fontFamily: "'Outfit', sans-serif",
+              fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
               transition: DESIGN_SYSTEM.transition.fast,
             }}
             onFocus={e => e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.border.accent}
             onBlur={e => e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.border.light}
           />
         </div>
-        <select value={selectedPro} onChange={e => setSelectedPro(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.card, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: DESIGN_SYSTEM.radius.md, padding: `${DESIGN_SYSTEM.spacing.sm} ${DESIGN_SYSTEM.spacing.md}`, color: selectedPro !== 'All' ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: DESIGN_SYSTEM.fontSize.md, outline: "none", fontFamily: "'Outfit', sans-serif", minWidth: isMobile ? '100%' : 160, width: isMobile ? '100%' : undefined }} onFocus={e => e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.border.accent} onBlur={e => e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.border.light}>
+        <select value={selectedPro} onChange={e => setSelectedPro(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.card, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: DESIGN_SYSTEM.radius.md, padding: `${DESIGN_SYSTEM.spacing.sm} ${DESIGN_SYSTEM.spacing.md}`, color: selectedPro !== 'All' ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: DESIGN_SYSTEM.fontSize.md, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", minWidth: isMobile ? '100%' : 160, width: isMobile ? '100%' : undefined }} onFocus={e => e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.border.accent} onBlur={e => e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.border.light}>
           {rosterProOptions.map(p => <option key={p} value={p}>{p === 'All' ? 'All PRO Affiliations' : p}</option>)}
         </select>
-        <select value={selectedGenre} onChange={e => setSelectedGenre(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.card, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: DESIGN_SYSTEM.radius.md, padding: `${DESIGN_SYSTEM.spacing.sm} ${DESIGN_SYSTEM.spacing.md}`, color: selectedGenre !== 'All' ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: DESIGN_SYSTEM.fontSize.md, outline: "none", fontFamily: "'Outfit', sans-serif", minWidth: isMobile ? '100%' : 140, width: isMobile ? '100%' : undefined }} onFocus={e => e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.border.accent} onBlur={e => e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.border.light}>
+        <select value={selectedGenre} onChange={e => setSelectedGenre(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.card, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: DESIGN_SYSTEM.radius.md, padding: `${DESIGN_SYSTEM.spacing.sm} ${DESIGN_SYSTEM.spacing.md}`, color: selectedGenre !== 'All' ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: DESIGN_SYSTEM.fontSize.md, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", minWidth: isMobile ? '100%' : 140, width: isMobile ? '100%' : undefined }} onFocus={e => e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.border.accent} onBlur={e => e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.border.light}>
           <option value="All">All Genres</option>
           {rosterGenreOptions.map(g => <option key={g} value={g}>{g}</option>)}
         </select>
-        <select value={filterLocation} onChange={e => setFilterLocation(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.card, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: DESIGN_SYSTEM.radius.md, padding: `${DESIGN_SYSTEM.spacing.sm} ${DESIGN_SYSTEM.spacing.md}`, color: filterLocation ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: DESIGN_SYSTEM.fontSize.md, outline: "none", fontFamily: "'Outfit', sans-serif", minWidth: isMobile ? '100%' : 140, width: isMobile ? '100%' : undefined }}>
+        <select value={filterLocation} onChange={e => setFilterLocation(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.card, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: DESIGN_SYSTEM.radius.md, padding: `${DESIGN_SYSTEM.spacing.sm} ${DESIGN_SYSTEM.spacing.md}`, color: filterLocation ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: DESIGN_SYSTEM.fontSize.md, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", minWidth: isMobile ? '100%' : 140, width: isMobile ? '100%' : undefined }}>
           <option value="">All Locations</option>
           {rosterLocations.map(l => <option key={l} value={l}>{l}</option>)}
         </select>
@@ -227,32 +227,44 @@ export function RosterPage({ accountType, onViewProfile, isMobile = false }) {
       </div>
 
       {loading ? (
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(240px,1fr))', gap: DESIGN_SYSTEM.spacing.md }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(280px,1fr))', gap: DESIGN_SYSTEM.spacing.md }}>
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} style={{ background: DESIGN_SYSTEM.colors.bg.card, borderRadius: DESIGN_SYSTEM.radius.lg, padding: DESIGN_SYSTEM.spacing.lg }}>
-              <div className="skeleton" style={{ height: 14, width: '70%', marginBottom: 12 }} />
-              <div className="skeleton" style={{ height: 12, width: '50%' }} />
+            <div key={i} style={{ background: DESIGN_SYSTEM.colors.bg.card, borderRadius: DESIGN_SYSTEM.radius.lg, overflow: 'hidden' }}>
+              <div style={{ height: 4, background: DESIGN_SYSTEM.colors.border.medium }} />
+              <div style={{ padding: DESIGN_SYSTEM.spacing.lg }}>
+                <div className="skeleton" style={{ height: 14, width: '70%', marginBottom: 12 }} />
+                <div className="skeleton" style={{ height: 12, width: '50%' }} />
+              </div>
             </div>
           ))}
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? '1fr' : "repeat(auto-fill, minmax(300px, 1fr))", gap: DESIGN_SYSTEM.spacing.md }}>
-          {filtered.map(composer => (
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? '1fr' : "repeat(auto-fill, minmax(280px, 1fr))", gap: DESIGN_SYSTEM.spacing.md }}>
+          {filtered.map(composer => {
+            // Genre-based accent color
+            const GENRE_COLORS = { 'Pop': '#8B5CF6', 'Rock': '#EF4444', 'Jazz': '#F59E0B', 'Classical': '#3B82F6', 'Hip-Hop': '#EC4899', 'Electronic': '#06B6D4', 'Cinematic': '#6366F1', 'Folk': '#84CC16', 'R&B': '#A855F7', 'Country': '#F97316' };
+            const accentColor = GENRE_COLORS[(composer.genres || [])[0]] || DESIGN_SYSTEM.colors.brand.primary;
+            const isOneStop = composer.is_one_stop;
+
+            return (
             <div
               key={composer.id}
+              className="card-hover"
               onClick={() => onViewProfile(composer)}
               style={{
                 background: DESIGN_SYSTEM.colors.bg.card,
                 borderRadius: DESIGN_SYSTEM.radius.lg,
-                padding: DESIGN_SYSTEM.spacing.lg,
                 border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
                 cursor: "pointer",
                 transition: `all ${DESIGN_SYSTEM.transition.normal}`,
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.border.accent;
-                e.currentTarget.style.transform = "translateY(-4px)";
-                e.currentTarget.style.boxShadow = DESIGN_SYSTEM.shadow.hover;
+                e.currentTarget.style.borderColor = accentColor + '55';
+                e.currentTarget.style.transform = "translateY(-3px)";
+                e.currentTarget.style.boxShadow = `0 12px 32px rgba(0,0,0,0.3), 0 0 0 1px ${accentColor}22`;
               }}
               onMouseLeave={e => {
                 e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.border.light;
@@ -260,47 +272,88 @@ export function RosterPage({ accountType, onViewProfile, isMobile = false }) {
                 e.currentTarget.style.boxShadow = 'none';
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: DESIGN_SYSTEM.spacing.md, marginBottom: DESIGN_SYSTEM.spacing.md }}>
-                <Avatar name={`${composer.first_name} ${composer.last_name}`} color={composer.avatar_color} avatarUrl={composer.avatar_url} size={56} />
-                <div>
-                  <div style={{
-                    color: DESIGN_SYSTEM.colors.text.primary,
-                    fontWeight: DESIGN_SYSTEM.fontWeight.bold,
-                    fontSize: DESIGN_SYSTEM.fontSize.lg,
-                    fontFamily: "'Outfit', sans-serif"
-                  }}>{composer.first_name} {composer.last_name}</div>
-                  {composer.location && <div style={{
-                    color: DESIGN_SYSTEM.colors.text.muted,
+              {/* Accent strip */}
+              <div style={{ height: 3, background: `linear-gradient(90deg, ${accentColor} 0%, ${accentColor}66 100%)`, flexShrink: 0 }} />
+
+              <div style={{ padding: DESIGN_SYSTEM.spacing.lg, flex: 1, display: 'flex', flexDirection: 'column' }}>
+                {/* Header row */}
+                <div style={{ display: "flex", alignItems: "flex-start", gap: DESIGN_SYSTEM.spacing.md, marginBottom: DESIGN_SYSTEM.spacing.sm }}>
+                  <Avatar name={`${composer.first_name} ${composer.last_name}`} color={composer.avatar_color} avatarUrl={composer.avatar_url} size={48} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      color: DESIGN_SYSTEM.colors.text.primary,
+                      fontWeight: DESIGN_SYSTEM.fontWeight.bold,
+                      fontSize: DESIGN_SYSTEM.fontSize.lg,
+                      fontFamily: DESIGN_SYSTEM.font.body,
+                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                    }}>{composer.first_name} {composer.last_name}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap' }}>
+                      {composer.location && (
+                        <span style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 11 }}>
+                          📍 {composer.location}
+                        </span>
+                      )}
+                      {composer.pro_name && (
+                        <span style={{ background: `${DESIGN_SYSTEM.colors.brand.primary}15`, color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}30` }}>
+                          {composer.pro_name}
+                        </span>
+                      )}
+                      {isOneStop && (
+                        <span style={{ background: 'rgba(6,182,212,0.12)', color: '#06B6D4', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, border: '1px solid rgba(6,182,212,0.25)', display: 'flex', alignItems: 'center', gap: 3 }}>
+                          <Shield size={9} /> One-Stop
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bio */}
+                {composer.bio && (
+                  <p style={{
+                    color: DESIGN_SYSTEM.colors.text.tertiary,
                     fontSize: DESIGN_SYSTEM.fontSize.sm,
-                    marginTop: '2px',
-                  }}>{composer.location}</div>}
+                    lineHeight: 1.6,
+                    marginBottom: DESIGN_SYSTEM.spacing.sm,
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                    flex: 1,
+                  }}>{composer.bio}</p>
+                )}
+
+                {/* Genre tags */}
+                {composer.genres && composer.genres.length > 0 && (
+                  <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 12 }}>
+                    {composer.genres.slice(0, 4).map((g, i) => (
+                      <span key={g} style={{
+                        background: i === 0 ? `${accentColor}18` : DESIGN_SYSTEM.colors.bg.surface,
+                        color: i === 0 ? accentColor : DESIGN_SYSTEM.colors.text.tertiary,
+                        fontSize: 10, fontWeight: 600,
+                        padding: '2px 7px', borderRadius: 5,
+                        border: `1px solid ${i === 0 ? accentColor + '30' : DESIGN_SYSTEM.colors.border.light}`,
+                        fontFamily: DESIGN_SYSTEM.font.body,
+                      }}>{g}</span>
+                    ))}
+                    {composer.genres.length > 4 && (
+                      <span style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 10, padding: '2px 4px' }}>+{composer.genres.length - 4}</span>
+                    )}
+                  </div>
+                )}
+
+                {/* Footer CTA */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: 10, borderTop: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
+                  <span style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 11, fontFamily: DESIGN_SYSTEM.font.body }}>
+                    {composer.account_type === 'music_executive' ? 'Executive' : 'Composer'}
+                  </span>
+                  <span style={{ color: accentColor, fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 3, fontFamily: DESIGN_SYSTEM.font.body }}>
+                    View Profile <ChevronRight size={13} />
+                  </span>
                 </div>
               </div>
-              {composer.bio && <p style={{
-                color: DESIGN_SYSTEM.colors.text.tertiary,
-                fontSize: DESIGN_SYSTEM.fontSize.sm,
-                lineHeight: 1.6,
-                marginBottom: DESIGN_SYSTEM.spacing.md,
-                display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical",
-                overflow: "hidden"
-              }}>{composer.bio}</p>}
-              {composer.genres && composer.genres.length > 0 && (
-                <div style={{ display: "flex", gap: DESIGN_SYSTEM.spacing.xs, flexWrap: "wrap", marginBottom: DESIGN_SYSTEM.spacing.sm }}>
-                  {composer.genres.slice(0, 3).map(g => <Badge key={g} color={DESIGN_SYSTEM.colors.accent.purple}>{g}</Badge>)}
-                </div>
-              )}
-              <span style={{
-                color: DESIGN_SYSTEM.colors.brand.primary,
-                fontSize: DESIGN_SYSTEM.fontSize.sm,
-                fontWeight: DESIGN_SYSTEM.fontWeight.semibold,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-              }}>View Profile <ChevronRight size={14} /></span>
             </div>
-          ))}
+          );
+          })}
         </div>
       )}
       {/* Load More */}
@@ -318,7 +371,7 @@ export function RosterPage({ accountType, onViewProfile, isMobile = false }) {
               fontSize: 14,
               fontWeight: 600,
               cursor: loadingMore ? 'default' : 'pointer',
-              fontFamily: "'Outfit', sans-serif",
+              fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
               transition: `all ${DESIGN_SYSTEM.transition.fast}`,
               display: 'inline-flex',
               alignItems: 'center',
@@ -344,7 +397,7 @@ export function RosterPage({ accountType, onViewProfile, isMobile = false }) {
             color: DESIGN_SYSTEM.colors.text.primary,
             fontSize: 18,
             fontWeight: 700,
-            fontFamily: "'Outfit', sans-serif",
+            fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
             marginBottom: 8,
           }}>No profiles found</h3>
           <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 14, marginBottom: 16 }}>
@@ -364,7 +417,7 @@ export function RosterPage({ accountType, onViewProfile, isMobile = false }) {
                 fontSize: 14,
                 fontWeight: 600,
                 cursor: 'pointer',
-                fontFamily: "'Outfit', sans-serif",
+                fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
               }}
             >
               Clear All Filters

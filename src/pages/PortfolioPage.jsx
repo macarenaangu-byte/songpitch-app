@@ -1,17 +1,19 @@
 import { useState, useEffect, useRef } from "react";
-import { Music, Plus, Upload, X, Users, Shield } from "lucide-react";
+import { Music, Plus, Upload, X, Users, Shield, LayoutGrid, List } from "lucide-react";
 import { parseBlob } from 'music-metadata';
 import { analyzeAudioFile } from '../audioAnalyzer';
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { GENRE_OPTIONS } from '../constants/genres';
 import { supabase } from '../lib/supabase';
-import { showToast } from '../lib/toast';
+import { showToast } from '../utils/toast';
 import { friendlyError } from '../lib/utils';
 import { SongCard } from '../components/SongCard';
-import { LoadingSongCard } from '../components/LoadingCards';
+import { SongGridSkeleton } from '../components/Skeleton';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { UploadProgressBar } from '../components/UploadProgressBar';
-import { AILoadingGame } from '../components/AILoadingGame'; 
+import { AILoadingGame } from '../components/AILoadingGame';
+import { useTier } from '../hooks/useTier';
+import UpgradeModal from '../components/UpgradeModal';
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; 
 const ACCEPTED_AUDIO_TYPES = ['audio/mpeg', 'audio/wav', 'audio/aac', 'audio/ogg', 'audio/flac', 'audio/mp4', 'audio/x-m4a', 'audio/x-wav', 'audio/webm'];
@@ -46,6 +48,8 @@ const uploadWithProgress = (file, storagePath, onProgress) => {
 };
 
 export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
+  const { withinLimit, upgradeMessage } = useTier(userProfile);
+  const [upgradeModal, setUpgradeModal] = useState({ open: false, feature: '' });
   const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -55,6 +59,7 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
   const [uploadProgress, setUploadProgress] = useState(null); 
   const [isDragging, setIsDragging] = useState(false);
   
+  const [viewMode, setViewMode] = useState('list'); // 'list' | 'grid'
   const [analyzing, setAnalyzing] = useState(false);
   const [bulkAnalyzing, setBulkAnalyzing] = useState(""); 
   
@@ -90,7 +95,7 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
         onConfirm: () => {
           setLicensingStatus(ONE_STOP_LABEL);
           setConfirmModal(null);
-          showToast('One-Stop track confirmed. One-Stop tracks are prioritized in executive sync searches.', 'success');
+          showToast.success('One-Stop track confirmed. One-Stop tracks are prioritized in executive sync searches.');
         },
         onCancel: () => setConfirmModal(null),
       });
@@ -124,11 +129,11 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
   const handleAudioFileChange = async (file) => {
     if (!file) return;
     if (!file.type.startsWith('audio/') && !ACCEPTED_AUDIO_TYPES.includes(file.type)) {
-      showToast('Invalid file type. Please upload an audio file.', 'error');
+      showToast.error('Invalid file type. Please upload an audio file.');
       return;
     }
     if (file.size > MAX_FILE_SIZE) {
-      showToast(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 50MB.`, 'error');
+      showToast.error(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 50MB.`);
       return;
     }
     setAudioFile(file);
@@ -146,7 +151,7 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
       // 45-second timeout — if AI server hangs, don't trap the user forever
       const timeoutId = setTimeout(() => {
         setAnalyzing(false);
-        showToast("Analysis is taking too long. Fill in the details manually!", "info");
+        showToast.info("Analysis is taking too long. Fill in the details manually!");
       }, 45000);
 
       try {
@@ -167,7 +172,7 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
       } catch (err) {
         clearTimeout(timeoutId);
         console.error("Audio analysis failed:", err);
-        showToast("Couldn't auto-analyze audio. You can fill in details manually.", "info");
+        showToast.info("Couldn't auto-analyze audio. You can fill in details manually.");
       } finally {
         setAnalyzing(false);
       }
@@ -199,9 +204,16 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!genre || !String(genre).trim()) { showToast("Primary Genre is required.", "error"); return; }
-    if (!bpm || Number.isNaN(parseInt(bpm, 10))) { showToast("BPM is required.", "error"); return; }
-    if (!licensingStatus || !String(licensingStatus).trim()) { showToast("Licensing Status is required. Choose One-Stop or Co-Owned.", "error"); return; }
+    if (!genre || !String(genre).trim()) { showToast.error("Primary Genre is required."); return; }
+    if (!bpm || Number.isNaN(parseInt(bpm, 10))) { showToast.error("BPM is required."); return; }
+    if (!licensingStatus || !String(licensingStatus).trim()) { showToast.error("Licensing Status is required. Choose One-Stop or Co-Owned."); return; }
+
+    // ── Tier gate: upload limit ───────────────────────────────────────────────
+    const uploadCheck = withinLimit('upload');
+    if (!uploadCheck.allowed) {
+      setUpgradeModal({ open: true, feature: upgradeMessage('upload') });
+      return;
+    }
 
     setLoading(true);
 
@@ -256,9 +268,13 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
 
       resetForm();
       loadSongs();
-      showToast(editingSong ? "Song updated!" : "Song added!", "success");
+      showToast.success(editingSong ? "Song updated!" : "Song added!");
+      // Increment weekly upload counter
+      if (!editingSong) {
+        await supabase.rpc('increment_usage', { p_user_id: userProfile.id, p_action: 'upload' });
+      }
     } catch (err) {
-      showToast(friendlyError(err), "error");
+      showToast.error(friendlyError(err));
     } finally {
       setUploadProgress(null);
       setLoading(false);
@@ -276,9 +292,9 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
           const { error } = await supabase.from('songs').delete().eq('id', song.id);
           if (error) throw error;
           loadSongs();
-          showToast("Song deleted!", "success");
+          showToast.success("Song deleted!");
         } catch (err) {
-          showToast(friendlyError(err), "error");
+          showToast.error(friendlyError(err));
         }
       },
     });
@@ -306,8 +322,8 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
     const allFiles = Array.from(e.target.files);
     const files = allFiles.filter(f => f.type.startsWith('audio/') || ACCEPTED_AUDIO_TYPES.includes(f.type));
     const rejected = allFiles.length - files.length;
-    if (rejected > 0) showToast(`${rejected} non-audio file${rejected > 1 ? 's' : ''} skipped.`, 'info');
-    if (files.length === 0) { showToast('No valid audio files found.', 'error'); return; }
+    if (rejected > 0) showToast.info(`${rejected} non-audio file${rejected > 1 ? 's' : ''} skipped.`);
+    if (files.length === 0) { showToast.error('No valid audio files found.'); return; }
     setBulkFiles(files); setShowBulk(true);
 
     const processed = [];
@@ -354,7 +370,7 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
       }).filter(Boolean);
 
     if (invalidRows.length > 0) {
-      showToast(`Row ${invalidRows[0].row} is missing: ${invalidRows[0].missing.join(', ')}`, 'error'); return;
+      showToast.error(`Row ${invalidRows[0].row} is missing: ${invalidRows[0].missing.join(', ')}`); return;
     }
 
     const analyzedData = bulkData.map(item => ({ ...item }));
@@ -390,9 +406,9 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
           await supabase.from('split_sheets').insert([{ user_id: userProfile.id, song_id: insertedSong.id, song_title: item.title, splits: { composition: [{ name: composerName, role: 'Songwriter/Composer', percentage: 100 }], master: [{ name: composerName, role: 'Owner', percentage: 100 }] }, signature: composerName, attested: true, input_method: 'auto_one_stop' }]);
         }
       }
-      showToast(`${analyzedData.length} songs uploaded successfully!`, "success");
+      showToast.success(`${analyzedData.length} songs uploaded successfully!`);
       setBulkData([]); setBulkFiles([]); setShowBulk(false); setBulkStep(null); loadSongs();
-    } catch (err) { showToast(friendlyError(err), "error"); } finally { setUploadProgress(null); setLoading(false); setBulkAnalyzing(''); }
+    } catch (err) { showToast.error(friendlyError(err)); } finally { setUploadProgress(null); setLoading(false); setBulkAnalyzing(''); }
   };
 
   const handleDragEnter = (e) => { e.preventDefault(); e.stopPropagation(); dragCounter.current++; if (e.dataTransfer.items && e.dataTransfer.items.length > 0) setIsDragging(true); };
@@ -402,70 +418,88 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
   const handleDrop = async (e) => {
     e.preventDefault(); e.stopPropagation(); setIsDragging(false); dragCounter.current = 0;
     const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('audio/'));
-    if (files.length === 0) { showToast("Please drop audio files only", "error"); return; }
+    if (files.length === 0) { showToast.error("Please drop audio files only"); return; }
     if (files.length === 1) {
-      setAudioFile(files[0]); setTitle(files[0].name.replace(/\.[^/.]+$/, '')); setShowForm(true); handleAudioFileChange(files[0]); showToast("File loaded \u2014 fill in the details and save!", "info");
+      setAudioFile(files[0]); setTitle(files[0].name.replace(/\.[^/.]+$/, '')); setShowForm(true); handleAudioFileChange(files[0]); showToast.info("File loaded \u2014 fill in the details and save!");
     } else { handleBulkFiles({ target: { files } }); }
   };
 
   return (
-    <div style={{ padding: isMobile ? '16px' : "32px 36px", minHeight: "100%", overflowY: "auto", position: "relative" }} onDragEnter={handleDragEnter} onDragLeave={handleDragLeave} onDragOver={handleDragOver} onDrop={handleDrop}>
+    <div className="page-enter" style={{ padding: isMobile ? '16px' : "32px 36px", minHeight: "100%", overflowY: "auto", position: "relative" }} onDragEnter={handleDragEnter} onDragLeave={handleDragLeave} onDragOver={handleDragOver} onDrop={handleDrop}>
+
+      {/* Upgrade modal */}
+      <UpgradeModal
+        isOpen={upgradeModal.open}
+        onClose={() => setUpgradeModal({ open: false, feature: '' })}
+        feature={upgradeModal.feature}
+        userProfile={userProfile}
+        defaultTier="basic"
+      />
+
       {/* 🎮 THE MINIGAME RENDERS IMMEDIATELY 🎮 */}
       {(analyzing || bulkAnalyzing) && <AILoadingGame />}
 
       {isDragging && (
-        <div style={{ position: "absolute", inset: 0, zIndex: 50, background: "rgba(29,185,84,0.08)", border: `3px dashed ${DESIGN_SYSTEM.colors.brand.primary}`, borderRadius: 20, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, pointerEvents: "none" }}>
+        <div style={{ position: "absolute", inset: 0, zIndex: 50, background: "rgba(201,168,76,0.08)", border: `3px dashed ${DESIGN_SYSTEM.colors.brand.primary}`, borderRadius: 20, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, pointerEvents: "none" }}>
           <Upload size={48} color={DESIGN_SYSTEM.colors.brand.primary} />
-          <div style={{ color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 18, fontWeight: 700, fontFamily: "'Outfit', sans-serif" }}>Drop audio files here</div>
+          <div style={{ color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 18, fontWeight: 700, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>Drop audio files here</div>
         </div>
       )}
 
       <div style={{ display: "flex", flexDirection: isMobile ? 'column' : 'row', justifyContent: "space-between", alignItems: isMobile ? 'flex-start' : "center", marginBottom: 24, gap: isMobile ? 12 : 0 }}>
-        <div><h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: isMobile ? 24 : 28, fontWeight: 800, fontFamily: "'Outfit', sans-serif" }}>My Portfolio</h1><p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 14, marginTop: 4 }}>Manage your music catalog</p></div>
-        <div style={{ display: "flex", gap: 10, width: isMobile ? '100%' : 'auto' }}>
-          <label style={{ background: DESIGN_SYSTEM.colors.accent.purple, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 10, padding: "9px 18px", fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontFamily: "'Outfit', sans-serif" }}>
+        <div><h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: isMobile ? 24 : 28, fontWeight: 800, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>My Portfolio</h1><p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 14, marginTop: 4 }}>Manage your music catalog</p></div>
+        <div style={{ display: "flex", gap: 10, width: isMobile ? '100%' : 'auto', alignItems: 'center' }}>
+          {/* View toggle */}
+          {songs.length > 0 && !isMobile && (
+            <div style={{ display: 'flex', background: DESIGN_SYSTEM.colors.bg.card, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: 3, gap: 2 }}>
+              {[{ mode: 'list', icon: <List size={15} /> }, { mode: 'grid', icon: <LayoutGrid size={15} /> }].map(({ mode, icon }) => (
+                <button key={mode} onClick={() => setViewMode(mode)} style={{ background: viewMode === mode ? DESIGN_SYSTEM.colors.brand.primary + '22' : 'transparent', border: viewMode === mode ? `1px solid ${DESIGN_SYSTEM.colors.brand.primary}40` : '1px solid transparent', borderRadius: 5, color: viewMode === mode ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.text.muted, padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'all 0.15s ease' }}>{icon}</button>
+              ))}
+            </div>
+          )}
+          <label style={{ background: DESIGN_SYSTEM.colors.accent.purple, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 10, padding: "9px 18px", fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
             <Upload size={15} /> Bulk Upload<input type="file" multiple accept="audio/*" onChange={handleBulkFiles} style={{ display: "none" }} />
           </label>
-          <button onClick={() => { resetForm(); setShowForm(!showForm); }} style={{ background: DESIGN_SYSTEM.colors.brand.primary, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 10, padding: "9px 18px", fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontFamily: "'Outfit', sans-serif" }}><Plus size={15} /> Add Song</button>
+          <button onClick={() => { resetForm(); setShowForm(!showForm); }} style={{ background: DESIGN_SYSTEM.colors.brand.primary, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 10, padding: "9px 18px", fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}><Plus size={15} /> Add Song</button>
         </div>
       </div>
 
       {showForm && (
         <div style={{ background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 16, padding: 22, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}33`, marginBottom: 20 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: "'Outfit', sans-serif" }}>{editingSong ? "Edit Song" : "Add New Song"}</h3>
+            <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>{editingSong ? "Edit Song" : "Add New Song"}</h3>
             <button onClick={resetForm} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={18} color={DESIGN_SYSTEM.colors.text.muted} /></button>
           </div>
           <form onSubmit={handleSubmit}>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12, marginBottom: 12 }}>
-              <input type="text" placeholder="Title (optional)" value={title} onChange={e => setTitle(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif" }} />
-              <select value={genre} onChange={e => setGenre(e.target.value)} required style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: genre ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif" }}><option value="">Primary Genre (required)...</option>{songGenreOptions.map(g => <option key={g} value={g}>{g}</option>)}</select>
-              <input type="text" placeholder="Secondary Genre (optional)" value={secondaryGenre} onChange={e => setSecondaryGenre(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif" }} />
-              <select value={instrumentType} onChange={e => setInstrumentType(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: instrumentType ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif" }}><option value="">Instrument Type...</option><option value="Vocal">Vocal</option><option value="Instrumental">Instrumental</option></select>
-              <input type="text" placeholder="Duration (e.g., 3:45)" value={duration} onChange={e => setDuration(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif" }} />
-              <input type="number" placeholder="BPM (required)" min={20} max={300} required value={bpm} onChange={e => setBpm(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif" }} />
-              <select value={key} onChange={e => setKey(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: key ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif" }}><option value="">Select Key...</option>{['C Major', 'C Minor', 'C# Major', 'C# Minor', 'D Major', 'D Minor', 'Eb Major', 'Eb Minor', 'E Major', 'E Minor', 'F Major', 'F Minor', 'F# Major', 'F# Minor', 'G Major', 'G Minor', 'Ab Major', 'Ab Minor', 'A Major', 'A Minor', 'Bb Major', 'Bb Minor', 'B Major', 'B Minor'].map(k => <option key={k} value={k}>{k}</option>)}</select>
-              <select value={mood} onChange={e => setMood(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: mood ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif" }}><option value="">Select Mood...</option>{moodOptions.map(m => <option key={m} value={m}>{m}</option>)}</select>
+              <input type="text" placeholder="Title (optional)" value={title} onChange={e => setTitle(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }} />
+              <select value={genre} onChange={e => setGenre(e.target.value)} required style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: genre ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}><option value="">Primary Genre (required)...</option>{songGenreOptions.map(g => <option key={g} value={g}>{g}</option>)}</select>
+              <input type="text" placeholder="Secondary Genre (optional)" value={secondaryGenre} onChange={e => setSecondaryGenre(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }} />
+              <select value={instrumentType} onChange={e => setInstrumentType(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: instrumentType ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}><option value="">Instrument Type...</option><option value="Vocal">Vocal</option><option value="Instrumental">Instrumental</option></select>
+              <input type="text" placeholder="Duration (e.g., 3:45)" value={duration} onChange={e => setDuration(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }} />
+              <input type="number" placeholder="BPM (required)" min={20} max={300} required value={bpm} onChange={e => setBpm(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }} />
+              <select value={key} onChange={e => setKey(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: key ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}><option value="">Select Key...</option>{['C Major', 'C Minor', 'C# Major', 'C# Minor', 'D Major', 'D Minor', 'Eb Major', 'Eb Minor', 'E Major', 'E Minor', 'F Major', 'F Minor', 'F# Major', 'F# Minor', 'G Major', 'G Minor', 'Ab Major', 'Ab Minor', 'A Major', 'A Minor', 'Bb Major', 'Bb Minor', 'B Major', 'B Minor'].map(k => <option key={k} value={k}>{k}</option>)}</select>
+              <select value={mood} onChange={e => setMood(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: mood ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}><option value="">Select Mood...</option>{moodOptions.map(m => <option key={m} value={m}>{m}</option>)}</select>
             </div>
             
             <div style={{ marginBottom: 12 }}>
               <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 8 }}>Ownership Type (required)</label>
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 10 }}>
                 <button type="button" onClick={() => handleLicensingStatusChange(ONE_STOP_LABEL)} style={{ background: licensingStatus === ONE_STOP_LABEL ? `${DESIGN_SYSTEM.colors.brand.primary}18` : DESIGN_SYSTEM.colors.bg.primary, border: `2px solid ${licensingStatus === ONE_STOP_LABEL ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.border.light}`, borderRadius: 12, padding: '14px 16px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}><Shield size={16} color={licensingStatus === ONE_STOP_LABEL ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.text.muted} /><span style={{ fontSize: 14, fontWeight: 700, color: licensingStatus === ONE_STOP_LABEL ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.text.primary, fontFamily: "'Outfit', sans-serif" }}>One-Stop (I Own 100%)</span></div>
-                  <div style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.text.tertiary, fontFamily: "'Outfit', sans-serif" }}>Full master & publishing rights</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}><Shield size={16} color={licensingStatus === ONE_STOP_LABEL ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.text.muted} /><span style={{ fontSize: 14, fontWeight: 700, color: licensingStatus === ONE_STOP_LABEL ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.text.primary, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>One-Stop (I Own 100%)</span></div>
+                  <div style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.text.tertiary, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>Full master & publishing rights</div>
                 </button>
                 <button type="button" onClick={() => handleLicensingStatusChange(ADMIN_CO_OWNED_LABEL)} style={{ background: licensingStatus === ADMIN_CO_OWNED_LABEL ? `${DESIGN_SYSTEM.colors.accent.amber}18` : DESIGN_SYSTEM.colors.bg.primary, border: `2px solid ${licensingStatus === ADMIN_CO_OWNED_LABEL ? DESIGN_SYSTEM.colors.accent.amber : DESIGN_SYSTEM.colors.border.light}`, borderRadius: 12, padding: '14px 16px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}><Users size={16} color={licensingStatus === ADMIN_CO_OWNED_LABEL ? DESIGN_SYSTEM.colors.accent.amber : DESIGN_SYSTEM.colors.text.muted} /><span style={{ fontSize: 14, fontWeight: 700, color: licensingStatus === ADMIN_CO_OWNED_LABEL ? DESIGN_SYSTEM.colors.accent.amber : DESIGN_SYSTEM.colors.text.primary, fontFamily: "'Outfit', sans-serif" }}>Co-Owned</span></div>
-                  <div style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.text.tertiary, fontFamily: "'Outfit', sans-serif" }}>Multiple rights holders — verify splits later</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}><Users size={16} color={licensingStatus === ADMIN_CO_OWNED_LABEL ? DESIGN_SYSTEM.colors.accent.amber : DESIGN_SYSTEM.colors.text.muted} /><span style={{ fontSize: 14, fontWeight: 700, color: licensingStatus === ADMIN_CO_OWNED_LABEL ? DESIGN_SYSTEM.colors.accent.amber : DESIGN_SYSTEM.colors.text.primary, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>Co-Owned</span></div>
+                  <div style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.text.tertiary, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>Multiple rights holders — verify splits later</div>
                 </button>
               </div>
             </div>
-            <textarea placeholder="Description (optional)" value={description} onChange={e => setDescription(e.target.value)} rows={2} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", resize: "none", marginBottom: 12, boxSizing: "border-box", fontFamily: "'Outfit', sans-serif" }} />
+            <textarea placeholder="Description (optional)" value={description} onChange={e => setDescription(e.target.value)} rows={2} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", resize: "none", marginBottom: 12, boxSizing: "border-box", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }} />
             
             <div style={{ marginBottom: 12 }}>
               <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 8 }}>Audio File {editingSong && !audioFile && "(Optional - leave blank to keep existing)"}</label>
-              <input type="file" accept="audio/*" onChange={e => handleAudioFileChange(e.target.files[0])} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Outfit', sans-serif" }} />
+              <input type="file" accept="audio/*" onChange={e => handleAudioFileChange(e.target.files[0])} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }} />
               
               {audioFile && !analyzing && (
                 <div style={{ color: DESIGN_SYSTEM.colors.accent.green, fontSize: 12, marginTop: 6 }}>\u2713 {audioFile.name} ({(audioFile.size / 1024 / 1024).toFixed(2)} MB)</div>
@@ -473,10 +507,10 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
             </div>
 
             <div style={{ display: "flex", gap: 10 }}>
-              <button type="submit" disabled={loading || analyzing} style={{ background: DESIGN_SYSTEM.colors.brand.primary, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 8, padding: "8px 20px", fontWeight: 600, fontSize: 14, cursor: loading ? "not-allowed" : "pointer", fontFamily: "'Outfit', sans-serif", opacity: loading ? 0.6 : 1 }}>
+              <button type="submit" disabled={loading || analyzing} style={{ background: DESIGN_SYSTEM.colors.brand.primary, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 8, padding: "8px 20px", fontWeight: 600, fontSize: 14, cursor: loading ? "not-allowed" : "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", opacity: loading ? 0.6 : 1 }}>
                 {loading ? "Saving..." : editingSong ? "Update Song" : "Add Song"}
               </button>
-              <button type="button" onClick={resetForm} style={{ background: "transparent", color: DESIGN_SYSTEM.colors.text.tertiary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "8px 16px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Outfit', sans-serif" }}>Cancel</button>
+              <button type="button" onClick={resetForm} style={{ background: "transparent", color: DESIGN_SYSTEM.colors.text.tertiary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "8px 16px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>Cancel</button>
             </div>
           </form>
         </div>
@@ -485,18 +519,18 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
       {showBulk && bulkData.length > 0 && bulkStep === 'definition' && (
         <div style={{ background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 16, padding: 28, border: `1px solid ${DESIGN_SYSTEM.colors.accent.purple}33`, marginBottom: 20 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-            <div><h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 18, fontWeight: 700, fontFamily: "'Outfit', sans-serif", marginBottom: 4 }}>Batch Ownership &mdash; {bulkData.length} songs</h3><p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13, margin: 0 }}>Before we review metadata, let's establish ownership for this batch.</p></div>
+            <div><h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 18, fontWeight: 700, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", marginBottom: 4 }}>Batch Ownership &mdash; {bulkData.length} songs</h3><p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13, margin: 0 }}>Before we review metadata, let's establish ownership for this batch.</p></div>
             <button onClick={() => { setShowBulk(false); setBulkData([]); setBulkStep(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={18} color={DESIGN_SYSTEM.colors.text.muted} /></button>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
-            <div onClick={() => { setConfirmModal({ open: true, title: 'Legal Confirmation', message: `By confirming One-Stop for all ${bulkData.length} tracks, you certify that you control 100% of both the Master recording and 100% of the Publishing rights for every song in this batch.`, onConfirm: () => { setConfirmModal(null); setBulkData(prev => prev.map(item => ({ ...item, licensing_status: ONE_STOP_LABEL, is_one_stop: true }))); setBulkStep('metadata'); showToast(`One-Stop confirmed for all ${bulkData.length} tracks`, "success"); }, onCancel: () => setConfirmModal(null), }); }} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 14, padding: 24, cursor: 'pointer', transition: 'all 0.2s' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}><div style={{ width: 40, height: 40, borderRadius: 10, background: `${DESIGN_SYSTEM.colors.brand.primary}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Shield size={20} color={DESIGN_SYSTEM.colors.brand.primary} /></div><span style={{ fontSize: 11, fontWeight: 700, color: DESIGN_SYSTEM.colors.brand.primary, textTransform: 'uppercase', letterSpacing: 0.5, fontFamily: "'Outfit', sans-serif" }}>One-Stop Ready</span></div>
-              <h4 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 15, fontWeight: 700, margin: '0 0 6px', fontFamily: "'Outfit', sans-serif" }}>All songs have the same ownership</h4>
+            <div onClick={() => { setConfirmModal({ open: true, title: 'Legal Confirmation', message: `By confirming One-Stop for all ${bulkData.length} tracks, you certify that you control 100% of both the Master recording and 100% of the Publishing rights for every song in this batch.`, onConfirm: () => { setConfirmModal(null); setBulkData(prev => prev.map(item => ({ ...item, licensing_status: ONE_STOP_LABEL, is_one_stop: true }))); setBulkStep('metadata'); showToast.success(`One-Stop confirmed for all ${bulkData.length} tracks`); }, onCancel: () => setConfirmModal(null), }); }} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 14, padding: 24, cursor: 'pointer', transition: 'all 0.2s' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}><div style={{ width: 40, height: 40, borderRadius: 10, background: `${DESIGN_SYSTEM.colors.brand.primary}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Shield size={20} color={DESIGN_SYSTEM.colors.brand.primary} /></div><span style={{ fontSize: 11, fontWeight: 700, color: DESIGN_SYSTEM.colors.brand.primary, textTransform: 'uppercase', letterSpacing: 0.5, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>One-Stop Ready</span></div>
+              <h4 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 15, fontWeight: 700, margin: '0 0 6px', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>All songs have the same ownership</h4>
               <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13, margin: 0, lineHeight: 1.4 }}>I am the sole creator of all {bulkData.length} tracks and own 100% of master & publishing rights.</p>
             </div>
-            <div onClick={() => { setBulkData(prev => prev.map(item => ({ ...item, licensing_status: ADMIN_CO_OWNED_LABEL, is_one_stop: false }))); setBulkStep('metadata'); showToast("Songs set to Co-Owned", "info"); }} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 14, padding: 24, cursor: 'pointer', transition: 'all 0.2s' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}><div style={{ width: 40, height: 40, borderRadius: 10, background: `${DESIGN_SYSTEM.colors.accent.amber}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Users size={20} color={DESIGN_SYSTEM.colors.accent.amber} /></div><span style={{ fontSize: 11, fontWeight: 700, color: DESIGN_SYSTEM.colors.accent.amber, textTransform: 'uppercase', letterSpacing: 0.5, fontFamily: "'Outfit', sans-serif" }}>Co-Owned</span></div>
-              <h4 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 15, fontWeight: 700, margin: '0 0 6px', fontFamily: "'Outfit', sans-serif" }}>These songs have multiple rights holders</h4>
+            <div onClick={() => { setBulkData(prev => prev.map(item => ({ ...item, licensing_status: ADMIN_CO_OWNED_LABEL, is_one_stop: false }))); setBulkStep('metadata'); showToast.info("Songs set to Co-Owned"); }} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 14, padding: 24, cursor: 'pointer', transition: 'all 0.2s' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}><div style={{ width: 40, height: 40, borderRadius: 10, background: `${DESIGN_SYSTEM.colors.accent.amber}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Users size={20} color={DESIGN_SYSTEM.colors.accent.amber} /></div><span style={{ fontSize: 11, fontWeight: 700, color: DESIGN_SYSTEM.colors.accent.amber, textTransform: 'uppercase', letterSpacing: 0.5, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>Co-Owned</span></div>
+              <h4 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 15, fontWeight: 700, margin: '0 0 6px', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>These songs have multiple rights holders</h4>
               <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13, margin: 0, lineHeight: 1.4 }}>Verify ownership splits in the Rights Verification Dashboard after upload.</p>
             </div>
           </div>
@@ -506,7 +540,7 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
       {showBulk && bulkData.length > 0 && bulkStep === 'metadata' && (
         <div style={{ background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 16, padding: 22, border: `1px solid ${DESIGN_SYSTEM.colors.accent.purple}33`, marginBottom: 20 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: "'Outfit', sans-serif" }}>Review & Complete ({bulkData.length} songs)</h3>
+            <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>Review & Complete ({bulkData.length} songs)</h3>
             <button onClick={() => { setShowBulk(false); setBulkData([]); setBulkFiles([]); }} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={18} color={DESIGN_SYSTEM.colors.text.muted} /></button>
           </div>
           
@@ -514,37 +548,37 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ borderBottom: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
-                  <th style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, fontWeight: 600, textAlign: "left", padding: "10px", fontFamily: "'Outfit', sans-serif" }}>Title</th>
-                  <th style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, fontWeight: 600, textAlign: "left", padding: "10px", fontFamily: "'Outfit', sans-serif" }}>Duration</th>
-                  <th style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, fontWeight: 600, textAlign: "left", padding: "10px", fontFamily: "'Outfit', sans-serif" }}>Primary Genre</th>
-                  <th style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, fontWeight: 600, textAlign: "left", padding: "10px", fontFamily: "'Outfit', sans-serif" }}>Secondary Genre</th>
-                  <th style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, fontWeight: 600, textAlign: "left", padding: "10px", fontFamily: "'Outfit', sans-serif" }}>BPM</th>
-                  <th style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, fontWeight: 600, textAlign: "left", padding: "10px", fontFamily: "'Outfit', sans-serif" }}>Instrument Type</th>
-                  <th style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, fontWeight: 600, textAlign: "left", padding: "10px", fontFamily: "'Outfit', sans-serif" }}>Ownership Type*</th>
-                  <th style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, fontWeight: 600, textAlign: "left", padding: "10px", fontFamily: "'Outfit', sans-serif" }}>Key</th>
-                  <th style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, fontWeight: 600, textAlign: "left", padding: "10px", fontFamily: "'Outfit', sans-serif" }}>Mood</th>
+                  <th style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, fontWeight: 600, textAlign: "left", padding: "10px", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>Title</th>
+                  <th style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, fontWeight: 600, textAlign: "left", padding: "10px", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>Duration</th>
+                  <th style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, fontWeight: 600, textAlign: "left", padding: "10px", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>Primary Genre</th>
+                  <th style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, fontWeight: 600, textAlign: "left", padding: "10px", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>Secondary Genre</th>
+                  <th style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, fontWeight: 600, textAlign: "left", padding: "10px", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>BPM</th>
+                  <th style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, fontWeight: 600, textAlign: "left", padding: "10px", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>Instrument Type</th>
+                  <th style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, fontWeight: 600, textAlign: "left", padding: "10px", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>Ownership Type*</th>
+                  <th style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, fontWeight: 600, textAlign: "left", padding: "10px", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>Key</th>
+                  <th style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, fontWeight: 600, textAlign: "left", padding: "10px", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>Mood</th>
                 </tr>
               </thead>
               <tbody>
                 {bulkData.map((item, i) => (
                   <tr key={i} style={{ borderBottom: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
-                    <td style={{ padding: "10px" }}><input value={item.title} onChange={e => updateBulkField(i, 'title', e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: "6px 8px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, outline: "none", fontFamily: "'Outfit', sans-serif" }} /></td>
+                    <td style={{ padding: "10px" }}><input value={item.title} onChange={e => updateBulkField(i, 'title', e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: "6px 8px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }} /></td>
                     <td style={{ padding: "10px", color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13 }}>{item.duration}</td>
-                    <td style={{ padding: "10px" }}><select value={item.genre} onChange={e => updateBulkField(i, 'genre', e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: "6px 8px", color: item.genre ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 13, outline: "none", fontFamily: "'Outfit', sans-serif" }}><option value="">Genre...</option>{songGenreOptions.map(g => <option key={g} value={g}>{g}</option>)}</select></td>
-                    <td style={{ padding: "10px" }}><input value={item.secondary_genre || ''} onChange={e => updateBulkField(i, 'secondary_genre', e.target.value)} placeholder="Optional" style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: "6px 8px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, outline: "none", fontFamily: "'Outfit', sans-serif" }} /></td>
-                    <td style={{ padding: "10px" }}><input value={item.bpm} onChange={e => updateBulkField(i, 'bpm', e.target.value)} type="number" style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: "6px 8px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, outline: "none", fontFamily: "'Outfit', sans-serif" }} /></td>
-                    <td style={{ padding: "10px" }}><select value={item.instrument_type || ''} onChange={e => updateBulkField(i, 'instrument_type', e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: "6px 8px", color: item.instrument_type ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 13, outline: "none", fontFamily: "'Outfit', sans-serif" }}><option value="">Type...</option><option value="Vocal">Vocal</option><option value="Instrumental">Instrumental</option></select></td>
-                    <td style={{ padding: "10px" }}><select value={item.licensing_status || ''} onChange={e => handleBulkLicensingStatusChange(i, e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: "6px 8px", color: item.licensing_status ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 13, outline: "none", fontFamily: "'Outfit', sans-serif" }}><option value="">Required...</option><option value={ONE_STOP_LABEL}>One-Stop (100%)</option><option value={ADMIN_CO_OWNED_LABEL}>Co-Owned</option></select></td>
-                    <td style={{ padding: "10px" }}><input value={item.key} onChange={e => updateBulkField(i, 'key', e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: "6px 8px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, outline: "none", fontFamily: "'Outfit', sans-serif" }} /></td>
-                    <td style={{ padding: "10px" }}><select value={item.mood} onChange={e => updateBulkField(i, 'mood', e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: "6px 8px", color: item.mood ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 13, outline: "none", fontFamily: "'Outfit', sans-serif" }}><option value="">Mood...</option>{moodOptions.map(m => <option key={m} value={m}>{m}</option>)}</select></td>
+                    <td style={{ padding: "10px" }}><select value={item.genre} onChange={e => updateBulkField(i, 'genre', e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: "6px 8px", color: item.genre ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 13, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}><option value="">Genre...</option>{songGenreOptions.map(g => <option key={g} value={g}>{g}</option>)}</select></td>
+                    <td style={{ padding: "10px" }}><input value={item.secondary_genre || ''} onChange={e => updateBulkField(i, 'secondary_genre', e.target.value)} placeholder="Optional" style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: "6px 8px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }} /></td>
+                    <td style={{ padding: "10px" }}><input value={item.bpm} onChange={e => updateBulkField(i, 'bpm', e.target.value)} type="number" style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: "6px 8px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }} /></td>
+                    <td style={{ padding: "10px" }}><select value={item.instrument_type || ''} onChange={e => updateBulkField(i, 'instrument_type', e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: "6px 8px", color: item.instrument_type ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 13, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}><option value="">Type...</option><option value="Vocal">Vocal</option><option value="Instrumental">Instrumental</option></select></td>
+                    <td style={{ padding: "10px" }}><select value={item.licensing_status || ''} onChange={e => handleBulkLicensingStatusChange(i, e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: "6px 8px", color: item.licensing_status ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 13, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}><option value="">Required...</option><option value={ONE_STOP_LABEL}>One-Stop (100%)</option><option value={ADMIN_CO_OWNED_LABEL}>Co-Owned</option></select></td>
+                    <td style={{ padding: "10px" }}><input value={item.key} onChange={e => updateBulkField(i, 'key', e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: "6px 8px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }} /></td>
+                    <td style={{ padding: "10px" }}><select value={item.mood} onChange={e => updateBulkField(i, 'mood', e.target.value)} style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: "6px 8px", color: item.mood ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 13, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}><option value="">Mood...</option>{moodOptions.map(m => <option key={m} value={m}>{m}</option>)}</select></td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <div style={{ marginTop: 10, color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 12, fontWeight: 600, fontFamily: "'Outfit', sans-serif" }}>One-Stop tracks are prioritized in executive searches for sync opportunities.</div>
+          <div style={{ marginTop: 10, color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 12, fontWeight: 600, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>One-Stop tracks are prioritized in executive searches for sync opportunities.</div>
           <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 12 }}>
-            <button onClick={saveBulkSongs} disabled={loading} style={{ background: DESIGN_SYSTEM.colors.accent.purple, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 8, padding: "10px 24px", fontWeight: 600, fontSize: 14, cursor: loading ? "not-allowed" : "pointer", fontFamily: "'Outfit', sans-serif", opacity: loading ? 0.6 : 1 }}>
+            <button onClick={saveBulkSongs} disabled={loading} style={{ background: DESIGN_SYSTEM.colors.accent.purple, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 8, padding: "10px 24px", fontWeight: 600, fontSize: 14, cursor: loading ? "not-allowed" : "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", opacity: loading ? 0.6 : 1 }}>
               {loading ? "Uploading..." : `Upload All ${bulkData.length} Songs`}
             </button>
           </div>
@@ -553,17 +587,17 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
 
       {uploadProgress && <UploadProgressBar progress={uploadProgress.progress} fileName={uploadProgress.fileName} totalFiles={uploadProgress.totalFiles} currentFile={uploadProgress.currentFile} />}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={viewMode === 'grid' ? { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 12 } : { display: "flex", flexDirection: "column", gap: 10 }}>
         {loading && songs.length === 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{Array.from({ length: 4 }).map((_, i) => (<LoadingSongCard key={i} />))}</div>
+          <SongGridSkeleton count={6} />
         ) : songs.length === 0 ? (
           <div style={{ background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 16, padding: 40, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, textAlign: "center" }}>
             <Music size={48} color={DESIGN_SYSTEM.colors.text.muted} style={{ margin: "0 auto 16px" }} />
-            <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: "'Outfit', sans-serif", marginBottom: 6 }}>Your portfolio is waiting</h3>
+            <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", marginBottom: 6 }}>Your portfolio is waiting</h3>
             <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13 }}>Upload your first track and let the world hear your sound!</p>
           </div>
         ) : (
-          songs.map(song => ( <SongCard key={song.id} song={song} isPlaying={playingSong?.id === song.id && isPlaying} onPlay={playAudio} showActions={true} onEdit={handleEdit} onDelete={handleDelete} hideComposerName isMobile={isMobile} /> ))
+          songs.map(song => ( <SongCard key={song.id} song={song} isPlaying={playingSong?.id === song.id && isPlaying} onPlay={playAudio} showActions={true} onEdit={handleEdit} onDelete={handleDelete} hideComposerName isMobile={isMobile} viewMode={viewMode} /> ))
         )}
       </div>
       <ConfirmModal open={confirmModal?.open} title={confirmModal?.title} message={confirmModal?.message} onConfirm={confirmModal?.onConfirm} onCancel={() => setConfirmModal(null)} />
