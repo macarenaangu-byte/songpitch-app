@@ -1474,13 +1474,16 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
         document.body
       )}
 
-      <ConfirmModal
-        open={confirmModal?.open}
-        title={confirmModal?.title}
-        message={confirmModal?.message}
-        onConfirm={confirmModal?.onConfirm}
-        onCancel={() => setConfirmModal(null)}
-      />
+      {createPortal(
+        <ConfirmModal
+          open={confirmModal?.open}
+          title={confirmModal?.title}
+          message={confirmModal?.message}
+          onConfirm={confirmModal?.onConfirm}
+          onCancel={() => setConfirmModal(null)}
+        />,
+        document.body
+      )}
     </div>
   );
 }

@@ -307,6 +307,150 @@ const SCREEN_SLIDES = {
   ],
 };
 
+/* ── Feature Videos Component ────────────────────────────────────────────── */
+const COMPOSER_VIDEOS = [
+  { src: '/composer_pitch.mp4', title: 'Pitch Your Music', desc: 'Apply to sync briefs with AI-polished pitches in seconds' },
+  { src: '/composer_design.mp4', title: 'Your Portfolio', desc: 'Upload, tag, and manage your entire catalog in one place' },
+  { src: '/composer_screen.mov', title: 'AI Deal Analyzer', desc: 'Upload any contract and get plain-English analysis instantly' },
+];
+
+function FeatureVideos({ isMobile }) {
+  const [tab, setTab] = useState('composer');
+  const [composerIdx, setComposerIdx] = useState(0);
+  const videoRef = useRef(null);
+
+  const videos = tab === 'composer' ? COMPOSER_VIDEOS : [];
+  const current = videos[composerIdx] || COMPOSER_VIDEOS[0];
+  const accentColor = tab === 'composer' ? DESIGN_SYSTEM.colors.brand.primary : '#8B5CF6';
+
+  const go = (dir) => {
+    setComposerIdx(i => (i + dir + videos.length) % videos.length);
+    if (videoRef.current) { videoRef.current.load(); videoRef.current.play().catch(() => {}); }
+  };
+
+  return (
+    <div style={{ padding: isMobile ? '60px 20px' : '80px 48px', background: 'rgba(8,10,18,0.6)', borderTop: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderBottom: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
+      <div style={{ maxWidth: 900, margin: '0 auto' }}>
+        <div className="reveal" style={{ textAlign: 'center', marginBottom: 40 }}>
+          <p style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 12, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 14 }}>See It In Action</p>
+          <h2 style={{ fontFamily: DESIGN_SYSTEM.font.display, fontSize: isMobile ? 28 : 42, fontWeight: 700, letterSpacing: '-0.02em', color: DESIGN_SYSTEM.colors.text.primary, margin: '0 0 24px' }}>
+            What you can do
+          </h2>
+          {/* Tabs */}
+          <div style={{ display: 'inline-flex', background: 'rgba(255,255,255,0.04)', border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 12, padding: 4, gap: 4 }}>
+            {[{ key: 'composer', label: '🎵 For Composers' }, { key: 'executive', label: '🎬 For Executives' }].map(t => (
+              <button key={t.key} onClick={() => { setTab(t.key); setComposerIdx(0); }}
+                style={{ background: tab === t.key ? (t.key === 'composer' ? `${DESIGN_SYSTEM.colors.brand.primary}22` : 'rgba(139,92,246,0.2)') : 'transparent', color: tab === t.key ? (t.key === 'composer' ? DESIGN_SYSTEM.colors.brand.primary : '#8B5CF6') : DESIGN_SYSTEM.colors.text.muted, border: tab === t.key ? `1px solid ${t.key === 'composer' ? DESIGN_SYSTEM.colors.brand.primary : '#8B5CF6'}44` : '1px solid transparent', borderRadius: 9, padding: '8px 20px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: "'Inter', -apple-system, sans-serif", transition: 'all 0.2s' }}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {tab === 'composer' ? (
+          <div className="reveal">
+            {/* Video player */}
+            <div style={{ borderRadius: 20, overflow: 'hidden', border: `1px solid ${accentColor}33`, boxShadow: `0 24px 80px ${accentColor}18`, position: 'relative', background: '#000' }}>
+              <video ref={videoRef} key={current.src} autoPlay muted loop playsInline
+                style={{ width: '100%', display: 'block', maxHeight: 520, objectFit: 'contain' }}>
+                <source src={current.src} />
+              </video>
+              {/* Prev / Next arrows */}
+              {videos.length > 1 && (
+                <>
+                  <button onClick={() => go(-1)} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.6)', border: `1px solid ${accentColor}44`, borderRadius: '50%', width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', fontSize: 18, backdropFilter: 'blur(6px)' }}>‹</button>
+                  <button onClick={() => go(1)} style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.6)', border: `1px solid ${accentColor}44`, borderRadius: '50%', width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', fontSize: 18, backdropFilter: 'blur(6px)' }}>›</button>
+                </>
+              )}
+            </div>
+            {/* Caption + dots */}
+            <div style={{ textAlign: 'center', marginTop: 20 }}>
+              <div style={{ fontWeight: 700, fontSize: 17, color: DESIGN_SYSTEM.colors.text.primary, marginBottom: 6 }}>{current.title}</div>
+              <div style={{ fontSize: 14, color: DESIGN_SYSTEM.colors.text.secondary, marginBottom: 16 }}>{current.desc}</div>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
+                {videos.map((_, i) => (
+                  <button key={i} onClick={() => { setComposerIdx(i); if (videoRef.current) { videoRef.current.load(); videoRef.current.play().catch(() => {}); } }}
+                    style={{ width: i === composerIdx ? 24 : 8, height: 8, borderRadius: 4, background: i === composerIdx ? accentColor : `${accentColor}44`, border: 'none', cursor: 'pointer', transition: 'all 0.25s', padding: 0 }} />
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="reveal" style={{ textAlign: 'center', padding: '60px 24px', borderRadius: 20, border: `1px solid rgba(139,92,246,0.2)`, background: 'rgba(139,92,246,0.04)' }}>
+            <div style={{ fontSize: 40, marginBottom: 16 }}>🎬</div>
+            <div style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 15 }}>Executive feature videos coming soon.</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── ML Systems Section ───────────────────────────────────────────────────── */
+function MLSystemsSection({ isMobile }) {
+  return (
+    <div style={{ padding: isMobile ? '60px 20px' : '80px 48px' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+        <div className="reveal" style={{ textAlign: 'center', marginBottom: 48 }}>
+          <p style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 12, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 14 }}>Powered by AI</p>
+          <h2 style={{ fontFamily: DESIGN_SYSTEM.font.display, fontSize: isMobile ? 28 : 42, fontWeight: 700, letterSpacing: '-0.02em', color: DESIGN_SYSTEM.colors.text.primary, margin: '0 0 14px' }}>
+            Two proprietary ML systems,<br />built specifically for music
+          </h2>
+          <p style={{ fontSize: 16, color: DESIGN_SYSTEM.colors.text.secondary, maxWidth: 540, margin: '0 auto', lineHeight: 1.7 }}>
+            Generic AI tools weren't built for sync licensing. Ours are.
+          </p>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 24 }}>
+          {/* Song Analyzer AI */}
+          <div className="reveal" style={{ borderRadius: 20, padding: isMobile ? '28px 24px' : '36px 32px', background: 'rgba(18,20,31,0.6)', border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}22`, backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+              <div style={{ width: 52, height: 52, borderRadius: 16, background: `${DESIGN_SYSTEM.colors.brand.primary}18`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>🎧</div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 17, color: DESIGN_SYSTEM.colors.text.primary, fontFamily: DESIGN_SYSTEM.font.display }}>Song Analyzer AI</div>
+                <div style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.brand.primary, fontWeight: 600, marginTop: 2 }}>Audio Intelligence Engine</div>
+              </div>
+            </div>
+            <p style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 14, lineHeight: 1.75, margin: '0 0 20px' }}>
+              Upload any audio file and our ML model instantly detects genre, mood, BPM, and key — then transcribes lyrics using speech recognition. No manual tagging needed.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {['Genre & mood classification', 'BPM + key detection', 'Automatic lyric transcription', 'One-Stop rights verification'].map(f => (
+                <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: DESIGN_SYSTEM.colors.brand.primary, flexShrink: 0 }} />
+                  <span style={{ fontSize: 13, color: DESIGN_SYSTEM.colors.text.secondary }}>{f}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* LegalSplits ML */}
+          <div className="reveal reveal-delay-1" style={{ borderRadius: 20, padding: isMobile ? '28px 24px' : '36px 32px', background: 'rgba(18,20,31,0.6)', border: '1px solid rgba(139,92,246,0.22)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+              <div style={{ width: 52, height: 52, borderRadius: 16, background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>⚖️</div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 17, color: DESIGN_SYSTEM.colors.text.primary, fontFamily: DESIGN_SYSTEM.font.display }}>LegalSplits ML</div>
+                <div style={{ fontSize: 12, color: '#8B5CF6', fontWeight: 600, marginTop: 2 }}>Music Rights Intelligence</div>
+              </div>
+            </div>
+            <p style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 14, lineHeight: 1.75, margin: '0 0 20px' }}>
+              Upload any recording deal, publishing agreement, or co-pub contract. Our AI flags unfair clauses, explains every term in plain English, and gives you a deal score — in seconds.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {['Contract clause analysis & scoring', 'Split sheet verification', 'PRO & IPI registration lookup', 'Controlled composition detection'].map(f => (
+                <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#8B5CF6', flexShrink: 0 }} />
+                  <span style={{ fontSize: 13, color: DESIGN_SYSTEM.colors.text.secondary }}>{f}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function LandingPage({ onGetStarted, onLegalPage }) {
   const [activeSection, setActiveSection] = useState('');
   const [howTab, setHowTab] = useState('composer'); // 'composer' | 'executive'
@@ -1067,6 +1211,9 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
         </div>
       </div>
 
+      {/* ── Feature Videos ───────────────────────────────────────────────── */}
+      <FeatureVideos isMobile={isMobile} />
+
       {/* ── Value Props: For Executives & Composers ─────────────────────── */}
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "0 20px 60px" : "0 48px 80px" }}>
         <h2 style={{ fontSize: isMobile ? 32 : 48, fontWeight: 600, textAlign: "center", marginBottom: 48, fontFamily: DESIGN_SYSTEM.font.display, letterSpacing: '0.01em' }}>What does it do?</h2>
@@ -1248,6 +1395,9 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
       </div>
 
       {/* ── Social Proof — hidden until real reviews are collected ── */}
+
+      {/* ── ML Systems ──────────────────────────────────────────────────── */}
+      <MLSystemsSection isMobile={isMobile} />
 
       {/* ── Pricing ─────────────────────────────────────────────────────── */}
       <div id="pricing" style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "0 20px 60px" : "0 48px 80px" }}>
