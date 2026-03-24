@@ -311,20 +311,25 @@ const SCREEN_SLIDES = {
 const COMPOSER_VIDEOS = [
   { src: '/composer_pitch.mp4', title: 'Pitch Your Music', desc: 'Apply to sync briefs with AI-polished pitches in seconds' },
   { src: '/composer_design.mp4', title: 'Your Portfolio', desc: 'Upload, tag, and manage your entire catalog in one place' },
-  { src: '/composer_screen.mov', title: 'AI Deal Analyzer', desc: 'Upload any contract and get plain-English analysis instantly' },
+  { src: '/composer_screen.mp4', title: 'AI Deal Analyzer', desc: 'Upload any contract and get plain-English analysis instantly' },
+];
+
+const EXECUTIVE_VIDEOS = [
+  { src: '/exec_video1.mp4', title: 'Search the Catalog', desc: 'Find exactly the track you need — filter by mood, genre, BPM, and rights' },
+  { src: '/exec_video2.mp4', title: 'Review & Shortlist', desc: 'Compare pitches, shortlist favourites, and send offers in one click' },
 ];
 
 function FeatureVideos({ isMobile }) {
   const [tab, setTab] = useState('composer');
-  const [composerIdx, setComposerIdx] = useState(0);
+  const [activeIdx, setActiveIdx] = useState(0);
   const videoRef = useRef(null);
 
-  const videos = tab === 'composer' ? COMPOSER_VIDEOS : [];
-  const current = videos[composerIdx] || COMPOSER_VIDEOS[0];
+  const videos = tab === 'composer' ? COMPOSER_VIDEOS : EXECUTIVE_VIDEOS;
+  const current = videos[activeIdx] || videos[0];
   const accentColor = tab === 'composer' ? DESIGN_SYSTEM.colors.brand.primary : '#8B5CF6';
 
   const go = (dir) => {
-    setComposerIdx(i => (i + dir + videos.length) % videos.length);
+    setActiveIdx(i => (i + dir + videos.length) % videos.length);
     if (videoRef.current) { videoRef.current.load(); videoRef.current.play().catch(() => {}); }
   };
 
@@ -339,7 +344,7 @@ function FeatureVideos({ isMobile }) {
           {/* Tabs */}
           <div style={{ display: 'inline-flex', background: 'rgba(255,255,255,0.04)', border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 12, padding: 4, gap: 4 }}>
             {[{ key: 'composer', label: '🎵 For Composers' }, { key: 'executive', label: '🎬 For Executives' }].map(t => (
-              <button key={t.key} onClick={() => { setTab(t.key); setComposerIdx(0); }}
+              <button key={t.key} onClick={() => { setTab(t.key); setActiveIdx(0); }}
                 style={{ background: tab === t.key ? (t.key === 'composer' ? `${DESIGN_SYSTEM.colors.brand.primary}22` : 'rgba(139,92,246,0.2)') : 'transparent', color: tab === t.key ? (t.key === 'composer' ? DESIGN_SYSTEM.colors.brand.primary : '#8B5CF6') : DESIGN_SYSTEM.colors.text.muted, border: tab === t.key ? `1px solid ${t.key === 'composer' ? DESIGN_SYSTEM.colors.brand.primary : '#8B5CF6'}44` : '1px solid transparent', borderRadius: 9, padding: '8px 20px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: "'Inter', -apple-system, sans-serif", transition: 'all 0.2s' }}>
                 {t.label}
               </button>
@@ -347,40 +352,32 @@ function FeatureVideos({ isMobile }) {
           </div>
         </div>
 
-        {tab === 'composer' ? (
-          <div className="reveal">
-            {/* Video player */}
-            <div style={{ borderRadius: 20, overflow: 'hidden', border: `1px solid ${accentColor}33`, boxShadow: `0 24px 80px ${accentColor}18`, position: 'relative', background: '#000' }}>
-              <video ref={videoRef} key={current.src} autoPlay muted loop playsInline
-                style={{ width: '100%', display: 'block', maxHeight: 520, objectFit: 'contain' }}>
-                <source src={current.src} />
-              </video>
-              {/* Prev / Next arrows */}
-              {videos.length > 1 && (
-                <>
-                  <button onClick={() => go(-1)} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.6)', border: `1px solid ${accentColor}44`, borderRadius: '50%', width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', fontSize: 18, backdropFilter: 'blur(6px)' }}>‹</button>
-                  <button onClick={() => go(1)} style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.6)', border: `1px solid ${accentColor}44`, borderRadius: '50%', width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', fontSize: 18, backdropFilter: 'blur(6px)' }}>›</button>
-                </>
-              )}
-            </div>
-            {/* Caption + dots */}
-            <div style={{ textAlign: 'center', marginTop: 20 }}>
-              <div style={{ fontWeight: 700, fontSize: 17, color: DESIGN_SYSTEM.colors.text.primary, marginBottom: 6 }}>{current.title}</div>
-              <div style={{ fontSize: 14, color: DESIGN_SYSTEM.colors.text.secondary, marginBottom: 16 }}>{current.desc}</div>
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
-                {videos.map((_, i) => (
-                  <button key={i} onClick={() => { setComposerIdx(i); if (videoRef.current) { videoRef.current.load(); videoRef.current.play().catch(() => {}); } }}
-                    style={{ width: i === composerIdx ? 24 : 8, height: 8, borderRadius: 4, background: i === composerIdx ? accentColor : `${accentColor}44`, border: 'none', cursor: 'pointer', transition: 'all 0.25s', padding: 0 }} />
-                ))}
-              </div>
+        <div className="reveal">
+          {/* Video player */}
+          <div style={{ borderRadius: 20, overflow: 'hidden', border: `1px solid ${accentColor}33`, boxShadow: `0 24px 80px ${accentColor}18`, position: 'relative', background: '#000' }}>
+            <video ref={videoRef} key={current.src} autoPlay muted loop playsInline
+              style={{ width: '100%', display: 'block', maxHeight: 520, objectFit: 'contain' }}>
+              <source src={current.src} type="video/mp4" />
+            </video>
+            {videos.length > 1 && (
+              <>
+                <button onClick={() => go(-1)} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.6)', border: `1px solid ${accentColor}44`, borderRadius: '50%', width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', fontSize: 18, backdropFilter: 'blur(6px)' }}>‹</button>
+                <button onClick={() => go(1)} style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.6)', border: `1px solid ${accentColor}44`, borderRadius: '50%', width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', fontSize: 18, backdropFilter: 'blur(6px)' }}>›</button>
+              </>
+            )}
+          </div>
+          {/* Caption + dots */}
+          <div style={{ textAlign: 'center', marginTop: 20 }}>
+            <div style={{ fontWeight: 700, fontSize: 17, color: DESIGN_SYSTEM.colors.text.primary, marginBottom: 6 }}>{current.title}</div>
+            <div style={{ fontSize: 14, color: DESIGN_SYSTEM.colors.text.secondary, marginBottom: 16 }}>{current.desc}</div>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
+              {videos.map((_, i) => (
+                <button key={i} onClick={() => { setActiveIdx(i); if (videoRef.current) { videoRef.current.load(); videoRef.current.play().catch(() => {}); } }}
+                  style={{ width: i === activeIdx ? 24 : 8, height: 8, borderRadius: 4, background: i === activeIdx ? accentColor : `${accentColor}44`, border: 'none', cursor: 'pointer', transition: 'all 0.25s', padding: 0 }} />
+              ))}
             </div>
           </div>
-        ) : (
-          <div className="reveal" style={{ textAlign: 'center', padding: '60px 24px', borderRadius: 20, border: `1px solid rgba(139,92,246,0.2)`, background: 'rgba(139,92,246,0.04)' }}>
-            <div style={{ fontSize: 40, marginBottom: 16 }}>🎬</div>
-            <div style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 15 }}>Executive feature videos coming soon.</div>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );
