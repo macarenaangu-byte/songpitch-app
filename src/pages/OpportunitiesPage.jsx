@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Search, Plus, X, Edit, Trash2, Calendar, DollarSign, CheckCircle, XCircle, Bookmark, Users, Briefcase, Check, ChevronDown } from "lucide-react";
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { GENRE_OPTIONS } from '../constants/genres';
@@ -1095,8 +1096,8 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
         </div>
       )}
 
-      {/* Apply Modal (Composers only) */}
-      {showApplyModal && (
+      {/* Apply Modal (Composers only) — rendered via portal so position:fixed is always relative to the true viewport */}
+      {showApplyModal && createPortal(
         <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
           <div style={{ background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 20, padding: 28, maxWidth: 540, width: "100%", border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, maxHeight: "90vh", overflowY: "auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
@@ -1263,10 +1264,11 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
-      {/* AI Brief Writer Modal */}
-      {showAIBrief && (
+      {/* AI Brief Writer Modal — portal so position:fixed is always relative to viewport */}
+      {showAIBrief && createPortal(
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           background: 'rgba(0,0,0,0.85)',
@@ -1468,7 +1470,8 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
               </>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <ConfirmModal

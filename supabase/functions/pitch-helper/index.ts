@@ -24,8 +24,16 @@ serve(async (req) => {
 
     const isPolishMode = existingPitch && existingPitch.trim().length > 10;
 
+    // If no song was selected, try to extract a track name from the pitch text itself
+    // Handles: called 'Fuego Steps', titled "X", track "X", song "X"
+    let inferredTitle: string | null = null;
+    if (!song?.title && isPolishMode && existingPitch) {
+      const titleMatch = existingPitch.match(/(?:called|titled|track|song)\s+['\u2018\u2019""]([^'\u2018\u2019""]+)['\u2018\u2019""]/i);
+      if (titleMatch) inferredTitle = titleMatch[1];
+    }
+
     const songDescription = [
-      song?.title ? `"${song.title}"` : null,
+      (song?.title || inferredTitle) ? `"${song?.title || inferredTitle}"` : null,
       song?.genre || null,
       song?.mood ? `${song.mood} feel` : null,
       song?.bpm ? `${song.bpm} BPM` : null,
