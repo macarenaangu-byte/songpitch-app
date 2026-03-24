@@ -1211,61 +1211,6 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
       {/* ── Feature Videos ───────────────────────────────────────────────── */}
       <FeatureVideos isMobile={isMobile} />
 
-      {/* ── Value Props: For Executives & Composers ─────────────────────── */}
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "0 20px 60px" : "0 48px 80px" }}>
-        <h2 style={{ fontSize: isMobile ? 32 : 48, fontWeight: 600, textAlign: "center", marginBottom: 48, fontFamily: DESIGN_SYSTEM.font.display, letterSpacing: '0.01em' }}>What does it do?</h2>
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(320px, 1fr))", gap: 32 }}>
-          {[
-            {
-              accent: DESIGN_SYSTEM.colors.brand.accent,
-              icon: <Search size={28} color={DESIGN_SYSTEM.colors.brand.accent} />,
-              title: "For Music Executives",
-              points: [
-                "No more messy Dropbox links or expired Google Drive folders",
-                "Filter by genre, vibe, mood, or BPM — find exactly what you need in seconds",
-                "Every track is pre-tagged, pre-screened, and pitch-ready",
-                "Post briefs with budgets and deadlines, receive curated applications",
-              ],
-            },
-            {
-              accent: DESIGN_SYSTEM.colors.brand.purple,
-              icon: <Music size={28} color={DESIGN_SYSTEM.colors.brand.purple} />,
-              title: "For Composers & Producers",
-              points: [
-                "AI auto-tags your genre, mood, and BPM in under a minute",
-                "Build a private, secure track vault with verified rights documentation",
-                "Generate and publish split sheets without legal back-and-forth",
-                "Pitch directly to real industry briefs — no cold emails needed",
-              ],
-            },
-          ].map(({ accent, icon, title, points }) => (
-            <div key={title} style={{
-              background: `rgba(18,20,31,0.42)`,
-              backdropFilter: 'blur(14px)',
-              WebkitBackdropFilter: 'blur(14px)',
-              border: `1px solid ${accent}22`,
-              borderRadius: 16, padding: 36, transition: 'all 0.3s ease',
-            }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = accent + '50'; e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = `0 12px 32px ${accent}18`; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = accent + '25'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
-            >
-              <div style={{ width: 56, height: 56, borderRadius: 14, background: `${accent}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
-                {icon}
-              </div>
-              <h3 style={{ fontSize: 22, fontWeight: 700, marginBottom: 16 }}>{title}</h3>
-              <ul style={{ margin: 0, paddingLeft: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {points.map(p => (
-                  <li key={p} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                    <CheckCircle size={16} color={accent} style={{ marginTop: 2, flexShrink: 0 }} />
-                    <span style={{ color: DESIGN_SYSTEM.colors.text.secondary, lineHeight: 1.6, fontSize: 15 }}>{p}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* ── Feature Grid ────────────────────────────────────────────────── */}
       <div id="features" style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "0 20px 60px" : "0 48px 80px" }}>
         <div className="reveal" style={{ textAlign: 'center', marginBottom: 40 }}>
