@@ -923,10 +923,10 @@ export default function SongPitch() {
 
   // Legal pages (accessible without auth — checked before loading spinner)
   if (legalPage === 'terms') {
-    return <TermsOfServicePage onBack={() => setLegalPage(null)} />;
+    return <Suspense fallback={null}><TermsOfServicePage onBack={() => setLegalPage(null)} /></Suspense>;
   }
   if (legalPage === 'privacy') {
-    return <PrivacyPolicyPage onBack={() => setLegalPage(null)} />;
+    return <Suspense fallback={null}><PrivacyPolicyPage onBack={() => setLegalPage(null)} /></Suspense>;
   }
   if (legalPage === 'dmca') {
     return <Suspense fallback={null}><DMCAPage onBack={() => setLegalPage(null)} /></Suspense>;

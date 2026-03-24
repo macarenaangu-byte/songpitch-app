@@ -1,11 +1,11 @@
-import { Play, Pause, Music, Edit, Trash2, Clock, Shield, Zap, CheckCircle, AlertTriangle } from "lucide-react";
+import { Play, Pause, Music, Edit, Trash2, Shield, CheckCircle, AlertTriangle } from "lucide-react";
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { Badge } from './Badge';
 
 export function SongCard({ song, onPlay, isPlaying, showActions, onEdit, onDelete, hideComposerName, onViewRights, isMobile = false, viewMode = 'list' }) {
   const primaryGenre = song.primary_genre || song.genre;
   const secondaryGenre = song.secondary_genre;
-  const instrumentType = isMobile ? null : song.instrument_type;
+  // const instrumentType = isMobile ? null : song.instrument_type; // reserved for future display
   const licensingStatus = song.licensing_status;
   const isOneStopTrack = !!song.is_one_stop || (typeof licensingStatus === 'string' && licensingStatus.startsWith('One-Stop'));
   const primaryGenreColor = DESIGN_SYSTEM.colors.brand.purple;

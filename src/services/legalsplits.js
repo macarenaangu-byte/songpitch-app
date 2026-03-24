@@ -5,11 +5,11 @@
  * LegalSplits AI `/v1/enrich-splits` endpoint.
  *
  * Environment variables required (in .env.local):
- *   REACT_APP_LEGALSPLITS_API_URL  — base URL, e.g. https://legalsplits-ai.netlify.app
+ *   REACT_APP_LEGALSPLITS_API_URL  — base URL, e.g. https://legalsplits-ai.onrender.com
  *   REACT_APP_LEGALSPLITS_API_KEY  — API key starting with lsai_
  */
 
-const BASE_URL = process.env.REACT_APP_LEGALSPLITS_API_URL ?? 'https://legalsplits-ai.netlify.app'
+const BASE_URL = process.env.REACT_APP_LEGALSPLITS_API_URL ?? 'https://legalsplits-ai.onrender.com'
 const API_KEY  = process.env.REACT_APP_LEGALSPLITS_API_KEY ?? ''
 
 /**

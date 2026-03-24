@@ -33,19 +33,22 @@
     <link rel="stylesheet" href="https://use.typekit.net/hnw5nak.css">
 
     <!-- ── Google Analytics 4 ──────────────────────────────────────────────
-         Replace G-XXXXXXXXXX with your real GA4 Measurement ID.
+         TODO: Replace G-XXXXXXXXXX with your real GA4 Measurement ID.
          Get it from: analytics.google.com → Admin → Data Streams → your stream
+         Then uncomment the scripts below.
     ──────────────────────────────────────────────────────────────────────── -->
+    <!-- GA4 disabled until Measurement ID is configured
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
       gtag('config', 'G-XXXXXXXXXX');
-      // Helper: call window.trackEvent('event_name', { key: value }) anywhere in the app
-      window.trackEvent = function(eventName, params) {
-        if (typeof gtag !== 'undefined') gtag('event', eventName, params || {});
-      };
+    </script>
+    -->
+    <script>
+      // trackEvent no-op until GA4 is configured
+      window.trackEvent = function(eventName, params) {};
     </script>
 
     <!-- Sentry: configure when ready (sentry.io → project → Settings → DSN) -->

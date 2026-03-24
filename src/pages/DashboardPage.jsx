@@ -3,7 +3,7 @@ import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { StatCard } from '../components/StatCard';
 import { MiniChart } from '../components/MiniChart';
 import { supabase } from '../lib/supabase';
-import { CheckCircle, Circle, Users, Music, Briefcase, MessageCircle, FileText, Search, Eye, User, Sparkles, X, ArrowRight, Upload, Zap } from 'lucide-react';
+import { CheckCircle, Circle, Users, Music, Briefcase, MessageCircle, FileText, Search, Eye, User, Sparkles, ArrowRight, Upload, Zap } from 'lucide-react';
 
 // Relative time helper
 function timeAgo(dateStr) {

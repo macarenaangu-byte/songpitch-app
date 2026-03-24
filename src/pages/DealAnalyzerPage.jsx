@@ -15,7 +15,7 @@ const RED    = '#f87171';
 const GREEN  = '#4ade80';
 const PURPLE = '#8B5CF6';
 
-const API_URL = process.env.REACT_APP_LEGALSPLITS_API_URL ?? 'https://legalsplits-ai.netlify.app';
+const API_URL = process.env.REACT_APP_LEGALSPLITS_API_URL ?? 'https://legalsplits-ai.onrender.com';
 const API_KEY = process.env.REACT_APP_LEGALSPLITS_API_KEY ?? '';
 
 const FAIRNESS_CONFIG = {
@@ -71,6 +71,7 @@ export function DealAnalyzerPage({ userProfile }) {
   // Load vault on mount
   useEffect(() => {
     if (canVault && userProfile) loadVault();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canVault, userProfile]);
 
   // Load user's songs when result arrives
@@ -565,8 +566,7 @@ export function DealAnalyzerPage({ userProfile }) {
 
 // ── Compact results panel used inside vault detail view ───────────────────────
 function VaultResultsPanel({ result }) {
-  const GOLD = '#C9A84C';
-  const RED  = '#f87171';
+  const RED   = '#f87171';
   const GREEN = '#4ade80';
   const fairness = FAIRNESS_CONFIG[result.overall_fairness] ?? FAIRNESS_CONFIG.standard;
   return (

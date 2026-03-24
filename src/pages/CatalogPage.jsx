@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Search, Music, X, ChevronDown, LayoutGrid, List, Play, Pause } from 'lucide-react';
+import { Search, Music, ChevronDown, LayoutGrid, List, Play, Pause } from 'lucide-react';
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { supabase } from '../lib/supabase';
 import { SongCard } from '../components/SongCard';

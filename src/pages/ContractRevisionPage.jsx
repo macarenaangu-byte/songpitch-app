@@ -3,7 +3,7 @@
 // and save results to the Contract Vault.
 
 import { useState, useEffect, useRef } from 'react';
-import { Upload, FileText, AlertTriangle, CheckCircle, X, Lock, Trash2, Clock, ChevronDown, ChevronUp, TrendingDown, TrendingUp, DollarSign } from 'lucide-react';
+import { Upload, FileText, AlertTriangle, CheckCircle, X, Lock, Trash2, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { supabase } from '../lib/supabase';
 import { showToast } from '../utils/toast';
@@ -14,7 +14,7 @@ const GOLD = '#C9A84C';
 const RED  = '#f87171';
 const GREEN = '#4ade80';
 
-const API_URL = process.env.REACT_APP_LEGALSPLITS_API_URL ?? 'https://legalsplits-ai.netlify.app';
+const API_URL = process.env.REACT_APP_LEGALSPLITS_API_URL ?? 'https://legalsplits-ai.onrender.com';
 const API_KEY = process.env.REACT_APP_LEGALSPLITS_API_KEY ?? '';
 
 const FAIRNESS_CONFIG = {
@@ -205,6 +205,7 @@ export function ContractRevisionPage({ userProfile }) {
   // Load vault on mount
   useEffect(() => {
     if (canVault) loadVault();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canVault]);
 
   async function loadVault() {
@@ -292,7 +293,7 @@ export function ContractRevisionPage({ userProfile }) {
     showToast.success('Removed from vault');
   };
 
-  const fairness = result ? (FAIRNESS_CONFIG[result.overall_fairness] ?? FAIRNESS_CONFIG.standard) : null;
+  // fairness used in ResultsPanel via result.overall_fairness directly
   const revUsage = withinLimit('contractRevision');
 
   return (

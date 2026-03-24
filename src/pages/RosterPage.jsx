@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, ChevronRight, ChevronDown, Users, Shield, Music } from 'lucide-react';
+import { Search, ChevronRight, ChevronDown, Users, Shield } from 'lucide-react';
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { GENRE_OPTIONS } from '../constants/genres';
 import { supabase } from '../lib/supabase';
 import { Avatar } from '../components/Avatar';
-import { Badge } from '../components/Badge';
+// import { Badge } from '../components/Badge'; // reserved for future use
 import { SortDropdown } from '../components/SortDropdown';
 import { FilterChips } from '../components/FilterChips';
 
