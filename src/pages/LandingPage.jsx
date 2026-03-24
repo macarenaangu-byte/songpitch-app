@@ -1247,54 +1247,7 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
         </div>
       </div>
 
-      {/* ── Social Proof ──────────────────────────────────────────────────── */}
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: isMobile ? '0 20px 60px' : '0 48px 100px' }}>
-        <div className="reveal" style={{ textAlign: 'center', marginBottom: 56 }}>
-          <p style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 16 }}>What creators are saying</p>
-          <h2 style={{ fontFamily: DESIGN_SYSTEM.font.display, fontSize: isMobile ? 28 : 42, fontWeight: 700, letterSpacing: '-0.02em', color: DESIGN_SYSTEM.colors.text.primary, margin: 0 }}>
-            Built for the people who make the music
-          </h2>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 24 }}>
-          {[
-            { quote: "Finally a platform that gets how sync licensing actually works. I had three placements in my first month.", name: "Sarah K.", role: "Film Composer, Los Angeles", initials: "SK", color: '#C9A84C' },
-            { quote: "As a music supervisor I used to spend hours sorting through emails. Now I find exactly what I need in minutes.", name: "Marcus T.", role: "Music Supervisor, NYC", initials: "MT", color: '#8B5CF6' },
-            { quote: "The AI tagging alone saved me 4 hours a week. My whole catalog is finally searchable.", name: "Priya N.", role: "Producer & Composer", initials: "PN", color: '#3B82F6' },
-          ].map(({ quote, name, role, initials, color }, i) => (
-            <div key={name} className={`reveal reveal-delay-${i + 1}`} style={{
-              background: 'rgba(18,20,31,0.42)',
-              backdropFilter: 'blur(14px)',
-              WebkitBackdropFilter: 'blur(14px)',
-              border: `1px solid rgba(255,255,255,0.06)`,
-              borderRadius: 20, padding: isMobile ? 24 : 32,
-              display: 'flex', flexDirection: 'column', gap: 20,
-            }}>
-              {/* Stars */}
-              <div style={{ display: 'flex', gap: 4 }}>
-                {[...Array(5)].map((_, s) => <span key={s} style={{ color: '#C9A84C', fontSize: 14 }}>★</span>)}
-              </div>
-              {/* Quote */}
-              <p style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 15, lineHeight: 1.65, margin: 0, fontStyle: 'italic' }}>
-                "{quote}"
-              </p>
-              {/* Author */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 'auto' }}>
-                <div style={{
-                  width: 40, height: 40, borderRadius: '50%',
-                  background: `linear-gradient(135deg, ${color}33, ${color}11)`,
-                  border: `1px solid ${color}44`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 13, fontWeight: 700, color: color,
-                }}>{initials}</div>
-                <div>
-                  <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, fontWeight: 600 }}>{name}</div>
-                  <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12 }}>{role}</div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* ── Social Proof — hidden until real reviews are collected ── */}
 
       {/* ── Pricing ─────────────────────────────────────────────────────── */}
       <div id="pricing" style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "0 20px 60px" : "0 48px 80px" }}>
