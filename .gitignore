@@ -13,6 +13,9 @@
 
 # misc
 .DS_Store
+
+# Claude Code local settings (machine-specific, not for repo)
+.claude/settings.local*
 .env
 .env.local
 .env.development.local

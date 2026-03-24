@@ -2,6 +2,11 @@
   command = "npm run build"
   publish = "build"
 
+[build.environment]
+  REACT_APP_AI_API_URL = "https://songpitch-ai.onrender.com"
+  REACT_APP_LEGALSPLITS_API_URL = "https://legalsplits-ai.onrender.com"
+  REACT_APP_LEGALSPLITS_API_KEY = "lsai_6e2be5e67fe5ca02b1f369446d8b9eff52fbd4f38a047f4ee6034be5e90c09e1"
+
 # SPA routing — send all paths to index.html
 [[redirects]]
   from = "/*"
