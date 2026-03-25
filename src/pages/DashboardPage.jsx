@@ -117,6 +117,11 @@ export function DashboardPage({ user, stats, onNavigate, isMobile = false, analy
     : false;
   const showOnboarding = isNewUser && !onboardingDismissed;
 
+  // Mark as seen the moment it first appears — so refreshing never shows it again
+  useEffect(() => {
+    if (showOnboarding) localStorage.setItem(dismissKey, '1');
+  }, [showOnboarding, dismissKey]);
+
   const composerSteps = [
     { icon: <User size={18} />, color: DESIGN_SYSTEM.colors.brand.primary, step: '1', title: 'Complete your profile', desc: 'Add your bio, PRO affiliation, and instruments to get discovered.', page: 'profile', cta: 'Go to Profile' },
     { icon: <Upload size={18} />, color: DESIGN_SYSTEM.colors.brand.blue, step: '2', title: 'Upload your first track', desc: 'AI auto-tags genre, mood, and BPM — your catalog is pitch-ready instantly.', page: 'portfolio', cta: 'Go to Portfolio' },
@@ -139,8 +144,8 @@ export function DashboardPage({ user, stats, onNavigate, isMobile = false, analy
       <div style={{
         background: DESIGN_SYSTEM.colors.gradient.hero,
         borderRadius: DESIGN_SYSTEM.radius.lg,
-        padding: isMobile ? '20px' : '32px',
-        marginBottom: DESIGN_SYSTEM.spacing.lg,
+        padding: isMobile ? '16px' : '20px 28px',
+        marginBottom: '16px',
         position: "relative",
         overflow: "hidden",
         border: `1px solid ${DESIGN_SYSTEM.colors.border.medium}`,

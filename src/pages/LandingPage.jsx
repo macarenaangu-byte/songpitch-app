@@ -1169,9 +1169,9 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
                 </div>
                 <div style={{ marginLeft: 'auto', background: `${DESIGN_SYSTEM.colors.brand.primary}15`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}35`, borderRadius: 20, padding: '3px 10px', fontSize: 11, fontWeight: 700, color: DESIGN_SYSTEM.colors.brand.primary }}>PRO</div>
               </div>
-              {/* GIF */}
+              {/* Video */}
               <div style={{ lineHeight: 0 }}>
-                <img src="/composer_flow.gif" alt="Composer workflow" style={{ width: '100%', display: 'block' }} />
+                <video src="/demo_composer.mp4" autoPlay muted loop playsInline style={{ width: '100%', display: 'block' }} />
               </div>
               {/* Footer */}
               <div style={{ padding: '14px 24px', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
@@ -1192,9 +1192,9 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
                 </div>
                 <div style={{ marginLeft: 'auto', background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.35)', borderRadius: 20, padding: '3px 10px', fontSize: 11, fontWeight: 700, color: '#8B5CF6' }}>PRO</div>
               </div>
-              {/* GIF */}
+              {/* Video */}
               <div style={{ lineHeight: 0 }}>
-                <img src="/executive_flow.gif" alt="Executive workflow" style={{ width: '100%', display: 'block' }} />
+                <video src="/demo_exec.mp4" autoPlay muted loop playsInline style={{ width: '100%', display: 'block' }} />
               </div>
               {/* Footer */}
               <div style={{ padding: '14px 24px', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
