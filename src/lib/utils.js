@@ -37,9 +37,11 @@ const shouldSendEmail = async (userId, type) => {
     if (!data) return true; // no preferences row = default to enabled
     // Map notification types to preference keys
     const prefKey = {
-      'new_response': 'new_responses',
-      'message': 'messages',
-      'opportunity': 'opportunities',
+      'new_message': 'messages',
+      'new_opportunity': 'opportunities',
+      'submission_received': 'new_responses',
+      'submission_shortlisted': 'new_responses',
+      'submission_rejected': 'new_responses',
       'song_approved': 'song_updates',
       'song_rejected': 'song_updates',
     }[type];
