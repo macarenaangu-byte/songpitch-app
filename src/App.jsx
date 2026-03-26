@@ -998,20 +998,24 @@ export default function SongPitch() {
       );
     }
 
-   switch (page) {
+    const isComposer = userProfile.account_type === 'composer';
+    const isExecutive = userProfile.account_type === 'music_executive';
+    const fallback = <DashboardPage user={userProfile} stats={stats} onNavigate={setPage} isMobile={isMobileView} analytics={analytics} />;
+
+    switch (page) {
       case "dashboard": return <DashboardPage user={userProfile} stats={stats} onNavigate={setPage} isMobile={isMobileView} analytics={analytics} />;
       case "roster": return <RosterPage accountType={userProfile.account_type} onViewProfile={setViewingProfile} isMobile={isMobileView} />;
-      case "catalog": return <CatalogPage audioPlayer={audioPlayer} isMobile={isMobileView} userProfile={userProfile} />;
+      case "catalog": return (isExecutive || isAdmin) ? <CatalogPage audioPlayer={audioPlayer} isMobile={isMobileView} userProfile={userProfile} /> : fallback;
       case "opportunities": return <OpportunitiesPage userProfile={userProfile} onBadgeRefresh={loadSidebarBadges} isMobile={isMobileView} />;
-      case "responses": return <ResponsesPage userProfile={userProfile} onNavigate={setPage} onViewProfile={setViewingProfile} audioPlayer={audioPlayer} isMobile={isMobileView} />;
+      case "responses": return (isExecutive || isAdmin) ? <ResponsesPage userProfile={userProfile} onNavigate={setPage} onViewProfile={setViewingProfile} audioPlayer={audioPlayer} isMobile={isMobileView} /> : fallback;
       case "messages": return <MessagesPage userProfile={userProfile} supportTargetUserId={supportTargetUserId} supportOpenToken={supportOpenToken} onBadgeRefresh={loadSidebarBadges} onActiveConversationChange={setActiveMessageConversationId} isMobile={isMobileView} />;
-      case "portfolio": return <PortfolioPage userProfile={userProfile} audioPlayer={audioPlayer} isMobile={isMobileView} />;
+      case "portfolio": return (isComposer || isAdmin) ? <PortfolioPage userProfile={userProfile} audioPlayer={audioPlayer} isMobile={isMobileView} /> : fallback;
       case "profile": return <ProfilePage user={{ ...userProfile, email: session.user.email }} onSignOut={handleSignOut} onProfileUpdate={() => loadUserProfile(session.user)} onDeleteAccount={handleDeleteAccount} />;
-      case "splits": return <SplitGenerator userProfile={userProfile} />;
-      case "deal-analyzer": return <DealAnalyzerPage userProfile={userProfile} />;
-      case "contract-revision": return <ContractRevisionPage userProfile={userProfile} />;
-      case "admin-dashboard": return <AdminDashboardPage stats={stats} userProfile={userProfile} onNavigate={setPage} onViewProfile={setViewingProfile} isMobile={isMobileView} analytics={analytics} />;
-      default: return <DashboardPage user={userProfile} stats={stats} isMobile={isMobileView} analytics={analytics} />;
+      case "splits": return (isComposer || isAdmin) ? <SplitGenerator userProfile={userProfile} /> : fallback;
+      case "deal-analyzer": return (isComposer || isAdmin) ? <DealAnalyzerPage userProfile={userProfile} /> : fallback;
+      case "contract-revision": return (isExecutive || isAdmin) ? <ContractRevisionPage userProfile={userProfile} /> : fallback;
+      case "admin-dashboard": return isAdmin ? <AdminDashboardPage stats={stats} userProfile={userProfile} onNavigate={setPage} onViewProfile={setViewingProfile} isMobile={isMobileView} analytics={analytics} /> : fallback;
+      default: return fallback;
     }
   };
 
