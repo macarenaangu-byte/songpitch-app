@@ -278,7 +278,7 @@ export function DealAnalyzerPage({ userProfile }) {
           {selected && (
             <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, padding: 20, overflowY: 'auto', maxHeight: '75vh' }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: DESIGN_SYSTEM.colors.text.primary, marginBottom: 14 }}>{selected.contract_name}</div>
-              {selected.analysis && <VaultResultsPanel result={selected.analysis} />}
+              {selected.analysis && <VaultResultsPanel result={selected.analysis} userProfile={userProfile} />}
             </div>
           )}
         </div>
@@ -408,17 +408,20 @@ export function DealAnalyzerPage({ userProfile }) {
             <Section title="👥 Contract Parties & Rights Verification">
               {/* Party table */}
               <div style={{ marginBottom: 16 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1fr 1fr', gap: 8, padding: '5px 0 8px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                  {['Name', 'Role', 'Comp %', 'IPI', 'PRO'].map(h => (
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1fr 1fr 1fr', gap: 8, padding: '5px 0 8px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                  {['Name', 'Role', 'Comp %', 'Master %', 'IPI', 'PRO'].map(h => (
                     <span key={h} style={{ fontSize: 10, color: '#7A7468', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.6px' }}>{h}</span>
                   ))}
                 </div>
                 {result.parties.map((party, i) => (
-                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1fr 1fr', gap: 8, padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', alignItems: 'center' }}>
+                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1fr 1fr 1fr', gap: 8, padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', alignItems: 'center' }}>
                     <span style={{ fontSize: 13, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.primary }}>{party.name}</span>
                     <span style={{ fontSize: 12, color: '#94a3b8' }}>{party.role}</span>
                     <span style={{ fontSize: 12, fontWeight: 700, color: party.composition_percentage != null ? GOLD : '#4A4640' }}>
                       {party.composition_percentage != null ? `${party.composition_percentage}%` : '—'}
+                    </span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: party.master_percentage != null ? GOLD : '#4A4640' }}>
+                      {party.master_percentage != null ? `${party.master_percentage}%` : '—'}
                     </span>
                     <span style={{ fontSize: 11, fontFamily: 'monospace', color: party.ipi ? GOLD : '#4A4640' }}>
                       {party.ipi ?? '—'}
@@ -564,39 +567,220 @@ export function DealAnalyzerPage({ userProfile }) {
   );
 }
 
-// ── Compact results panel used inside vault detail view ───────────────────────
-function VaultResultsPanel({ result }) {
-  const RED   = '#f87171';
-  const GREEN = '#4ade80';
+// ── Full results panel used inside vault detail view ─────────────────────────
+function VaultResultsPanel({ result, userProfile }) {
   const fairness = FAIRNESS_CONFIG[result.overall_fairness] ?? FAIRNESS_CONFIG.standard;
+
+  const [songs, setSongs]               = useState([]);
+  const [selectedSong, setSelectedSong] = useState('');
+  const [assigning, setAssigning]       = useState(false);
+  const [assigned, setAssigned]         = useState(false);
+
+  useEffect(() => {
+    if (userProfile) {
+      supabase.from('songs')
+        .select('id, title')
+        .eq('composer_id', userProfile.id)
+        .order('created_at', { ascending: false })
+        .then(({ data }) => setSongs(data ?? []));
+    }
+  }, [userProfile]);
+
+  const assignToSong = async () => {
+    if (!selectedSong || !result?.parties?.length) return;
+    setAssigning(true);
+    try {
+      const song = songs.find(s => s.id === selectedSong);
+      const splitsPayload = result.parties.map(p => ({
+        name:       p.name,
+        role:       p.role ?? '',
+        percentage: p.composition_percentage ?? p.master_percentage ?? 0,
+        ipi:        p.ipi ?? null,
+        pro:        p.pro ?? null,
+      }));
+      const { error } = await supabase.from('split_sheets').insert({
+        user_id:      userProfile.id,
+        song_title:   song?.title ?? 'Unknown',
+        splits:       splitsPayload,
+        signature:    `deal_analyzer_${Date.now()}`,
+        attested:     false,
+        input_method: 'deal_analyzer',
+      });
+      if (error) throw error;
+      setAssigned(true);
+      showToast.success(`Split sheet created for "${song?.title}" ✓`);
+    } catch (err) {
+      showToast.error('Could not assign to song: ' + err.message);
+    } finally {
+      setAssigning(false);
+    }
+  };
+
   return (
     <div>
+      {/* Fairness + deal type */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
         <span style={{ fontSize: 14, fontWeight: 800, color: fairness.color, fontFamily: "'Space Grotesk', sans-serif" }}>{fairness.label}</span>
         {result.deal_type && <span style={{ background: 'rgba(255,255,255,0.07)', color: '#94a3b8', fontSize: 11, padding: '3px 9px', borderRadius: 20, textTransform: 'capitalize' }}>{result.deal_type}</span>}
       </div>
-      {result.summary && <p style={{ color: '#94a3b8', fontSize: 13, lineHeight: 1.6, margin: '0 0 14px' }}>{result.summary}</p>}
-      {result.red_flags?.length > 0 && (
-        <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 10, color: RED, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>Red Flags</div>
-          {result.red_flags.map((f, i) => (
-            <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 6 }}>
-              <AlertTriangle size={12} color={RED} style={{ marginTop: 2, flexShrink: 0 }} />
-              <span style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.5 }}>{f}</span>
-            </div>
-          ))}
-        </div>
+
+      {/* Summary */}
+      {result.summary && (
+        <Section title="📋 Summary">
+          <p style={{ color: '#94a3b8', fontSize: 13, lineHeight: 1.6, margin: 0 }}>{result.summary}</p>
+        </Section>
       )}
-      {result.green_flags?.length > 0 && (
-        <div>
-          <div style={{ fontSize: 10, color: GREEN, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>Green Flags</div>
-          {result.green_flags.map((f, i) => (
-            <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 6 }}>
-              <CheckCircle size={12} color={GREEN} style={{ marginTop: 2, flexShrink: 0 }} />
-              <span style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.5 }}>{f}</span>
+
+      {/* Contract Parties */}
+      {result.parties?.length > 0 && (
+        <Section title="👥 Contract Parties & Rights Verification">
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1fr 1fr 1fr', gap: 8, padding: '5px 0 8px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              {['Name', 'Role', 'Comp %', 'Master %', 'IPI', 'PRO'].map(h => (
+                <span key={h} style={{ fontSize: 10, color: '#7A7468', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.6px' }}>{h}</span>
+              ))}
             </div>
-          ))}
-        </div>
+            {result.parties.map((party, i) => (
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1fr 1fr 1fr', gap: 8, padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.primary }}>{party.name}</span>
+                <span style={{ fontSize: 12, color: '#94a3b8' }}>{party.role}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: party.composition_percentage != null ? GOLD : '#4A4640' }}>
+                  {party.composition_percentage != null ? `${party.composition_percentage}%` : '—'}
+                </span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: party.master_percentage != null ? GOLD : '#4A4640' }}>
+                  {party.master_percentage != null ? `${party.master_percentage}%` : '—'}
+                </span>
+                <span style={{ fontSize: 11, fontFamily: 'monospace', color: party.ipi ? GOLD : '#4A4640' }}>
+                  {party.ipi ?? '—'}
+                </span>
+                <span style={{ fontSize: 12, color: party.pro ? GREEN : '#4A4640' }}>
+                  {party.pro ?? '—'}
+                </span>
+              </div>
+            ))}
+          </div>
+          {userProfile && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <Music size={15} color='#7A7468' />
+              <span style={{ fontSize: 12, color: '#7A7468', fontWeight: 600 }}>Assign parties to song:</span>
+              <select
+                value={selectedSong}
+                onChange={e => { setSelectedSong(e.target.value); setAssigned(false); }}
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '7px 12px', color: DESIGN_SYSTEM.colors.text.primary, fontSize: 12, cursor: 'pointer', flex: 1, minWidth: 160 }}
+              >
+                <option value="">— Select a song —</option>
+                {songs.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
+              </select>
+              <button onClick={assignToSong} disabled={!selectedSong || assigning || assigned} style={{
+                display: 'flex', alignItems: 'center', gap: 7,
+                padding: '8px 14px', borderRadius: 9, fontSize: 12, fontWeight: 700,
+                background: assigned ? 'rgba(74,222,128,0.12)' : selectedSong ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${assigned ? 'rgba(74,222,128,0.3)' : selectedSong ? 'rgba(139,92,246,0.35)' : 'rgba(255,255,255,0.08)'}`,
+                color: assigned ? GREEN : selectedSong ? PURPLE : '#4A4640',
+                cursor: !selectedSong || assigning || assigned ? 'not-allowed' : 'pointer',
+              }}>
+                <UserCheck size={13} />
+                {assigned ? 'Assigned ✓' : assigning ? 'Saving...' : 'Assign to Song'}
+              </button>
+            </div>
+          )}
+        </Section>
+      )}
+
+      {/* Key Terms */}
+      {(result.advance != null || result.royalty_rate != null || result.deal_term_years != null) && (
+        <Section title="📊 Key Terms">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10 }}>
+            {[
+              { label: 'Advance',      value: result.advance != null ? `$${result.advance.toLocaleString()}` : '—' },
+              { label: 'Royalty Rate', value: result.royalty_rate != null ? `${result.royalty_rate}%` : '—' },
+              { label: 'Net Royalty',  value: result.net_royalty_rate != null ? `${result.net_royalty_rate}%` : '—' },
+              { label: 'Term',         value: result.deal_term_years != null ? `${result.deal_term_years} yr${result.deal_term_years !== 1 ? 's' : ''}` : '—' },
+              { label: 'Territory',    value: result.territory ?? '—' },
+            ].map(({ label, value }) => (
+              <div key={label} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '10px 12px' }}>
+                <div style={{ fontSize: 10, color: '#7A7468', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 5 }}>{label}</div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: DESIGN_SYSTEM.colors.text.primary, fontFamily: "'Space Grotesk', sans-serif" }}>{value}</div>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {/* Red & Green Flags */}
+      {(result.red_flags?.length > 0 || result.green_flags?.length > 0) && (
+        <Section title="🚩 Red Flags & Green Flags">
+          <div style={{ display: 'grid', gridTemplateColumns: result.green_flags?.length ? '1fr 1fr' : '1fr', gap: 14 }}>
+            {result.red_flags?.length > 0 && (
+              <div>
+                <div style={{ fontSize: 10, color: RED, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>Red Flags</div>
+                {result.red_flags.map((f, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 6 }}>
+                    <AlertTriangle size={12} color={RED} style={{ marginTop: 2, flexShrink: 0 }} />
+                    <span style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.5 }}>{f}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {result.green_flags?.length > 0 && (
+              <div>
+                <div style={{ fontSize: 10, color: GREEN, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>Green Flags</div>
+                {result.green_flags.map((f, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 6 }}>
+                    <CheckCircle size={12} color={GREEN} style={{ marginTop: 2, flexShrink: 0 }} />
+                    <span style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.5 }}>{f}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Section>
+      )}
+
+      {/* Market Comparison */}
+      {result.market_comparison?.length > 0 && (
+        <Section title="📈 Market Comparison">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {result.market_comparison.map((row, i) => (
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 12, padding: '10px 0', borderBottom: i < result.market_comparison.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none', alignItems: 'center' }}>
+                <span style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.text.primary, fontWeight: 600 }}>{row.term}</span>
+                <span style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.text.secondary }}>{row.value}</span>
+                <span style={{ fontSize: 11, color: '#7A7468' }}>Industry: {row.industry_standard}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: ASSESSMENT_COLOR[row.assessment] ?? '#94a3b8', background: `${ASSESSMENT_COLOR[row.assessment] ?? '#94a3b8'}15`, padding: '3px 8px', borderRadius: 20, whiteSpace: 'nowrap' }}>
+                  {row.assessment}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {/* Recoupment Timeline */}
+      {result.recoupment_timeline && (
+        <Section title="⏱ Recoupment Timeline">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 8 }}>
+            <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '10px 12px' }}>
+              <div style={{ fontSize: 10, color: '#7A7468', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 5 }}>At 500K streams/mo</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: DESIGN_SYSTEM.colors.text.primary }}>{result.recoupment_timeline.at_500k_streams_monthly}</div>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '10px 12px' }}>
+              <div style={{ fontSize: 10, color: '#7A7468', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 5 }}>At 1M streams/mo</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: DESIGN_SYSTEM.colors.text.primary }}>{result.recoupment_timeline.at_1m_streams_monthly}</div>
+            </div>
+          </div>
+          {result.recoupment_timeline.notes && <p style={{ color: '#7A7468', fontSize: 12, margin: 0, lineHeight: 1.6 }}>{result.recoupment_timeline.notes}</p>}
+        </Section>
+      )}
+
+      {/* Negotiation Checklist */}
+      {result.negotiation_points?.length > 0 && (
+        <Section title="✅ Negotiation Checklist">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {result.negotiation_points.map((point, i) => (
+              <NegotiationItem key={i} text={point} />
+            ))}
+          </div>
+        </Section>
       )}
     </div>
   );
