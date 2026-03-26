@@ -5,9 +5,10 @@
 // Secrets: supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_...
 //
 // In Stripe Dashboard → Webhooks → Add endpoint:
-//   URL: https://pmdxbyuknfwqjzrmfrwc.supabase.co/functions/v1/stripe-webhook
+//   URL: https://zjbsmxgccmtatrbjlvep.supabase.co/functions/v1/stripe-webhook
 //   Events: customer.subscription.created, customer.subscription.updated,
-//            customer.subscription.deleted, checkout.session.completed
+//            customer.subscription.deleted, checkout.session.completed,
+//            invoice.payment_failed
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import Stripe from 'https://esm.sh/stripe@14.21.0?target=deno';
@@ -30,6 +31,31 @@ const PRICE_TO_TIER: Record<string, 'basic' | 'pro'> = {
   [Deno.env.get('STRIPE_PRICE_EXEC_BASIC')     ?? '']: 'basic',
   [Deno.env.get('STRIPE_PRICE_EXEC_PRO')       ?? '']: 'pro',
 };
+
+const ADMIN_EMAIL = 'mangulo@songpitchhub.com';
+
+async function sendAdminEmail(subject: string, body: string): Promise<void> {
+  const resendApiKey = Deno.env.get('RESEND_API_KEY');
+  if (!resendApiKey) return;
+  const html = `
+    <div style="background:#1a1a2e;padding:32px;font-family:'Helvetica Neue',sans-serif;max-width:520px;margin:auto;border-radius:12px;">
+      <div style="margin-bottom:18px;">
+        <span style="color:#C9A84C;font-size:18px;font-weight:800;">SongPitch</span>
+        <span style="color:#94a3b8;font-size:13px;margin-left:10px;">Payment Alert</span>
+      </div>
+      <h2 style="color:#e2e8f0;font-size:16px;font-weight:700;margin:0 0 14px;">${subject}</h2>
+      <p style="color:#94a3b8;font-size:14px;line-height:1.7;margin:0;">${body}</p>
+      <div style="margin-top:24px;padding-top:18px;border-top:1px solid rgba(255,255,255,0.08);color:#4A4640;font-size:11px;">
+        SongPitch automatic monitoring
+      </div>
+    </div>`;
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${resendApiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: `SongPitch <${ADMIN_EMAIL}>`, to: [ADMIN_EMAIL], subject, html }),
+  });
+  if (!res.ok) console.error('[stripe-webhook] Resend error:', res.status, await res.text());
+}
 
 async function setTier(stripeCustomerId: string, tier: 'free' | 'basic' | 'pro', subscriptionId?: string, endsAt?: Date) {
   await supabase
@@ -93,14 +119,39 @@ Deno.serve(async (req) => {
 
       await setTier(sub.customer as string, tier, sub.id, endsAt);
       console.log(`[stripe-webhook] Set tier=${tier} for customer=${sub.customer}`);
+
+      if (event.type === 'customer.subscription.created') {
+        await sendAdminEmail(
+          '💳 New subscriber on SongPitch',
+          `Tier: <strong>${tier}</strong><br>Stripe customer: ${sub.customer}<br>Renews: ${endsAt.toDateString()}`,
+        );
+      }
       break;
     }
 
     // ── Subscription canceled / expired ────────────────────────────────────
     case 'customer.subscription.deleted': {
       const sub = event.data.object as Stripe.Subscription;
+      const priceId = sub.items.data[0]?.price?.id ?? '';
+      const tier = PRICE_TO_TIER[priceId] ?? 'unknown';
       await setTier(sub.customer as string, 'free');
       console.log(`[stripe-webhook] Downgraded to free for customer=${sub.customer}`);
+      await sendAdminEmail(
+        '😢 Cancellation on SongPitch',
+        `Tier cancelled: <strong>${tier}</strong><br>Stripe customer: ${sub.customer}`,
+      );
+      break;
+    }
+
+    // ── Payment failed ──────────────────────────────────────────────────────
+    case 'invoice.payment_failed': {
+      const invoice = event.data.object as Stripe.Invoice;
+      const amount  = invoice.amount_due ? `$${(invoice.amount_due / 100).toFixed(2)}` : '—';
+      console.log(`[stripe-webhook] Payment failed for customer=${invoice.customer}, amount=${amount}`);
+      await sendAdminEmail(
+        '⚠️ Payment failed on SongPitch',
+        `Amount due: <strong>${amount}</strong><br>Stripe customer: ${invoice.customer}<br>Invoice: ${invoice.id}`,
+      );
       break;
     }
   }
