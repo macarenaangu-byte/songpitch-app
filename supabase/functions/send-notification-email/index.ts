@@ -161,7 +161,7 @@ Deno.serve(async (req) => {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${resendApiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: 'SongPitch <notifications@songpitchhub.com>',
+        from: 'SongPitch <mangulo@songpitchhub.com>',
         to: [userEmail],
         subject: template.subject(title),
         html: template.body(body, metadata || {}),
