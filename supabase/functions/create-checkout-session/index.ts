@@ -123,9 +123,15 @@ Deno.serve(async (req) => {
       cancel_url:  cancel_url  ?? `${Deno.env.get('APP_URL') ?? 'https://www.songpitchhub.com'}?upgrade=canceled`,
     };
 
-    // Apply coupon if provided (e.g. FOUNDER2026)
+    // Apply promotion code if provided (e.g. FOUNDER2026)
+    // Looks up the promotion code by its user-facing string, then applies by ID
     if (coupon_code) {
-      sessionParams.discounts = [{ coupon: coupon_code }];
+      const promoCodes = await stripe.promotionCodes.list({ code: coupon_code, limit: 1, active: true });
+      if (promoCodes.data.length > 0) {
+        sessionParams.discounts = [{ promotion_code: promoCodes.data[0].id }];
+      }
+      // Whether found or not, allow manual entry on Stripe checkout page too
+      sessionParams.allow_promotion_codes = true;
     } else {
       sessionParams.allow_promotion_codes = true;
     }
