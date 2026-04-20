@@ -88,6 +88,7 @@ export default function UpgradeModal({ isOpen, onClose, feature, userProfile, de
           headers: {
             'Content-Type':  'application/json',
             'Authorization': `Bearer ${session.access_token}`,
+            'apikey':        process.env.REACT_APP_SUPABASE_ANON_KEY,
           },
           body: JSON.stringify({
             tier:        selectedTier,
