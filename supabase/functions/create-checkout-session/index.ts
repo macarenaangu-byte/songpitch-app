@@ -129,14 +129,17 @@ Deno.serve(async (req) => {
     };
 
     // Apply promotion code if provided (e.g. FOUNDER2026)
-    // Looks up the promotion code by its user-facing string, then applies by ID
+    // Stripe disallows combining `discounts` + `allow_promotion_codes` — must pick one
     if (coupon_code) {
       const promoCodes = await stripe.promotionCodes.list({ code: coupon_code, limit: 1, active: true });
       if (promoCodes.data.length > 0) {
+        // Code found — apply it directly, disable manual entry box
         sessionParams.discounts = [{ promotion_code: promoCodes.data[0].id }];
+        sessionParams.allow_promotion_codes = false;
+      } else {
+        // Code not found — show promo code field on Stripe page so user can try
+        sessionParams.allow_promotion_codes = true;
       }
-      // Whether found or not, allow manual entry on Stripe checkout page too
-      sessionParams.allow_promotion_codes = true;
     } else {
       sessionParams.allow_promotion_codes = true;
     }
