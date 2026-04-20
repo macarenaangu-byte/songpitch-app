@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
     const notification = body?.record ?? body;
 
     const userId = notification?.user_id;
-    const title  = notification?.title  ?? 'SongPitch';
+    const title  = notification?.title  ?? 'Coda-Vault';
     const message = notification?.message ?? notification?.body ?? '';
     const notifType = notification?.type ?? '';
 

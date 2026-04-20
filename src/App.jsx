@@ -935,10 +935,10 @@ export default function SongPitch() {
   if (loading) {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: 16, background: DESIGN_SYSTEM.colors.bg.primary, fontFamily: DESIGN_SYSTEM.font.body }}>
-        <img src="/songpitch-logo.png" alt="SongPitch" style={{ width: 56, height: 56, objectFit: 'contain' }} onError={(e) => e.target.style.display = 'none'} />
+        <img src="/songpitch-logo.png" alt="Coda-Vault" style={{ width: 56, height: 56, objectFit: 'contain' }} onError={(e) => e.target.style.display = 'none'} />
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div className="ui-spinner" style={{ width: 16, height: 16, border: `2px solid ${DESIGN_SYSTEM.colors.border.light}`, borderTopColor: DESIGN_SYSTEM.colors.brand.primary, borderRadius: '50%' }} />
-          <span style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 14, fontWeight: 500 }}>Loading SongPitch...</span>
+          <span style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 14, fontWeight: 500 }}>Loading Coda-Vault...</span>
         </div>
       </div>
     );
@@ -1046,11 +1046,11 @@ export default function SongPitch() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <img
               src="/songpitch-logo.png"
-              alt="SongPitch"
+              alt="Coda-Vault"
               style={{ width: 24, height: 24, objectFit: 'contain', filter: 'hue-rotate(282deg) saturate(0.75) brightness(0.95)' }}
               onError={(e) => { e.target.style.display = 'none'; }}
             />
-            <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: DESIGN_SYSTEM.font.body }}>SongPitch</span>
+            <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: DESIGN_SYSTEM.font.body }}>Coda-Vault</span>
           </div>
           <button
             aria-label="Toggle menu"
@@ -1109,19 +1109,19 @@ export default function SongPitch() {
             {/* Logo - Professional presentation */}
             <img
               src="/songpitch-logo.png"
-              alt="SongPitch"
+              alt="Coda-Vault"
               style={{ width: 32, height: 32, objectFit: 'contain', margin: isSidebarCollapsed ? '0 auto' : undefined, filter: 'hue-rotate(282deg) saturate(0.75) brightness(0.95)' }}
               onError={(e) => { e.target.style.display = 'none'; }}
             />
             {!isSidebarCollapsed && (
               <div>
-                <div style={{ 
+                <div style={{
                   fontSize: 19,
                   fontWeight: 700,
                   color: DESIGN_SYSTEM.colors.text.primary,
                   letterSpacing: "-0.3px",
                   fontFamily: DESIGN_SYSTEM.font.body,
-                }}>SongPitch</div>
+                }}>Coda-Vault</div>
               </div>
             )}
             <div style={{ marginLeft: isSidebarCollapsed ? 0 : 'auto', display: 'flex', alignItems: 'center', gap: 2 }}>

@@ -11,11 +11,11 @@ const corsHeaders = {
 // Email templates per notification type
 const emailTemplates: Record<string, { subject: (title: string) => string; body: (body: string, metadata: Record<string, unknown>) => string }> = {
   new_message: {
-    subject: () => 'You have a new message on SongPitch',
+    subject: () => 'You have a new message on Coda-Vault',
     body: (body) => `
       <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 32px 24px;">
         <div style="text-align: center; margin-bottom: 28px;">
-          <h1 style="color: #C9A84C; font-size: 24px; margin: 0;">SongPitch</h1>
+          <h1 style="color: #C9A84C; font-size: 24px; margin: 0;">Coda-Vault</h1>
         </div>
         <div style="background: #1a1a2e; border-radius: 12px; padding: 24px; border: 1px solid #2a2a4a;">
           <h2 style="color: #ffffff; font-size: 18px; margin: 0 0 8px;">New Message</h2>
@@ -30,7 +30,7 @@ const emailTemplates: Record<string, { subject: (title: string) => string; body:
     body: (body) => `
       <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 32px 24px;">
         <div style="text-align: center; margin-bottom: 28px;">
-          <h1 style="color: #C9A84C; font-size: 24px; margin: 0;">SongPitch</h1>
+          <h1 style="color: #C9A84C; font-size: 24px; margin: 0;">Coda-Vault</h1>
         </div>
         <div style="background: #1a1a2e; border-radius: 12px; padding: 24px; border: 1px solid #2a2a4a;">
           <h2 style="color: #ffffff; font-size: 18px; margin: 0 0 8px;">New Opportunity</h2>
@@ -45,7 +45,7 @@ const emailTemplates: Record<string, { subject: (title: string) => string; body:
     body: (body) => `
       <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 32px 24px;">
         <div style="text-align: center; margin-bottom: 28px;">
-          <h1 style="color: #C9A84C; font-size: 24px; margin: 0;">SongPitch</h1>
+          <h1 style="color: #C9A84C; font-size: 24px; margin: 0;">Coda-Vault</h1>
         </div>
         <div style="background: #1a1a2e; border-radius: 12px; padding: 24px; border: 1px solid #2a2a4a;">
           <h2 style="color: #ffffff; font-size: 18px; margin: 0 0 8px;">New Submission</h2>
@@ -60,7 +60,7 @@ const emailTemplates: Record<string, { subject: (title: string) => string; body:
     body: (body) => `
       <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 32px 24px;">
         <div style="text-align: center; margin-bottom: 28px;">
-          <h1 style="color: #C9A84C; font-size: 24px; margin: 0;">SongPitch</h1>
+          <h1 style="color: #C9A84C; font-size: 24px; margin: 0;">Coda-Vault</h1>
         </div>
         <div style="background: #1a1a2e; border-radius: 12px; padding: 24px; border: 1px solid #2a2a4a;">
           <h2 style="color: #ffffff; font-size: 18px; margin: 0 0 8px;">Congratulations! 🎉</h2>
@@ -71,11 +71,11 @@ const emailTemplates: Record<string, { subject: (title: string) => string; body:
       </div>`,
   },
   submission_rejected: {
-    subject: () => 'Submission update on SongPitch',
+    subject: () => 'Submission update on Coda-Vault',
     body: (body) => `
       <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 32px 24px;">
         <div style="text-align: center; margin-bottom: 28px;">
-          <h1 style="color: #C9A84C; font-size: 24px; margin: 0;">SongPitch</h1>
+          <h1 style="color: #C9A84C; font-size: 24px; margin: 0;">Coda-Vault</h1>
         </div>
         <div style="background: #1a1a2e; border-radius: 12px; padding: 24px; border: 1px solid #2a2a4a;">
           <h2 style="color: #ffffff; font-size: 18px; margin: 0 0 8px;">Submission Update</h2>
@@ -161,7 +161,7 @@ Deno.serve(async (req) => {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${resendApiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: 'SongPitch <mangulo@songpitchhub.com>',
+        from: 'Coda-Vault <manadeau@coda-vault.com>',
         to: [userEmail],
         subject: template.subject(title),
         html: template.body(body, metadata || {}),

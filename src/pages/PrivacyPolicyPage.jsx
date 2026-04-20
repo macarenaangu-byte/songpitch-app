@@ -6,7 +6,7 @@ export function PrivacyPolicyPage({ onBack }) {
   const h3Style = { fontSize: 17, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.primary, marginTop: 24, marginBottom: 8 };
   return (
     <LegalPageLayout title="Privacy Policy" onBack={onBack}>
-      <p>SongPitch ("we", "us", "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you use our platform at songpitchhub.com.</p>
+      <p>Coda-Vault ("we", "us", "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you use our platform at songpitchhub.com.</p>
 
       <h2 style={h2Style}>1. Information We Collect</h2>
       <h3 style={h3Style}>1.1 Account Information</h3>

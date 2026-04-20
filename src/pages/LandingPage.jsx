@@ -13,7 +13,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "How much does it cost?",
-    a: "SongPitch has a free tier that's yours to keep — no credit card required. Basic and Pro plans unlock advanced features like contract analysis, unlimited uploads, and the full LegalSplits ML suite. Use code FOUNDER2026 for 6 months free on any Pro plan."
+    a: "Coda-Vault has a free tier that's yours to keep — no credit card required. Basic and Pro plans unlock advanced features like contract analysis, unlimited uploads, and the full LegalSplits ML suite. Use code FOUNDER2026 for 6 months free on any Pro plan."
   },
   {
     q: "What makes the AI tagging different from other tools?",
@@ -533,8 +533,8 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
       }}>
         {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-          <img src="/songpitch-logo.png" alt="SongPitch" style={{ width: 32, height: 32, objectFit: 'contain', filter: 'hue-rotate(282deg) saturate(0.75) brightness(0.95)' }} onError={(e) => e.target.style.display = 'none'} />
-          <div style={{ fontSize: isMobile ? 16 : 20, fontWeight: 800, background: DESIGN_SYSTEM.colors.gradient.main, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '-0.3px' }}>SongPitch</div>
+          <img src="/songpitch-logo.png" alt="Coda-Vault" style={{ width: 32, height: 32, objectFit: 'contain', filter: 'hue-rotate(282deg) saturate(0.75) brightness(0.95)' }} onError={(e) => e.target.style.display = 'none'} />
+          <div style={{ fontSize: isMobile ? 16 : 20, fontWeight: 800, background: DESIGN_SYSTEM.colors.gradient.main, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '-0.3px' }}>Coda-Vault</div>
         </div>
 
         {/* Center nav links — desktop only */}
@@ -762,7 +762,7 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
             margin: '0 0 18px', color: DESIGN_SYSTEM.colors.text.primary,
             lineHeight: 1.15,
           }}>
-            Who is SongPitch for?
+            Who is Coda-Vault for?
           </h2>
           <p style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 17, maxWidth: 480, margin: '0 auto', lineHeight: 1.7 }}>
             Two professionals. One platform. Every deal, handled.
@@ -1494,7 +1494,7 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
           ))}
         </div>
         <p style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: isMobile ? 12 : 13, marginTop: 16 }}>
-          © {new Date().getFullYear()} SongPitch. Where talent meets opportunity.
+          © {new Date().getFullYear()} Coda-Vault. Where talent meets opportunity.
         </p>
       </div>
     </div>

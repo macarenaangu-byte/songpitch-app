@@ -128,7 +128,7 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
           }]);
         }
 
-        showToast.success('Account created! Welcome to SongPitch.');
+        showToast.success('Account created! Welcome to Coda-Vault.');
         onAuthComplete(data.user, profileData);
 
       } else if (authView === 'forgot') {
@@ -277,7 +277,7 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
         <div style={{ width: "100%", maxWidth: 480, background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 24, padding: 40, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, boxShadow: '0 16px 48px rgba(0,0,0,0.4)', margin: '20px 0' }}>
 
           <div style={{ textAlign: "center", marginBottom: 24 }}>
-            <img src="/songpitch-logo.png" alt="SongPitch" style={{ width: 48, height: 48, objectFit: 'contain', margin: '0 auto 12px', display: 'block', filter: 'hue-rotate(282deg) saturate(0.75) brightness(0.95)' }} onError={(e) => { e.target.style.display = 'none'; }} />
+            <img src="/songpitch-logo.png" alt="Coda-Vault" style={{ width: 48, height: 48, objectFit: 'contain', margin: '0 auto 12px', display: 'block', filter: 'hue-rotate(282deg) saturate(0.75) brightness(0.95)' }} onError={(e) => { e.target.style.display = 'none'; }} />
             <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 24, fontWeight: 800, marginBottom: 4 }}>Complete Your Profile</h1>
             <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 14 }}>Step 2 of 2 — Tell us about yourself</p>
           </div>
@@ -411,7 +411,7 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
 
   // ── LOGIN / SIGNUP STEP 1 / FORGOT PASSWORD ──────────────────────────────
   const headings = {
-    login:  { title: 'Welcome Back',   subtitle: 'Sign in to SongPitch' },
+    login:  { title: 'Welcome Back',   subtitle: 'Sign in to Coda-Vault' },
     signup: { title: 'Create Account', subtitle: 'Step 1 of 2 — Enter your credentials' },
     forgot: { title: 'Reset Password', subtitle: "Enter your email and we'll send a reset link" },
   };
@@ -421,7 +421,7 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
       <div style={{ width: "100%", maxWidth: 420, background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 24, padding: 40, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}>
 
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <img src="/songpitch-logo.png" alt="SongPitch" style={{ width: 56, height: 56, objectFit: 'contain', margin: '0 auto 16px', display: 'block', filter: 'hue-rotate(282deg) saturate(0.75) brightness(0.95)' }} onError={(e) => { e.target.style.display = 'none'; }} />
+          <img src="/songpitch-logo.png" alt="Coda-Vault" style={{ width: 56, height: 56, objectFit: 'contain', margin: '0 auto 16px', display: 'block', filter: 'hue-rotate(282deg) saturate(0.75) brightness(0.95)' }} onError={(e) => { e.target.style.display = 'none'; }} />
           <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 28, fontWeight: 800, marginBottom: 6 }}>
             {headings[authView].title}
           </h1>

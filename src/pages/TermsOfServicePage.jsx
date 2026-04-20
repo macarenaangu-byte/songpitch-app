@@ -9,8 +9,8 @@ export function LegalPageLayout({ title, onBack, children }) {
           <ArrowLeft size={16} /> Back
         </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <img src="/songpitch-logo.png" alt="SongPitch" style={{ width: 32, height: 32, objectFit: 'contain' }} onError={e => e.target.style.display = 'none'} />
-          <span style={{ fontWeight: 700, fontSize: 18, color: DESIGN_SYSTEM.colors.text.primary }}>SongPitch</span>
+          <img src="/songpitch-logo.png" alt="Coda-Vault" style={{ width: 32, height: 32, objectFit: 'contain' }} onError={e => e.target.style.display = 'none'} />
+          <span style={{ fontWeight: 700, fontSize: 18, color: DESIGN_SYSTEM.colors.text.primary }}>Coda-Vault</span>
         </div>
       </div>
       <div style={{ maxWidth: 800, margin: '0 auto', padding: '48px 24px' }}>
@@ -27,7 +27,7 @@ export function TermsOfServicePage({ onBack }) {
   const h3Style = { fontSize: 17, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.primary, marginTop: 24, marginBottom: 8 };
   return (
     <LegalPageLayout title="Terms of Service" onBack={onBack}>
-      <p>Welcome to SongPitch ("Platform", "we", "us", "our"). By accessing or using our platform at songpitchhub.com, you agree to be bound by these Terms of Service ("Terms"). If you do not agree, do not use the Platform.</p>
+      <p>Welcome to Coda-Vault ("Platform", "we", "us", "our"). By accessing or using our platform at songpitchhub.com, you agree to be bound by these Terms of Service ("Terms"). If you do not agree, do not use the Platform.</p>
 
       <h2 style={h2Style}>1. Definitions</h2>
       <p><strong>"User"</strong> means any individual who creates an account on the Platform, including Composers and Music Executives.</p>
@@ -52,29 +52,29 @@ export function TermsOfServicePage({ onBack }) {
 
       <h2 style={h2Style}>4. Intellectual Property & Content Ownership</h2>
       <h3 style={h3Style}>4.1 Your Content</h3>
-      <p>You retain full ownership of all Content you upload to the Platform. By uploading Content, you grant SongPitch a limited, non-exclusive, royalty-free license to host, display, and transmit your Content solely for the purpose of operating the Platform and providing our services to you.</p>
+      <p>You retain full ownership of all Content you upload to the Platform. By uploading Content, you grant Coda-Vault a limited, non-exclusive, royalty-free license to host, display, and transmit your Content solely for the purpose of operating the Platform and providing our services to you.</p>
       <h3 style={h3Style}>4.2 No Transfer of Rights</h3>
-      <p>The Platform facilitates connections between Composers and Music Executives. SongPitch does not claim ownership of your music, and uploading a song does not transfer any rights to us or to other Users. Any licensing agreements between Users are separate from these Terms.</p>
+      <p>The Platform facilitates connections between Composers and Music Executives. Coda-Vault does not claim ownership of your music, and uploading a song does not transfer any rights to us or to other Users. Any licensing agreements between Users are separate from these Terms.</p>
       <h3 style={h3Style}>4.3 Platform Content</h3>
-      <p>The SongPitch name, logo, design, and all platform-created materials are the property of SongPitch and may not be reproduced without permission.</p>
+      <p>The Coda-Vault name, logo, design, and all platform-created materials are the property of Coda-Vault and may not be reproduced without permission.</p>
 
       <h2 style={h2Style}>5. AI-Powered Features</h2>
       <p>The Platform uses machine learning to analyze uploaded audio files for genre classification, mood detection, and lyrics transcription. These results are provided as assistive metadata and may not be fully accurate. We also offer an AI Brief Writer that generates opportunity descriptions. You are responsible for reviewing and editing all AI-generated content before publishing.</p>
 
       <h2 style={h2Style}>6. Privacy</h2>
-      <p>Your use of the Platform is also governed by our Privacy Policy. By using SongPitch, you consent to the collection and use of your information as described therein.</p>
+      <p>Your use of the Platform is also governed by our Privacy Policy. By using Coda-Vault, you consent to the collection and use of your information as described therein.</p>
 
       <h2 style={h2Style}>7. Messaging & Communications</h2>
-      <p>The Platform provides in-app messaging between Users. You agree to communicate respectfully and professionally. SongPitch reserves the right to review and remove messages that violate these Terms or our community guidelines.</p>
+      <p>The Platform provides in-app messaging between Users. You agree to communicate respectfully and professionally. Coda-Vault reserves the right to review and remove messages that violate these Terms or our community guidelines.</p>
 
       <h2 style={h2Style}>8. Termination</h2>
       <p>We may suspend or terminate your account at any time for violation of these Terms. You may delete your account at any time through your profile settings. Upon termination, your Content may be retained for a reasonable period to resolve any pending disputes.</p>
 
       <h2 style={h2Style}>9. Disclaimers</h2>
-      <p>The Platform is provided "as is" without warranties of any kind. We do not guarantee uninterrupted access, accuracy of AI analysis, or the quality of interactions between Users. SongPitch is not a party to any licensing agreements formed between Users.</p>
+      <p>The Platform is provided "as is" without warranties of any kind. We do not guarantee uninterrupted access, accuracy of AI analysis, or the quality of interactions between Users. Coda-Vault is not a party to any licensing agreements formed between Users.</p>
 
       <h2 style={h2Style}>10. Limitation of Liability</h2>
-      <p>To the maximum extent permitted by law, SongPitch shall not be liable for any indirect, incidental, special, or consequential damages arising from your use of the Platform, including but not limited to loss of revenue, data, or business opportunities.</p>
+      <p>To the maximum extent permitted by law, Coda-Vault shall not be liable for any indirect, incidental, special, or consequential damages arising from your use of the Platform, including but not limited to loss of revenue, data, or business opportunities.</p>
 
       <h2 style={h2Style}>11. Changes to These Terms</h2>
       <p>We may update these Terms from time to time. We will notify registered Users of material changes via email or in-app notification. Continued use of the Platform after changes constitutes acceptance of the updated Terms.</p>
