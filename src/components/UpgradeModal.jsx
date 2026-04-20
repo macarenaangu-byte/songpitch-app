@@ -81,26 +81,17 @@ export default function UpgradeModal({ isOpen, onClose, feature, userProfile, de
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Please sign in to upgrade.');
 
-      const res = await fetch(
-        `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/create-checkout-session`,
-        {
-          method:  'POST',
-          headers: {
-            'Content-Type':  'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-            'apikey':        process.env.REACT_APP_SUPABASE_ANON_KEY,
-          },
-          body: JSON.stringify({
-            tier:        selectedTier,
-            coupon_code: couponCode.trim() || undefined,
-            success_url: `${window.location.origin}?upgrade=success`,
-            cancel_url:  `${window.location.origin}?upgrade=canceled`,
-          }),
-        }
-      );
+      const { data, error: fnError } = await supabase.functions.invoke('create-checkout-session', {
+        body: {
+          tier:        selectedTier,
+          coupon_code: couponCode.trim() || undefined,
+          success_url: `${window.location.origin}?upgrade=success`,
+          cancel_url:  `${window.location.origin}?upgrade=canceled`,
+        },
+      });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Checkout failed');
+      if (fnError) throw new Error(fnError.message ?? 'Checkout failed');
+      if (!data?.url) throw new Error('Checkout failed');
 
       // Redirect to Stripe Checkout
       window.location.href = data.url;
