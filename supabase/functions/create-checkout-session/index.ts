@@ -109,6 +109,7 @@ Deno.serve(async (req) => {
     }
 
     // ── Build checkout session params ────────────────────────────────────────
+    // Build base session params — do NOT include allow_promotion_codes yet
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       customer:             customerId,
       mode:                 'subscription',
@@ -117,7 +118,6 @@ Deno.serve(async (req) => {
         price:    priceId,
         quantity: 1,
       }],
-      allow_promotion_codes: false,  // we pass coupon directly if provided
       subscription_data: {
         metadata: {
           supabase_profile_id: profile.id,
@@ -129,15 +129,14 @@ Deno.serve(async (req) => {
     };
 
     // Apply promotion code if provided (e.g. FOUNDER2026)
-    // Stripe disallows combining `discounts` + `allow_promotion_codes` — must pick one
+    // Stripe forbids having BOTH discounts and allow_promotion_codes in the same session,
+    // even if allow_promotion_codes is false — so we only add whichever one applies.
     if (coupon_code) {
       const promoCodes = await stripe.promotionCodes.list({ code: coupon_code, limit: 1, active: true });
       if (promoCodes.data.length > 0) {
-        // Code found — apply it directly, disable manual entry box
         sessionParams.discounts = [{ promotion_code: promoCodes.data[0].id }];
-        sessionParams.allow_promotion_codes = false;
+        // allow_promotion_codes intentionally omitted — Stripe rejects both together
       } else {
-        // Code not found — show promo code field on Stripe page so user can try
         sessionParams.allow_promotion_codes = true;
       }
     } else {
