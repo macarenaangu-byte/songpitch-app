@@ -23,7 +23,7 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
 );
 
-// Map Stripe Price IDs → SongPitch subscription tiers
+// Map Stripe Price IDs → Coda-Vault subscription tiers
 // Covers all 4 products (composer + executive, basic + pro)
 const PRICE_TO_TIER: Record<string, 'basic' | 'pro'> = {
   [Deno.env.get('STRIPE_PRICE_COMPOSER_BASIC') ?? '']: 'basic',
@@ -32,7 +32,7 @@ const PRICE_TO_TIER: Record<string, 'basic' | 'pro'> = {
   [Deno.env.get('STRIPE_PRICE_EXEC_PRO')       ?? '']: 'pro',
 };
 
-const ADMIN_EMAIL = 'mangulo@songpitchhub.com';
+const ADMIN_EMAIL = 'manadeau@coda-vault.com';
 
 async function sendAdminEmail(subject: string, body: string): Promise<void> {
   const resendApiKey = Deno.env.get('RESEND_API_KEY');
@@ -40,19 +40,19 @@ async function sendAdminEmail(subject: string, body: string): Promise<void> {
   const html = `
     <div style="background:#1a1a2e;padding:32px;font-family:'Helvetica Neue',sans-serif;max-width:520px;margin:auto;border-radius:12px;">
       <div style="margin-bottom:18px;">
-        <span style="color:#C9A84C;font-size:18px;font-weight:800;">SongPitch</span>
+        <span style="color:#C9A84C;font-size:18px;font-weight:800;">Coda-Vault</span>
         <span style="color:#94a3b8;font-size:13px;margin-left:10px;">Payment Alert</span>
       </div>
       <h2 style="color:#e2e8f0;font-size:16px;font-weight:700;margin:0 0 14px;">${subject}</h2>
       <p style="color:#94a3b8;font-size:14px;line-height:1.7;margin:0;">${body}</p>
       <div style="margin-top:24px;padding-top:18px;border-top:1px solid rgba(255,255,255,0.08);color:#4A4640;font-size:11px;">
-        SongPitch automatic monitoring
+        Coda-Vault automatic monitoring
       </div>
     </div>`;
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${resendApiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: `SongPitch <${ADMIN_EMAIL}>`, to: [ADMIN_EMAIL], subject, html }),
+    body: JSON.stringify({ from: `Coda-Vault <${ADMIN_EMAIL}>`, to: [ADMIN_EMAIL], subject, html }),
   });
   if (!res.ok) console.error('[stripe-webhook] Resend error:', res.status, await res.text());
 }
@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
       const customerId = session.customer as string;
       const customerEmail = session.customer_details?.email;
 
-      // Link Stripe customer to SongPitch profile
+      // Link Stripe customer to Coda-Vault profile
       if (customerEmail) {
         await supabase
           .from('user_profiles')
@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
 
       if (event.type === 'customer.subscription.created') {
         await sendAdminEmail(
-          '💳 New subscriber on SongPitch',
+          '💳 New subscriber on Coda-Vault',
           `Tier: <strong>${tier}</strong><br>Stripe customer: ${sub.customer}<br>Renews: ${endsAt.toDateString()}`,
         );
       }
@@ -137,7 +137,7 @@ Deno.serve(async (req) => {
       await setTier(sub.customer as string, 'free');
       console.log(`[stripe-webhook] Downgraded to free for customer=${sub.customer}`);
       await sendAdminEmail(
-        '😢 Cancellation on SongPitch',
+        '😢 Cancellation on Coda-Vault',
         `Tier cancelled: <strong>${tier}</strong><br>Stripe customer: ${sub.customer}`,
       );
       break;
@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
       const amount  = invoice.amount_due ? `$${(invoice.amount_due / 100).toFixed(2)}` : '—';
       console.log(`[stripe-webhook] Payment failed for customer=${invoice.customer}, amount=${amount}`);
       await sendAdminEmail(
-        '⚠️ Payment failed on SongPitch',
+        '⚠️ Payment failed on Coda-Vault',
         `Amount due: <strong>${amount}</strong><br>Stripe customer: ${invoice.customer}<br>Invoice: ${invoice.id}`,
       );
       break;
