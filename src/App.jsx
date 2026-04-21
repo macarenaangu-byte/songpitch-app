@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
-import { Search, Users, Music, MessageCircle, User, ChevronRight, ChevronLeft, Briefcase, FileText, TrendingUp, Bell, Menu, Shield, BookOpen, Scale } from "lucide-react";
+import { Search, Users, Music, MessageCircle, User, ChevronRight, ChevronLeft, Briefcase, FileText, TrendingUp, Bell, Menu, Shield, BookOpen, Scale, AlertTriangle } from "lucide-react";
 // ─── Extracted modules ──────────────────────────────────────────────────────
 import { DESIGN_SYSTEM } from './constants/designSystem';
 import { supabase } from './lib/supabase';
@@ -79,6 +79,7 @@ export default function SongPitch() {
   const [showLanding, setShowLanding] = useState(true);  // NEW: Show landing page first
   const [legalPage, setLegalPage] = useState(() => getLegalPageFromHash()); // 'terms', 'privacy', 'dmca', or null
   const [page, setPage] = useState(() => getPageFromHash() || "dashboard");
+  const [deleteAccountModal, setDeleteAccountModal] = useState({ open: false, typed: '', loading: false });
   const [activeMessageConversationId, setActiveMessageConversationId] = useState(null);
   const [stats, setStats] = useState({ songs: 0, users: 0, opportunities: 0, conversations: 0, profileViews: 0 });
   const [analytics, setAnalytics] = useState(null);
@@ -848,32 +849,24 @@ export default function SongPitch() {
     window.history.replaceState(null, '', window.location.pathname);
   };
 
-  const handleDeleteAccount = async () => {
-    // TODO: Replace window.confirm/prompt with a React state-based modal for restrictive environments
-    let confirmed = false;
-    let typed = null;
-    try {
-      confirmed = window.confirm('This will permanently delete your account and cannot be undone. Continue?');
-      if (!confirmed) return;
-      typed = window.prompt('Type DELETE to confirm permanent account deletion.');
-    } catch {
-      showToast.error('Unable to show confirmation dialog. Please try again.');
-      return;
-    }
-    if (typed !== 'DELETE') {
-      showToast.info('Account deletion cancelled.');
-      return;
-    }
+  const handleDeleteAccount = () => {
+    setDeleteAccountModal({ open: true, typed: '', loading: false });
+  };
 
+  const handleConfirmDelete = async () => {
+    if (deleteAccountModal.typed !== 'DELETE') return;
+    setDeleteAccountModal(s => ({ ...s, loading: true }));
     try {
       const { error } = await supabase.functions.invoke('delete-account', { body: {} });
       if (error) throw error;
       showToast.success('Account deleted permanently.');
+      setDeleteAccountModal({ open: false, typed: '', loading: false });
       await supabase.auth.signOut();
       setUserProfile(null);
       setPage('dashboard');
     } catch (err) {
       showToast.error(friendlyError(err));
+      setDeleteAccountModal(s => ({ ...s, loading: false }));
     }
   };
 
@@ -1423,6 +1416,97 @@ export default function SongPitch() {
             >
               Yes, I'm here
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Delete Account Modal ─────────────────────────────────────────── */}
+      {deleteAccountModal.open && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(4,5,14,0.82)',
+          backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 20,
+        }}>
+          <div style={{
+            background: DESIGN_SYSTEM.colors.bg.card,
+            border: '1px solid rgba(248,113,113,0.25)',
+            borderRadius: 20, padding: 32,
+            maxWidth: 420, width: '100%',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
+          }}>
+            {/* Icon */}
+            <div style={{
+              width: 48, height: 48, borderRadius: 14,
+              background: 'rgba(248,113,113,0.1)',
+              border: '1px solid rgba(248,113,113,0.25)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              marginBottom: 20,
+            }}>
+              <AlertTriangle size={22} color="#f87171" />
+            </div>
+
+            <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 18, fontWeight: 700, marginBottom: 8, fontFamily: DESIGN_SYSTEM.font.body }}>
+              Delete your account?
+            </h3>
+            <p style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 14, lineHeight: 1.6, marginBottom: 20, fontFamily: DESIGN_SYSTEM.font.body }}>
+              This will permanently delete your profile, songs, messages, and all associated data. <strong style={{ color: DESIGN_SYSTEM.colors.text.primary }}>This cannot be undone.</strong>
+            </p>
+
+            {/* Type to confirm */}
+            <p style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 12, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 8, fontFamily: DESIGN_SYSTEM.font.body }}>
+              Type <span style={{ color: '#f87171', fontFamily: 'monospace' }}>DELETE</span> to confirm
+            </p>
+            <input
+              type="text"
+              value={deleteAccountModal.typed}
+              onChange={e => setDeleteAccountModal(s => ({ ...s, typed: e.target.value }))}
+              onKeyDown={e => e.key === 'Enter' && handleConfirmDelete()}
+              placeholder="DELETE"
+              autoFocus
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                background: DESIGN_SYSTEM.colors.bg.primary,
+                border: `1px solid ${deleteAccountModal.typed === 'DELETE' ? '#f87171' : DESIGN_SYSTEM.colors.border.light}`,
+                borderRadius: 10, padding: '11px 14px',
+                color: '#f87171', fontSize: 14, fontFamily: 'monospace',
+                outline: 'none', marginBottom: 20,
+                letterSpacing: '1px',
+              }}
+            />
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setDeleteAccountModal({ open: false, typed: '', loading: false })}
+                disabled={deleteAccountModal.loading}
+                style={{
+                  flex: 1, padding: '11px', borderRadius: 10, cursor: 'pointer',
+                  background: 'transparent', border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
+                  color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 14, fontWeight: 600,
+                  fontFamily: DESIGN_SYSTEM.font.body,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={deleteAccountModal.typed !== 'DELETE' || deleteAccountModal.loading}
+                style={{
+                  flex: 1, padding: '11px', borderRadius: 10,
+                  cursor: deleteAccountModal.typed !== 'DELETE' || deleteAccountModal.loading ? 'not-allowed' : 'pointer',
+                  background: deleteAccountModal.typed === 'DELETE' ? '#ef4444' : 'rgba(248,113,113,0.15)',
+                  border: 'none',
+                  color: deleteAccountModal.typed === 'DELETE' ? '#fff' : '#f87171',
+                  fontSize: 14, fontWeight: 700,
+                  fontFamily: DESIGN_SYSTEM.font.body,
+                  opacity: deleteAccountModal.loading ? 0.6 : 1,
+                  transition: 'all 0.15s',
+                }}
+              >
+                {deleteAccountModal.loading ? 'Deleting…' : 'Delete Account'}
+              </button>
+            </div>
           </div>
         </div>
       )}

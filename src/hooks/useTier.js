@@ -18,6 +18,7 @@ const TIER_LIMITS = {
     marketAnalytics:           false,
     contractRevision:          false,
     contractVault:             false,
+    aiBriefWriter:             false,
   },
   basic: {
     uploadsPerWeek:            null,   // unlimited
@@ -34,6 +35,7 @@ const TIER_LIMITS = {
     marketAnalytics:           false,
     contractRevision:          true,
     contractVault:             true,
+    aiBriefWriter:             true,
   },
   pro: {
     uploadsPerWeek:            null,
@@ -50,6 +52,7 @@ const TIER_LIMITS = {
     marketAnalytics:           true,
     contractRevision:          true,
     contractVault:             true,
+    aiBriefWriter:             true,
   },
   admin: {
     uploadsPerWeek:            null,
@@ -66,6 +69,7 @@ const TIER_LIMITS = {
     marketAnalytics:           true,
     contractRevision:          true,
     contractVault:             true,
+    aiBriefWriter:             true,
   },
 };
 
@@ -117,6 +121,7 @@ export function useTier(userProfile) {
       marketAnalytics:    'Market analytics are available on the Pro plan.',
       contractRevision:   'Contract Revision (powered by LegalSplits ML) is available on Basic and Pro plans.',
       contractVault:      'Save and manage contracts in your vault on Basic and Pro plans.',
+      aiBriefWriter:      'AI Brief Writer is available on Basic and Pro plans.',
       upload:             `You've reached your ${limits.uploadsPerWeek} uploads/week limit. Upgrade to Basic for unlimited uploads.`,
       contact:            `You've used all ${limits.contactsPerMonth} monthly contacts. Upgrade for more.`,
       opportunity:        `You've reached your ${limits.opportunitiesPerMonth} opportunity posts this month. Upgrade for more.`,

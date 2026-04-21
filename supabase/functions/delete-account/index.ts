@@ -155,6 +155,13 @@ Deno.serve(async (req) => {
         .eq('user_profile_id', profileId);
       ignoreMissingTable(composersError as SupabaseTableError | null);
 
+      // Clean up push subscriptions so no stale rows remain after deletion
+      const { error: pushSubsError } = await adminClient
+        .from('push_subscriptions')
+        .delete()
+        .eq('user_id', profileId);
+      ignoreMissingTable(pushSubsError as SupabaseTableError | null);
+
       const { error: profileError } = await adminClient
         .from('user_profiles')
         .delete()

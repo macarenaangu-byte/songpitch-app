@@ -3,7 +3,8 @@ import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { StatCard } from '../components/StatCard';
 import { MiniChart } from '../components/MiniChart';
 import { supabase } from '../lib/supabase';
-import { CheckCircle, Circle, Users, Music, Briefcase, MessageCircle, FileText, Search, Eye, User, Sparkles, ArrowRight, Upload, Zap } from 'lucide-react';
+import { CheckCircle, Circle, Users, Music, Briefcase, MessageCircle, FileText, Search, Eye, User, Sparkles, ArrowRight, Upload, Zap, X, Star } from 'lucide-react';
+import UpgradeModal from '../components/UpgradeModal';
 
 // Relative time helper
 function timeAgo(dateStr) {
@@ -102,6 +103,15 @@ export function DashboardPage({ user, stats, onNavigate, isMobile = false, analy
     return () => { cancelled = true; };
   }, []);
 
+  // Founder offer banner — show for free-tier users until dismissed
+  const founderKey = `cv_founder_banner_dismissed_${user?.id}`;
+  const [founderBannerDismissed, setFounderBannerDismissed] = useState(
+    () => localStorage.getItem(founderKey) === '1'
+  );
+  const [founderModalOpen, setFounderModalOpen] = useState(false);
+  const isFree = !user?.subscription_tier || user?.subscription_tier === 'free';
+  const showFounderBanner = isFree && !founderBannerDismissed && !isAdminUser;
+
   // Onboarding walkthrough modal — show for new users (joined within last 14 days), dismissible
   const dismissKey = `sp_onboarding_dismissed_${user?.id}`;
   const [onboardingDismissed, setOnboardingDismissed] = useState(
@@ -140,6 +150,103 @@ export function DashboardPage({ user, stats, onNavigate, isMobile = false, analy
 
   return (
     <div className="page-enter" style={{ padding: isMobile ? '16px' : `${DESIGN_SYSTEM.spacing.xl} ${DESIGN_SYSTEM.spacing.xl}`, minHeight: "100%", overflowY: "auto" }}>
+
+      {/* ── Upgrade Modal (Founder offer) ─────────────────────────────────── */}
+      <UpgradeModal
+        isOpen={founderModalOpen}
+        onClose={() => setFounderModalOpen(false)}
+        feature="6 months of Pro — completely free for founding members."
+        userProfile={user}
+        defaultTier="pro"
+        defaultCoupon="FOUNDER2026"
+      />
+
+      {/* ── Founder Offer Banner ──────────────────────────────────────────── */}
+      {showFounderBanner && (
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(201,168,76,0.14) 0%, rgba(201,168,76,0.06) 100%)',
+          border: '1px solid rgba(201,168,76,0.35)',
+          borderRadius: DESIGN_SYSTEM.radius.md,
+          padding: isMobile ? '14px 16px' : '14px 20px',
+          marginBottom: 16,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 14,
+          flexWrap: isMobile ? 'wrap' : 'nowrap',
+          position: 'relative',
+        }}>
+          {/* Gold star icon */}
+          <div style={{
+            flexShrink: 0,
+            width: 36, height: 36,
+            borderRadius: 10,
+            background: 'rgba(201,168,76,0.15)',
+            border: '1px solid rgba(201,168,76,0.3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Star size={18} color="#C9A84C" fill="#C9A84C" />
+          </div>
+
+          {/* Text */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ color: '#C9A84C', fontWeight: 700, fontSize: 13, fontFamily: DESIGN_SYSTEM.font.display }}>
+              🎉 Founding Member Offer
+            </span>
+            <span style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, marginLeft: 8 }}>
+              Get <strong style={{ color: DESIGN_SYSTEM.colors.text.primary }}>6 months of Pro free</strong> — use code{' '}
+              <span style={{
+                background: 'rgba(201,168,76,0.15)', color: '#C9A84C',
+                padding: '1px 8px', borderRadius: 6, fontFamily: 'monospace',
+                fontSize: 12, fontWeight: 700, letterSpacing: '0.5px',
+              }}>FOUNDER2026</span>
+              {' '}at checkout.
+            </span>
+          </div>
+
+          {/* CTA */}
+          <button
+            onClick={() => setFounderModalOpen(true)}
+            style={{
+              flexShrink: 0,
+              background: '#C9A84C',
+              color: '#0D0B0F',
+              border: 'none',
+              borderRadius: 8,
+              padding: '8px 16px',
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontFamily: DESIGN_SYSTEM.font.body,
+              whiteSpace: 'nowrap',
+            }}
+            onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+          >
+            Claim Offer →
+          </button>
+
+          {/* Dismiss */}
+          <button
+            onClick={() => {
+              localStorage.setItem(founderKey, '1');
+              setFounderBannerDismissed(true);
+            }}
+            style={{
+              flexShrink: 0,
+              background: 'none', border: 'none',
+              cursor: 'pointer', padding: 4,
+              color: DESIGN_SYSTEM.colors.text.muted,
+              display: 'flex', alignItems: 'center',
+            }}
+            aria-label="Dismiss"
+            onMouseEnter={e => e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.secondary}
+            onMouseLeave={e => e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.muted}
+          >
+            <X size={15} />
+          </button>
+        </div>
+      )}
+
       {/* Hero Section with Trust Signal */}
       <div style={{
         background: DESIGN_SYSTEM.colors.gradient.hero,

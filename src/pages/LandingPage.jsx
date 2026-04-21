@@ -109,6 +109,7 @@ const PRICING_GROUPS = [
         price: "$9.99",
         period: "/ month",
         badge: "Most Popular",
+        founderOffer: true,
         features: [
           "Everything in Basic",
           "Deal Analyzer — upload any recording deal PDF",
@@ -162,6 +163,7 @@ const PRICING_GROUPS = [
         price: "$14.99",
         period: "/ month",
         badge: "Luxury",
+        founderOffer: true,
         features: [
           "Everything in Basic",
           "Unlimited contacts & opportunity postings",
@@ -222,6 +224,7 @@ function FAQItem({ item }) {
 }
 
 const NAV_LINKS = [
+  { label: 'Our Story', id: 'our-story' },
   { label: 'Who is it for?', id: 'who-for' },
   { label: 'How it works', id: 'how-it-works' },
   { label: 'Features', id: 'features' },
@@ -515,21 +518,25 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
       </div>
 
       {/* ── Nav ─────────────────────────────────────────────────────────── */}
+      {/* 64px spacer so fixed nav doesn't overlap hero content */}
+      <div style={{ height: 64, flexShrink: 0 }} />
       <nav style={{
         padding: isMobile ? "0 20px" : "0 48px",
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
         borderBottom: scrolled ? `1px solid ${DESIGN_SYSTEM.colors.border.light}` : '1px solid transparent',
-        position: 'sticky',
+        position: 'fixed',
         top: 0,
+        left: 0,
+        right: 0,
         height: 64,
-        background: scrolled ? 'rgba(8,10,18,0.88)' : 'transparent',
-        backdropFilter: scrolled ? 'blur(20px)' : 'none',
-        WebkitBackdropFilter: scrolled ? 'blur(20px)' : 'none',
+        background: scrolled ? 'rgba(8,10,18,0.92)' : 'rgba(8,10,18,0.7)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
         boxShadow: scrolled ? '0 1px 0 rgba(255,255,255,0.06)' : 'none',
         transition: 'all 0.3s ease',
-        zIndex: 100,
+        zIndex: 1000,
       }}>
         {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
@@ -616,7 +623,7 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
           borderBottom: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
-          zIndex: 99,
+          zIndex: 999,
           display: 'flex', flexDirection: 'column',
           padding: '12px 0 20px',
         }}>
@@ -738,6 +745,219 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
               <span style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 500 }}>Where great music meets the right ears</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* ── Our Story ───────────────────────────────────────────────────── */}
+      <div id="our-story" style={{
+        background: DESIGN_SYSTEM.colors.bg.secondary,
+        borderTop: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
+        borderBottom: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
+        padding: isMobile ? '60px 0' : '100px 0',
+      }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: isMobile ? '0 20px' : '0 48px' }}>
+
+          {/* Section label + title */}
+          <div className="reveal" style={{ textAlign: 'center', marginBottom: isMobile ? 48 : 72 }}>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.25)',
+              borderRadius: 24, padding: '6px 18px', marginBottom: 20,
+            }}>
+              <span style={{ color: '#C9A84C', fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>WHY WE BUILT THIS</span>
+            </div>
+            <h2 style={{
+              fontSize: isMobile ? 30 : 48, fontWeight: 700, marginBottom: 16,
+              fontFamily: DESIGN_SYSTEM.font.display, letterSpacing: '-0.01em',
+              color: DESIGN_SYSTEM.colors.text.primary,
+            }}>
+              A problem nobody had solved.
+            </h2>
+            <p style={{
+              fontSize: isMobile ? 15 : 17, color: DESIGN_SYSTEM.colors.text.secondary,
+              maxWidth: 660, margin: '0 auto', lineHeight: 1.75,
+            }}>
+              I spent months building this platform because I saw a real problem nobody had
+              solved — and I{' '}
+              <em>couldn't ignore it.</em>
+            </p>
+          </div>
+
+          {/* Two-sided problem */}
+          <div className="reveal" style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+            gap: isMobile ? 16 : 24,
+            marginBottom: isMobile ? 48 : 64,
+          }}>
+            {/* Composer side */}
+            <div style={{
+              background: 'rgba(201,168,76,0.05)',
+              border: '1px solid rgba(201,168,76,0.15)',
+              borderRadius: 20, padding: isMobile ? '28px 24px' : '36px 32px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 10,
+                  background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.25)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 18,
+                }}>🎵</div>
+                <span style={{ color: '#C9A84C', fontSize: 13, fontWeight: 700, letterSpacing: '0.04em' }}>
+                  THE COMPOSER'S REALITY
+                </span>
+              </div>
+              <p style={{
+                color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 15,
+                lineHeight: 1.8, margin: 0,
+              }}>
+                You have the talent. You send emails that go unanswered. You upload your music to
+                generic platforms where it disappears among millions of files. You wait.
+                And wait. And wait.
+              </p>
+              <p style={{
+                color: DESIGN_SYSTEM.colors.text.muted, fontSize: 14,
+                lineHeight: 1.7, marginTop: 16, marginBottom: 0,
+                borderTop: '1px solid rgba(201,168,76,0.1)', paddingTop: 16,
+                fontStyle: 'italic',
+              }}>
+                Not because you're not good enough — because nobody built the infrastructure for you to get through.
+              </p>
+            </div>
+
+            {/* Executive side */}
+            <div style={{
+              background: 'rgba(139,92,246,0.05)',
+              border: '1px solid rgba(139,92,246,0.15)',
+              borderRadius: 20, padding: isMobile ? '28px 24px' : '36px 32px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 10,
+                  background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.25)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 18,
+                }}>🎯</div>
+                <span style={{ color: DESIGN_SYSTEM.colors.brand.purple, fontSize: 13, fontWeight: 700, letterSpacing: '0.04em' }}>
+                  THE EXECUTIVE'S REALITY
+                </span>
+              </div>
+              <p style={{
+                color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 15,
+                lineHeight: 1.8, margin: 0,
+              }}>
+                You receive hundreds of emails a week — unlabeled files, Dropbox links, music
+                with no documented rights. When you find something you love, weeks of paperwork
+                stand between you and closing the deal.
+              </p>
+              <p style={{
+                color: DESIGN_SYSTEM.colors.text.muted, fontSize: 14,
+                lineHeight: 1.7, marginTop: 16, marginBottom: 0,
+                borderTop: '1px solid rgba(139,92,246,0.1)', paddingTop: 16,
+                fontStyle: 'italic',
+              }}>
+                For a project with a deadline, that process doesn't just slow things down — it kills the deal.
+              </p>
+            </div>
+          </div>
+
+          {/* Bridge statement */}
+          <div className="reveal" style={{ textAlign: 'center', marginBottom: isMobile ? 48 : 64 }}>
+            <p style={{
+              fontSize: isMobile ? 18 : 22, fontWeight: 600,
+              color: DESIGN_SYSTEM.colors.text.primary,
+              fontFamily: DESIGN_SYSTEM.font.display,
+              marginBottom: 12,
+            }}>
+              Nobody wins. Great music never reaches the people who need it.
+            </p>
+            <p style={{
+              fontSize: isMobile ? 15 : 17, color: DESIGN_SYSTEM.colors.text.secondary,
+              lineHeight: 1.75, maxWidth: 620, margin: '0 auto',
+            }}>
+              Coda-Vault is the infrastructure that was missing — the bridge between both sides,
+              with all the legal and technical groundwork already done before the music ever
+              reaches an executive. What normally takes three months to resolve,{' '}
+              <strong style={{ color: DESIGN_SYSTEM.colors.text.primary }}>takes 24 hours.</strong>
+            </p>
+          </div>
+
+          {/* Core purpose quote */}
+          <div className="reveal" style={{
+            background: 'linear-gradient(135deg, rgba(201,168,76,0.1) 0%, rgba(201,168,76,0.04) 100%)',
+            border: '1px solid rgba(201,168,76,0.25)',
+            borderRadius: 24, padding: isMobile ? '32px 24px' : '48px 56px',
+            textAlign: 'center', marginBottom: isMobile ? 48 : 64,
+            position: 'relative', overflow: 'hidden',
+          }}>
+            {/* Decorative quote mark */}
+            <div style={{
+              position: 'absolute', top: -10, left: 28,
+              fontSize: 120, lineHeight: 1, color: 'rgba(201,168,76,0.07)',
+              fontFamily: 'Georgia, serif', userSelect: 'none', pointerEvents: 'none',
+            }}>"</div>
+            <p style={{
+              fontSize: isMobile ? 22 : 32, fontWeight: 700,
+              color: '#C9A84C', fontFamily: DESIGN_SYSTEM.font.display,
+              letterSpacing: '-0.01em', lineHeight: 1.35,
+              margin: '0 0 24px', position: 'relative',
+            }}>
+              AI isn't here to replace artists.
+              <br />It's here to clear their path.
+            </p>
+            <div style={{
+              width: 40, height: 2, background: 'rgba(201,168,76,0.4)',
+              margin: '0 auto 20px',
+            }} />
+            <p style={{
+              color: DESIGN_SYSTEM.colors.text.muted, fontSize: 14,
+              fontWeight: 600, letterSpacing: '0.04em', margin: 0,
+            }}>
+              — Macarena Angulo Nadeau, Founder &amp; CEO
+            </p>
+          </div>
+
+          {/* Values */}
+          <div className="reveal">
+            <p style={{
+              textAlign: 'center', color: DESIGN_SYSTEM.colors.text.muted,
+              fontSize: 11, fontWeight: 700, letterSpacing: '0.1em',
+              textTransform: 'uppercase', marginBottom: 20,
+            }}>
+              What we stand for
+            </p>
+            <div style={{
+              display: 'flex', flexWrap: 'wrap',
+              gap: 12, justifyContent: 'center',
+            }}>
+              {[
+                { icon: '🔓', label: 'Access over exclusivity', desc: 'Talent determines opportunity — not contacts or resources.' },
+                { icon: '🤝', label: 'Technology in service of the human', desc: 'AI exists to empower the artist. Never to replace them.' },
+                { icon: '📋', label: 'Integrity first', desc: 'Every track, every contract, every deal is documented and honest.' },
+                { icon: '✦', label: 'Simplicity', desc: "If it's complicated, it's because it hasn't been done right yet." },
+              ].map(({ icon, label, desc }) => (
+                <div key={label} style={{
+                  background: 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
+                  borderRadius: 14, padding: '18px 22px',
+                  maxWidth: isMobile ? '100%' : 240,
+                  flex: isMobile ? '1 1 100%' : '1 1 200px',
+                }}>
+                  <div style={{ fontSize: 20, marginBottom: 10 }}>{icon}</div>
+                  <div style={{
+                    color: DESIGN_SYSTEM.colors.text.primary,
+                    fontSize: 13, fontWeight: 700, marginBottom: 6,
+                    fontFamily: DESIGN_SYSTEM.font.display,
+                  }}>{label}</div>
+                  <div style={{
+                    color: DESIGN_SYSTEM.colors.text.muted,
+                    fontSize: 12, lineHeight: 1.6,
+                  }}>{desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -1384,6 +1604,33 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
                       {tier.period && <span style={{ fontSize: 13, color: DESIGN_SYSTEM.colors.text.tertiary }}>{tier.period}</span>}
                     </div>
                   </div>
+
+                  {/* Founder offer callout — Pro cards only */}
+                  {tier.founderOffer && (
+                    <div style={{
+                      background: 'rgba(201,168,76,0.1)',
+                      border: '1px solid rgba(201,168,76,0.3)',
+                      borderRadius: 10,
+                      padding: '10px 14px',
+                      marginBottom: 16,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                    }}>
+                      <Star size={13} color="#C9A84C" fill="#C9A84C" style={{ flexShrink: 0 }} />
+                      <div>
+                        <div style={{ color: '#C9A84C', fontSize: 12, fontWeight: 800, letterSpacing: '0.03em' }}>
+                          🎉 FOUNDER OFFER — Limited to 500 spots
+                        </div>
+                        <div style={{ color: 'rgba(201,168,76,0.8)', fontSize: 12, marginTop: 2 }}>
+                          Use code{' '}
+                          <span style={{ fontFamily: 'monospace', fontWeight: 700, letterSpacing: '0.5px' }}>FOUNDER2026</span>
+                          {' '}for 6 months free
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <ul style={{ listStyle: 'none', margin: '0 0 24px', padding: 0, display: 'flex', flexDirection: 'column', gap: 9 }}>
                     {tier.features.map(f => (
                       <li key={f} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
@@ -1474,12 +1721,12 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
           Questions? We'd love to hear from you.
         </p>
         <a
-          href="mailto:hello@songpitchhub.com"
+          href="mailto:hello@coda-vault.com"
           style={{ color: DESIGN_SYSTEM.colors.brand.accent, fontSize: isMobile ? 14 : 15, fontWeight: 600, textDecoration: "none" }}
           onMouseEnter={e => e.currentTarget.style.color = DESIGN_SYSTEM.colors.brand.blue}
           onMouseLeave={e => e.currentTarget.style.color = DESIGN_SYSTEM.colors.brand.accent}
         >
-          hello@songpitchhub.com
+          hello@coda-vault.com
         </a>
         <div style={{ marginTop: 20, display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'center', alignItems: 'center', gap: isMobile ? 12 : 24, flexWrap: 'wrap' }}>
           {[

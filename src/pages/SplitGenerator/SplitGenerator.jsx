@@ -5,6 +5,8 @@ import { supabase } from '../../lib/supabase';
 import { showToast } from '../../utils/toast';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { enrichSplits } from '../../services/legalsplits';
+import { useTier } from '../../hooks/useTier';
+import UpgradeModal from '../../components/UpgradeModal';
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 const styles = {
@@ -357,6 +359,10 @@ function SplitSection({ label, icon, accentColor, splits, onUpdate, onRemove, on
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 export default function SplitGenerator({ userProfile }) {
+  // Tier gates
+  const { can, upgradeMessage } = useTier(userProfile);
+  const [upgradeModal, setUpgradeModal] = useState({ open: false, feature: '' });
+
   // Tab state
   const [activeTab, setActiveTab] = useState('new');
 
@@ -508,6 +514,10 @@ export default function SplitGenerator({ userProfile }) {
       setIsProcessing(true);
       setActiveInput('voice');
     } else {
+      if (!can('fullSplitAnalysis')) {
+        setUpgradeModal({ open: true, feature: upgradeMessage('fullSplitAnalysis') });
+        return;
+      }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         const mediaRecorder = new MediaRecorder(stream);
@@ -559,6 +569,11 @@ export default function SplitGenerator({ userProfile }) {
   const handleImageUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
+
+    if (!can('fullSplitAnalysis')) {
+      setUpgradeModal({ open: true, feature: upgradeMessage('fullSplitAnalysis') });
+      return;
+    }
 
     setIsScanning(true);
     setActiveInput('scan');
@@ -726,6 +741,10 @@ export default function SplitGenerator({ userProfile }) {
   const canSave = isAttested && signature.trim().length >= 3 && bothValid && selectedSongId && !isSaving;
 
   const handleEnrichPRO = async () => {
+    if (!can('proIpiEnrichment')) {
+      setUpgradeModal({ open: true, feature: upgradeMessage('proIpiEnrichment') });
+      return;
+    }
     setProEnriching(true);
     setProEnrichedData(null);
     setProEnrichError(null);
@@ -747,6 +766,14 @@ export default function SplitGenerator({ userProfile }) {
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <div style={styles.page}>
+      <UpgradeModal
+        isOpen={upgradeModal.open}
+        onClose={() => setUpgradeModal({ open: false, feature: '' })}
+        feature={upgradeModal.feature}
+        userProfile={userProfile}
+        defaultTier="basic"
+      />
+
       {/* Header */}
       <div style={styles.header}>
         <h1 style={styles.title}>Rights Verification Dashboard</h1>

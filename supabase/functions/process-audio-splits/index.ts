@@ -23,7 +23,7 @@ serve(async (req: Request) => {
     // @ts-ignore
     const openAiKey = Deno.env.get('OPENAI_API_KEY')
     if (!openAiKey) {
-      throw new Error('')
+      throw new Error('OPENAI_API_KEY is not configured')
     }
 
     console.log("Audio received, sending to Whisper...")

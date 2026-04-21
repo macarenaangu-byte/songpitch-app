@@ -15,7 +15,7 @@ import { useTier } from '../hooks/useTier';
 import UpgradeModal from '../components/UpgradeModal';
 
 export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = false }) {
-  const { withinLimit, upgradeMessage } = useTier(userProfile);
+  const { can, withinLimit, upgradeMessage } = useTier(userProfile);
   const [upgradeModal, setUpgradeModal] = useState({ open: false, feature: '' });
   const [opportunities, setOpportunities] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -421,6 +421,10 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
 
   // AI Brief Writer
   const generateAIBrief = async () => {
+    if (!can('aiBriefWriter')) {
+      setUpgradeModal({ open: true, feature: upgradeMessage('aiBriefWriter') });
+      return;
+    }
     if (!aiNotes.trim() || aiNotes.trim().length < 10) {
       showToast("Please describe your project in at least a couple of sentences", "error");
       return;

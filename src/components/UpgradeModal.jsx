@@ -59,10 +59,10 @@ const PRICING = {
   music_executive: { basic: 5.99, pro: 14.99 },
 };
 
-export default function UpgradeModal({ isOpen, onClose, feature, userProfile, defaultTier = 'basic' }) {
+export default function UpgradeModal({ isOpen, onClose, feature, userProfile, defaultTier = 'basic', defaultCoupon = '' }) {
   const [selectedTier, setSelectedTier] = useState(defaultTier);
-  const [couponCode, setCouponCode]     = useState('');
-  const [showCoupon, setShowCoupon]     = useState(false);
+  const [couponCode, setCouponCode]     = useState(defaultCoupon);
+  const [showCoupon, setShowCoupon]     = useState(!!defaultCoupon);
   const [loading, setLoading]           = useState(false);
   const [error, setError]               = useState('');
 
@@ -90,8 +90,8 @@ export default function UpgradeModal({ isOpen, onClose, feature, userProfile, de
         },
       });
 
-      if (fnError) throw new Error(fnError.message ?? 'Checkout failed');
-      if (!data?.url) throw new Error('Checkout failed');
+      if (fnError) throw new Error(data?.error || fnError.message || 'Checkout failed');
+      if (!data?.url) throw new Error(data?.error || 'Checkout failed');
 
       // Redirect to Stripe Checkout
       window.location.href = data.url;

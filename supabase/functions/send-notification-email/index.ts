@@ -20,9 +20,9 @@ const emailTemplates: Record<string, { subject: (title: string) => string; body:
         <div style="background: #1a1a2e; border-radius: 12px; padding: 24px; border: 1px solid #2a2a4a;">
           <h2 style="color: #ffffff; font-size: 18px; margin: 0 0 8px;">New Message</h2>
           <p style="color: #a0a0b8; font-size: 14px; line-height: 1.6; margin: 0 0 20px;">${body}</p>
-          <a href="https://www.songpitchhub.com" style="display: inline-block; background: #C9A84C; color: #ffffff; text-decoration: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 14px;">View Message</a>
+          <a href="https://www.coda-vault.com" style="display: inline-block; background: #C9A84C; color: #ffffff; text-decoration: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 14px;">View Message</a>
         </div>
-        <p style="color: #666; font-size: 11px; text-align: center; margin-top: 24px;">You're receiving this because you have message notifications enabled. <a href="https://www.songpitchhub.com" style="color: #C9A84C;">Manage preferences</a></p>
+        <p style="color: #666; font-size: 11px; text-align: center; margin-top: 24px;">You're receiving this because you have message notifications enabled. <a href="https://www.coda-vault.com" style="color: #C9A84C;">Manage preferences</a></p>
       </div>`,
   },
   new_opportunity: {
@@ -35,9 +35,9 @@ const emailTemplates: Record<string, { subject: (title: string) => string; body:
         <div style="background: #1a1a2e; border-radius: 12px; padding: 24px; border: 1px solid #2a2a4a;">
           <h2 style="color: #ffffff; font-size: 18px; margin: 0 0 8px;">New Opportunity</h2>
           <p style="color: #a0a0b8; font-size: 14px; line-height: 1.6; margin: 0 0 20px;">${body}</p>
-          <a href="https://www.songpitchhub.com" style="display: inline-block; background: #C9A84C; color: #ffffff; text-decoration: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 14px;">View Opportunity</a>
+          <a href="https://www.coda-vault.com" style="display: inline-block; background: #C9A84C; color: #ffffff; text-decoration: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 14px;">View Opportunity</a>
         </div>
-        <p style="color: #666; font-size: 11px; text-align: center; margin-top: 24px;">You're receiving this because you have opportunity notifications enabled. <a href="https://www.songpitchhub.com" style="color: #C9A84C;">Manage preferences</a></p>
+        <p style="color: #666; font-size: 11px; text-align: center; margin-top: 24px;">You're receiving this because you have opportunity notifications enabled. <a href="https://www.coda-vault.com" style="color: #C9A84C;">Manage preferences</a></p>
       </div>`,
   },
   submission_received: {
@@ -50,9 +50,9 @@ const emailTemplates: Record<string, { subject: (title: string) => string; body:
         <div style="background: #1a1a2e; border-radius: 12px; padding: 24px; border: 1px solid #2a2a4a;">
           <h2 style="color: #ffffff; font-size: 18px; margin: 0 0 8px;">New Submission</h2>
           <p style="color: #a0a0b8; font-size: 14px; line-height: 1.6; margin: 0 0 20px;">${body}</p>
-          <a href="https://www.songpitchhub.com" style="display: inline-block; background: #C9A84C; color: #ffffff; text-decoration: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 14px;">Review Submissions</a>
+          <a href="https://www.coda-vault.com" style="display: inline-block; background: #C9A84C; color: #ffffff; text-decoration: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 14px;">Review Submissions</a>
         </div>
-        <p style="color: #666; font-size: 11px; text-align: center; margin-top: 24px;">You're receiving this because you have submission notifications enabled. <a href="https://www.songpitchhub.com" style="color: #C9A84C;">Manage preferences</a></p>
+        <p style="color: #666; font-size: 11px; text-align: center; margin-top: 24px;">You're receiving this because you have submission notifications enabled. <a href="https://www.coda-vault.com" style="color: #C9A84C;">Manage preferences</a></p>
       </div>`,
   },
   submission_shortlisted: {
@@ -65,9 +65,9 @@ const emailTemplates: Record<string, { subject: (title: string) => string; body:
         <div style="background: #1a1a2e; border-radius: 12px; padding: 24px; border: 1px solid #2a2a4a;">
           <h2 style="color: #ffffff; font-size: 18px; margin: 0 0 8px;">Congratulations! 🎉</h2>
           <p style="color: #a0a0b8; font-size: 14px; line-height: 1.6; margin: 0 0 20px;">${body}</p>
-          <a href="https://www.songpitchhub.com" style="display: inline-block; background: #C9A84C; color: #ffffff; text-decoration: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 14px;">View Details</a>
+          <a href="https://www.coda-vault.com" style="display: inline-block; background: #C9A84C; color: #ffffff; text-decoration: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 14px;">View Details</a>
         </div>
-        <p style="color: #666; font-size: 11px; text-align: center; margin-top: 24px;">You're receiving this because you have submission notifications enabled. <a href="https://www.songpitchhub.com" style="color: #C9A84C;">Manage preferences</a></p>
+        <p style="color: #666; font-size: 11px; text-align: center; margin-top: 24px;">You're receiving this because you have submission notifications enabled. <a href="https://www.coda-vault.com" style="color: #C9A84C;">Manage preferences</a></p>
       </div>`,
   },
   submission_rejected: {
@@ -80,9 +80,9 @@ const emailTemplates: Record<string, { subject: (title: string) => string; body:
         <div style="background: #1a1a2e; border-radius: 12px; padding: 24px; border: 1px solid #2a2a4a;">
           <h2 style="color: #ffffff; font-size: 18px; margin: 0 0 8px;">Submission Update</h2>
           <p style="color: #a0a0b8; font-size: 14px; line-height: 1.6; margin: 0 0 20px;">${body}</p>
-          <a href="https://www.songpitchhub.com" style="display: inline-block; background: #C9A84C; color: #ffffff; text-decoration: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 14px;">View Opportunities</a>
+          <a href="https://www.coda-vault.com" style="display: inline-block; background: #C9A84C; color: #ffffff; text-decoration: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 14px;">View Opportunities</a>
         </div>
-        <p style="color: #666; font-size: 11px; text-align: center; margin-top: 24px;">You're receiving this because you have submission notifications enabled. <a href="https://www.songpitchhub.com" style="color: #C9A84C;">Manage preferences</a></p>
+        <p style="color: #666; font-size: 11px; text-align: center; margin-top: 24px;">You're receiving this because you have submission notifications enabled. <a href="https://www.coda-vault.com" style="color: #C9A84C;">Manage preferences</a></p>
       </div>`,
   },
 };
