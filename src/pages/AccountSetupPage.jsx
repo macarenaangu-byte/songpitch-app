@@ -92,7 +92,7 @@ export function AccountSetupPage({ user, onComplete }) {
     <div className="hero-animated-bg" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
       <div style={{ width: "100%", maxWidth: 520, background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 24, padding: 40, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, boxShadow: '0 16px 48px rgba(0,0,0,0.4)', maxHeight: '90vh', overflowY: 'auto' }}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <img src="/songpitch-logo.png" alt="Coda-Vault" style={{ width: 48, height: 48, objectFit: 'contain', margin: '0 auto 14px', display: 'block', filter: 'hue-rotate(282deg) saturate(0.75) brightness(0.95)' }} onError={(e) => { e.target.style.display = 'none'; }} />
+          <img src="/songpitch-logo.png" alt="Coda-Vault" style={{ width: 48, height: 48, objectFit: 'contain', margin: '0 auto 14px', display: 'block' }} onError={(e) => { e.target.style.display = 'none'; }} />
           <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 26, fontWeight: 800, marginBottom: 6 }}>Complete Your Profile</h1>
           <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 14 }}>Tell us a bit about yourself to get started</p>
         </div>

@@ -540,7 +540,7 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
       }}>
         {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-          <img src="/songpitch-logo.png" alt="Coda-Vault" style={{ width: 32, height: 32, objectFit: 'contain', filter: 'hue-rotate(282deg) saturate(0.75) brightness(0.95)' }} onError={(e) => e.target.style.display = 'none'} />
+          <img src="/songpitch-logo.png" alt="Coda-Vault" style={{ width: 32, height: 32, objectFit: 'contain' }} onError={(e) => e.target.style.display = 'none'} />
           <div style={{ fontSize: isMobile ? 16 : 20, fontWeight: 800, background: DESIGN_SYSTEM.colors.gradient.main, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '-0.3px' }}>Coda-Vault</div>
         </div>
 

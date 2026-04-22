@@ -97,19 +97,23 @@ function NotificationItem({ notification, onClick, onDismiss }) {
   );
 }
 
-export function NotificationPanel({ notifications, loading, onMarkAllRead, onNotifClick, onDismiss, onClose }) {
+export function NotificationPanel({ notifications, loading, onMarkAllRead, onNotifClick, onDismiss, onClose, sidebarLeft }) {
   const unreadExists = notifications.some(n => !n.is_read);
 
   return (
     <div style={{
-      position: 'absolute', bottom: '100%', left: 0, marginBottom: 8,
-      width: 380, maxHeight: 480,
+      position: 'fixed',
+      left: sidebarLeft ?? 248,
+      bottom: 16,
+      width: 360,
+      maxHeight: 'calc(100vh - 80px)',
       background: DESIGN_SYSTEM.colors.bg.card,
       border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
       borderRadius: DESIGN_SYSTEM.radius.md,
-      boxShadow: DESIGN_SYSTEM.shadow.xl,
-      zIndex: 1000, display: 'flex', flexDirection: 'column',
+      boxShadow: '0 8px 40px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4)',
+      zIndex: 2000, display: 'flex', flexDirection: 'column',
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+      animation: 'notifSlideIn 0.18s ease',
     }}>
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',

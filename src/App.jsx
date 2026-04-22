@@ -1040,7 +1040,7 @@ export default function SongPitch() {
             <img
               src="/songpitch-logo.png"
               alt="Coda-Vault"
-              style={{ width: 24, height: 24, objectFit: 'contain', filter: 'hue-rotate(282deg) saturate(0.75) brightness(0.95)' }}
+              style={{ width: 24, height: 24, objectFit: 'contain', filter: undefined }}
               onError={(e) => { e.target.style.display = 'none'; }}
             />
             <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: DESIGN_SYSTEM.font.body }}>Coda-Vault</span>
@@ -1103,7 +1103,7 @@ export default function SongPitch() {
             <img
               src="/songpitch-logo.png"
               alt="Coda-Vault"
-              style={{ width: 32, height: 32, objectFit: 'contain', margin: isSidebarCollapsed ? '0 auto' : undefined, filter: 'hue-rotate(282deg) saturate(0.75) brightness(0.95)' }}
+              style={{ width: 32, height: 32, objectFit: 'contain', margin: isSidebarCollapsed ? '0 auto' : undefined, filter: undefined }}
               onError={(e) => { e.target.style.display = 'none'; }}
             />
             {!isSidebarCollapsed && (
@@ -1233,7 +1233,12 @@ export default function SongPitch() {
           <div ref={notifPanelRef} style={{ position: 'relative' }}>
             <button
               aria-label="Notifications"
-              onClick={() => setShowNotifPanel(p => !p)}
+              onClick={() => {
+                if (!showNotifPanel && notifications.some(n => !n.is_read)) {
+                  handleMarkAllRead();
+                }
+                setShowNotifPanel(p => !p);
+              }}
               style={{
                 width: "100%",
                 display: "flex",
@@ -1293,6 +1298,7 @@ export default function SongPitch() {
                 onNotifClick={handleNotifClick}
                 onDismiss={handleDismiss}
                 onClose={() => setShowNotifPanel(false)}
+                sidebarLeft={desktopSidebarWidth + 8}
               />
             )}
           </div>
