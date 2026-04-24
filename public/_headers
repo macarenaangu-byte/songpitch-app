@@ -1,0 +1,24 @@
+# manifest.json and service worker must never be cached
+# so PWA installs always get the latest name/icon/version
+
+/manifest.json
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/sw.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
+# Logos and icons — short cache so updates show quickly
+/logo192.png
+  Cache-Control: no-cache, must-revalidate
+
+/logo512.png
+  Cache-Control: no-cache, must-revalidate
+
+/favicon-32.png
+  Cache-Control: no-cache, must-revalidate
+
+/favicon-16.png
+  Cache-Control: no-cache, must-revalidate
+
+/songpitch-logo.png
+  Cache-Control: no-cache, must-revalidate
