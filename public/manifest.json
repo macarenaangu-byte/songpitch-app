@@ -1,11 +1,11 @@
 {
-  "short_name": "SongPitch",
-  "name": "SongPitch — Music Collaboration Platform",
-  "description": "Connect composers with music executives. Upload tracks, get AI genre analysis, and manage licensing splits.",
+  "short_name": "Coda-Vault",
+  "name": "Coda-Vault — Music Licensing Platform",
+  "description": "The AI platform connecting composers directly with music executives. Upload tracks, get instant AI analysis, and manage licensing splits.",
   "icons": [
     {
-      "src": "favicon.ico.png",
-      "sizes": "any",
+      "src": "favicon-32.png",
+      "sizes": "32x32",
       "type": "image/png"
     },
     {
@@ -21,9 +21,11 @@
       "purpose": "any maskable"
     }
   ],
-  "start_url": ".",
+  "start_url": "/?source=pwa",
+  "scope": "/",
   "display": "standalone",
-  "theme_color": "#0a0a0a",
-  "background_color": "#0a0a0a",
+  "orientation": "portrait-primary",
+  "theme_color": "#080A12",
+  "background_color": "#080A12",
   "categories": ["music", "business", "productivity"]
 }
