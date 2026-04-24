@@ -9,13 +9,13 @@
       "type": "image/png"
     },
     {
-      "src": "logo192.png",
+      "src": "cv-icon-192.png",
       "type": "image/png",
       "sizes": "192x192",
       "purpose": "any maskable"
     },
     {
-      "src": "logo512.png",
+      "src": "cv-icon-512.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "any maskable"

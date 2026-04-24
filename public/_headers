@@ -22,3 +22,9 @@
 
 /songpitch-logo.png
   Cache-Control: no-cache, must-revalidate
+
+/cv-icon-192.png
+  Cache-Control: no-cache, must-revalidate
+
+/cv-icon-512.png
+  Cache-Control: no-cache, must-revalidate
