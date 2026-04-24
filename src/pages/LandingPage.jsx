@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Music, Briefcase, Headphones, MessageCircle, Users, Shield, ChevronDown, ChevronUp, Play, Star, CheckCircle, Lock, Zap, Wand2, FileText } from 'lucide-react';
+import { Search, Music, Briefcase, Headphones, MessageCircle, Users, Shield, ChevronDown, ChevronUp, Play, Star, CheckCircle, Lock, Zap, Wand2, FileText, Download } from 'lucide-react';
 import { DESIGN_SYSTEM } from '../constants/designSystem';
+import { useInstallPrompt } from '../hooks/useInstallPrompt';
 
 const FAQ_ITEMS = [
   {
@@ -458,6 +459,7 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const { canInstall, install } = useInstallPrompt();
 
   useScrollReveal();
 
@@ -713,6 +715,24 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
           >
             <Play size={15} fill="currentColor" /> Watch Demo
           </a>
+          {canInstall && (
+            <button
+              onClick={install}
+              style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                background: 'transparent', color: DESIGN_SYSTEM.colors.text.secondary,
+                border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
+                borderRadius: 12, padding: '16px 32px', fontSize: 16, fontWeight: 600,
+                cursor: 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+                transition: 'all 0.2s ease',
+                width: isMobile ? '100%' : 'auto',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.brand.primary + '60'; e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.primary; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.border.light; e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.secondary; }}
+            >
+              <Download size={15} /> Download the App
+            </button>
+          )}
         </div>
 
         {/* Trust bar */}

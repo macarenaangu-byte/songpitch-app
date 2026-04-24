@@ -3,8 +3,9 @@ import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { StatCard } from '../components/StatCard';
 import { MiniChart } from '../components/MiniChart';
 import { supabase } from '../lib/supabase';
-import { CheckCircle, Circle, Users, Music, Briefcase, MessageCircle, FileText, Search, Eye, User, Sparkles, ArrowRight, Upload, Zap, X, Star } from 'lucide-react';
+import { CheckCircle, Circle, Users, Music, Briefcase, MessageCircle, FileText, Search, Eye, User, Sparkles, ArrowRight, Upload, Zap, X, Star, Download } from 'lucide-react';
 import UpgradeModal from '../components/UpgradeModal';
+import { useInstallPrompt } from '../hooks/useInstallPrompt';
 
 // Relative time helper
 function timeAgo(dateStr) {
@@ -111,6 +112,7 @@ export function DashboardPage({ user, stats, onNavigate, isMobile = false, analy
   const [founderModalOpen, setFounderModalOpen] = useState(false);
   const isFree = !user?.subscription_tier || user?.subscription_tier === 'free';
   const showFounderBanner = isFree && !founderBannerDismissed && !isAdminUser;
+  const { canInstall, install } = useInstallPrompt();
 
   // Onboarding walkthrough modal — show for new users (joined within last 14 days), dismissible
   const dismissKey = `sp_onboarding_dismissed_${user?.id}`;
@@ -243,6 +245,51 @@ export function DashboardPage({ user, stats, onNavigate, isMobile = false, analy
             onMouseLeave={e => e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.muted}
           >
             <X size={15} />
+          </button>
+        </div>
+      )}
+
+      {/* ── Install App Banner ────────────────────────────────────────────── */}
+      {canInstall && (
+        <div style={{
+          background: 'rgba(255,255,255,0.03)',
+          border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
+          borderRadius: DESIGN_SYSTEM.radius.md,
+          padding: isMobile ? '12px 16px' : '12px 20px',
+          marginBottom: 16,
+          display: 'flex', alignItems: 'center', gap: 14,
+        }}>
+          <div style={{
+            flexShrink: 0, width: 34, height: 34, borderRadius: 10,
+            background: 'rgba(255,255,255,0.06)', border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Download size={16} color={DESIGN_SYSTEM.colors.text.secondary} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontWeight: 600, fontSize: 13 }}>
+              Install Coda-Vault
+            </span>
+            <span style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, marginLeft: 8 }}>
+              Add to your desktop for instant access and notifications.
+            </span>
+          </div>
+          <button
+            onClick={install}
+            style={{
+              flexShrink: 0,
+              background: 'transparent',
+              color: DESIGN_SYSTEM.colors.brand.primary,
+              border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}50`,
+              borderRadius: 8, padding: '7px 16px',
+              fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              fontFamily: DESIGN_SYSTEM.font.body, whiteSpace: 'nowrap',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(201,168,76,0.1)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+          >
+            Install →
           </button>
         </div>
       )}

@@ -512,6 +512,15 @@ export default function SongPitch() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Show toast when a new app version is available
+  useEffect(() => {
+    const onUpdate = () => {
+      showToast.info('✨ New version available — reload to update');
+    };
+    window.addEventListener('sw-update-available', onUpdate);
+    return () => window.removeEventListener('sw-update-available', onUpdate);
+  }, []);
+
   // Global spacebar play/pause shortcut
   useEffect(() => {
     const handleKeyDown = (e) => {

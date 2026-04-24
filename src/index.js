@@ -39,7 +39,7 @@ if ('serviceWorker' in navigator) {
           const newWorker = reg.installing;
           newWorker?.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              console.log('[SW] New version available — reload to update');
+              window.dispatchEvent(new CustomEvent('sw-update-available'));
             }
           });
         });
