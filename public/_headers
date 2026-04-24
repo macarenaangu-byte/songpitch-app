@@ -28,3 +28,9 @@
 
 /cv-icon-512.png
   Cache-Control: no-cache, must-revalidate
+
+/app-icon-192.png
+  Cache-Control: no-cache, must-revalidate
+
+/app-icon-512.png
+  Cache-Control: no-cache, must-revalidate
