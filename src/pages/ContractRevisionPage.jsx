@@ -2,7 +2,7 @@
 // Executive Basic/Pro feature — review contract drafts via LegalSplits ML
 // and save results to the Contract Vault.
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Upload, FileText, AlertTriangle, CheckCircle, X, Lock, Trash2, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { supabase } from '../lib/supabase';
@@ -194,6 +194,7 @@ export function ContractRevisionPage({ userProfile }) {
   const [contractName, setContractName] = useState('');
   const [endpoint, setEndpoint] = useState('analyze-deal');
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [saving, setSaving]   = useState(false);
   const [result, setResult]   = useState(null);
   const [error, setError]     = useState('');
@@ -201,6 +202,25 @@ export function ContractRevisionPage({ userProfile }) {
   const [vaultLoading, setVaultLoading] = useState(false);
   const [selected, setSelected] = useState(null);
   const fileRef = useRef();
+  const progressRef = useRef(null);
+
+  // Animate a fake progress bar while the AI is working.
+  // Ticks quickly at first, then slows to a crawl near 90% — snaps to 100 on done.
+  const startProgress = useCallback(() => {
+    setProgress(0);
+    let current = 0;
+    progressRef.current = setInterval(() => {
+      current += current < 60 ? 3 : current < 80 ? 1.2 : 0.3;
+      if (current >= 90) current = 90;
+      setProgress(current);
+    }, 300);
+  }, []);
+
+  const finishProgress = useCallback(() => {
+    if (progressRef.current) { clearInterval(progressRef.current); progressRef.current = null; }
+    setProgress(100);
+    setTimeout(() => setProgress(0), 600);
+  }, []);
 
   // Load vault on mount
   useEffect(() => {
@@ -238,6 +258,7 @@ export function ContractRevisionPage({ userProfile }) {
     }
 
     setLoading(true); setError(''); setResult(null);
+    startProgress();
     try {
       const form = new FormData();
       form.append('file', file);
@@ -258,6 +279,7 @@ export function ContractRevisionPage({ userProfile }) {
     } catch (err) {
       setError(err.message);
     } finally {
+      finishProgress();
       setLoading(false);
     }
   };
@@ -404,6 +426,31 @@ export function ContractRevisionPage({ userProfile }) {
             </div>
 
             {error && <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 10, padding: '10px 14px', marginBottom: 12, color: RED, fontSize: 13 }}>{error}</div>}
+
+            {/* Progress bar — only visible while loading */}
+            {loading && (
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                  <span style={{ fontSize: 11, color: '#7A7468', fontWeight: 600, letterSpacing: '0.5px' }}>
+                    Reading contract…
+                  </span>
+                  <span style={{ fontSize: 11, color: GOLD, fontWeight: 700 }}>{Math.round(progress)}%</span>
+                </div>
+                <div style={{ height: 4, background: 'rgba(255,255,255,0.07)', borderRadius: 999, overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%',
+                    width: `${progress}%`,
+                    borderRadius: 999,
+                    background: `linear-gradient(90deg, ${GOLD}, #A8832A)`,
+                    transition: 'width 0.3s ease',
+                    boxShadow: `0 0 8px rgba(201,168,76,0.5)`,
+                  }} />
+                </div>
+                <div style={{ fontSize: 10, color: '#4A4640', marginTop: 4 }}>
+                  AI analysis typically takes 15–30 seconds
+                </div>
+              </div>
+            )}
 
             <button onClick={analyze} disabled={!file || loading} style={{
               width: '100%', padding: '12px', borderRadius: 12, fontSize: 14, fontWeight: 700,
