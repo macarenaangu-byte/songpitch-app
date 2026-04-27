@@ -26,6 +26,8 @@ export function isPushSupported() {
 /** Register /sw.js and return the ServiceWorkerRegistration */
 export async function registerServiceWorker() {
   if (!isPushSupported()) return null;
+  // Skip registration in development — the SW breaks webpack HMR
+  if (process.env.NODE_ENV !== 'production') return null;
   try {
     const reg = await navigator.serviceWorker.register('/sw.js');
     return reg;

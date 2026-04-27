@@ -29,21 +29,33 @@ root.render(
 reportWebVitals();
 
 // ── PWA Service Worker Registration ─────────────────────────────────────────
+// Only register in production. In development, the SW's Cache First strategy
+// intercepts webpack hot-reload chunks and returns stale cached versions,
+// which breaks HMR and causes continuous page blink loops.
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker
-      .register('/sw.js')
-      .then((reg) => {
-        console.log('[SW] Registered:', reg.scope);
-        reg.addEventListener('updatefound', () => {
-          const newWorker = reg.installing;
-          newWorker?.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              window.dispatchEvent(new CustomEvent('sw-update-available'));
-            }
+  if (process.env.NODE_ENV === 'production') {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker
+        .register('/sw.js')
+        .then((reg) => {
+          console.log('[SW] Registered:', reg.scope);
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            newWorker?.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                window.dispatchEvent(new CustomEvent('sw-update-available'));
+              }
+            });
           });
-        });
-      })
-      .catch((err) => console.error('[SW] Registration failed:', err));
-  });
+        })
+        .catch((err) => console.error('[SW] Registration failed:', err));
+    });
+  } else {
+    // Development: unregister any previously installed SW so it stops
+    // interfering with webpack dev server's hot module replacement.
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      registrations.forEach((r) => r.unregister());
+      if (registrations.length) console.log('[SW] Unregistered', registrations.length, 'worker(s) in dev mode');
+    });
+  }
 }

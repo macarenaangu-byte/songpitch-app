@@ -2,7 +2,7 @@
 // Pro composer feature — upload a recording deal, distribution, publishing,
 // co-pub, or 360 agreement PDF and get a full LegalSplits ML analysis.
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Upload, FileText, AlertTriangle, CheckCircle, X, Lock, ChevronDown, ChevronUp, Music, UserCheck, Archive, Trash2, Clock } from 'lucide-react';
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { supabase } from '../lib/supabase';
@@ -51,11 +51,29 @@ export function DealAnalyzerPage({ userProfile }) {
   const [file, setFile]             = useState(null);
   const [contractName, setContractName] = useState('');
   const [loading, setLoading]       = useState(false);
+  const [progress, setProgress]     = useState(0);
   const [saving, setSaving]         = useState(false);
   const [result, setResult]         = useState(null);
   const [error, setError]           = useState('');
   const [endpoint, setEndpoint]     = useState('analyze-deal');
   const fileRef = useRef();
+  const progressRef = useRef(null);
+
+  const startProgress = useCallback(() => {
+    setProgress(0);
+    let current = 0;
+    progressRef.current = setInterval(() => {
+      current += current < 60 ? 3 : current < 80 ? 1.2 : 0.3;
+      if (current >= 90) current = 90;
+      setProgress(current);
+    }, 300);
+  }, []);
+
+  const finishProgress = useCallback(() => {
+    if (progressRef.current) { clearInterval(progressRef.current); progressRef.current = null; }
+    setProgress(100);
+    setTimeout(() => setProgress(0), 600);
+  }, []);
 
   // Vault
   const [vault, setVault]           = useState([]);
@@ -145,6 +163,7 @@ export function DealAnalyzerPage({ userProfile }) {
     if (!canUse) { setUpgradeModal(true); return; }
 
     setLoading(true); setError(''); setResult(null);
+    startProgress();
     try {
       const form = new FormData();
       form.append('file', file);
@@ -161,6 +180,7 @@ export function DealAnalyzerPage({ userProfile }) {
     } catch (err) {
       setError(err.message);
     } finally {
+      finishProgress();
       setLoading(false);
     }
   };
@@ -364,6 +384,31 @@ export function DealAnalyzerPage({ userProfile }) {
           style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 10, padding: '9px 13px', color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, boxSizing: 'border-box' }}
         />
       </div>
+
+      {/* Progress bar — visible while AI reads the contract */}
+      {loading && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <span style={{ fontSize: 11, color: '#7A7468', fontWeight: 600, letterSpacing: '0.5px' }}>
+              Reading contract…
+            </span>
+            <span style={{ fontSize: 11, color: GOLD, fontWeight: 700 }}>{Math.round(progress)}%</span>
+          </div>
+          <div style={{ height: 4, background: 'rgba(255,255,255,0.07)', borderRadius: 999, overflow: 'hidden' }}>
+            <div style={{
+              height: '100%',
+              width: `${progress}%`,
+              borderRadius: 999,
+              background: `linear-gradient(90deg, ${GOLD}, #A8832A)`,
+              transition: 'width 0.3s ease',
+              boxShadow: `0 0 8px rgba(201,168,76,0.5)`,
+            }} />
+          </div>
+          <div style={{ fontSize: 10, color: '#4A4640', marginTop: 4 }}>
+            AI analysis typically takes 15–30 seconds
+          </div>
+        </div>
+      )}
 
       {/* Analyze button */}
       <button onClick={analyze} disabled={!file || loading} style={{
