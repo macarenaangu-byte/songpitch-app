@@ -1213,11 +1213,20 @@ export default function SplitGenerator({ userProfile }) {
                             {legacy ? 'Splits (Legacy)' : 'Composition / Publishing'}
                           </div>
                           {compSplits.map((s, j) => (
-                            <div key={j} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: DESIGN_SYSTEM.colors.bg.card, borderRadius: DESIGN_SYSTEM.radius.sm, marginBottom: 4 }}>
-                              <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: DESIGN_SYSTEM.fontSize.md }}>
-                                {s.name} <span style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: DESIGN_SYSTEM.fontSize.sm }}>({s.role})</span>
-                              </span>
-                              <span style={{ color: legacy ? DESIGN_SYSTEM.colors.text.secondary : COMP_COLOR, fontWeight: DESIGN_SYSTEM.fontWeight.bold }}>{s.percentage}%</span>
+                            <div key={j} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '8px 12px', background: DESIGN_SYSTEM.colors.bg.card, borderRadius: DESIGN_SYSTEM.radius.sm, marginBottom: 4 }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: DESIGN_SYSTEM.fontSize.md, fontWeight: 600 }}>
+                                  {s.name}
+                                </span>
+                                {s.role && <span style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: DESIGN_SYSTEM.fontSize.sm }}> · {s.role}</span>}
+                                {(s.ipi || s.pro) && (
+                                  <div style={{ display: 'flex', gap: 8, marginTop: 3, flexWrap: 'wrap' }}>
+                                    {s.pro && <span style={{ fontSize: 11, fontWeight: 600, padding: '1px 6px', borderRadius: 4, background: `${legacy ? DESIGN_SYSTEM.colors.text.secondary : COMP_COLOR}18`, color: legacy ? DESIGN_SYSTEM.colors.text.secondary : COMP_COLOR, border: `1px solid ${legacy ? DESIGN_SYSTEM.colors.text.secondary : COMP_COLOR}30` }}>{s.pro}</span>}
+                                    {s.ipi && <span style={{ fontSize: 11, fontFamily: 'monospace', color: DESIGN_SYSTEM.colors.text.muted, padding: '1px 6px', borderRadius: 4, background: DESIGN_SYSTEM.colors.bg.elevated, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>IPI {s.ipi}</span>}
+                                  </div>
+                                )}
+                              </div>
+                              <span style={{ color: legacy ? DESIGN_SYSTEM.colors.text.secondary : COMP_COLOR, fontWeight: DESIGN_SYSTEM.fontWeight.bold, marginLeft: 10, flexShrink: 0 }}>{s.percentage}%</span>
                             </div>
                           ))}
                         </div>
@@ -1230,11 +1239,20 @@ export default function SplitGenerator({ userProfile }) {
                             <Disc size={12} /> Master Recording
                           </div>
                           {mastSplits.map((s, j) => (
-                            <div key={j} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: DESIGN_SYSTEM.colors.bg.card, borderRadius: DESIGN_SYSTEM.radius.sm, marginBottom: 4 }}>
-                              <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: DESIGN_SYSTEM.fontSize.md }}>
-                                {s.name} <span style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: DESIGN_SYSTEM.fontSize.sm }}>({s.role})</span>
-                              </span>
-                              <span style={{ color: MASTER_COLOR, fontWeight: DESIGN_SYSTEM.fontWeight.bold }}>{s.percentage}%</span>
+                            <div key={j} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '8px 12px', background: DESIGN_SYSTEM.colors.bg.card, borderRadius: DESIGN_SYSTEM.radius.sm, marginBottom: 4 }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: DESIGN_SYSTEM.fontSize.md, fontWeight: 600 }}>
+                                  {s.name}
+                                </span>
+                                {s.role && <span style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: DESIGN_SYSTEM.fontSize.sm }}> · {s.role}</span>}
+                                {(s.ipi || s.pro) && (
+                                  <div style={{ display: 'flex', gap: 8, marginTop: 3, flexWrap: 'wrap' }}>
+                                    {s.pro && <span style={{ fontSize: 11, fontWeight: 600, padding: '1px 6px', borderRadius: 4, background: `${MASTER_COLOR}18`, color: MASTER_COLOR, border: `1px solid ${MASTER_COLOR}30` }}>{s.pro}</span>}
+                                    {s.ipi && <span style={{ fontSize: 11, fontFamily: 'monospace', color: DESIGN_SYSTEM.colors.text.muted, padding: '1px 6px', borderRadius: 4, background: DESIGN_SYSTEM.colors.bg.elevated, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>IPI {s.ipi}</span>}
+                                  </div>
+                                )}
+                              </div>
+                              <span style={{ color: MASTER_COLOR, fontWeight: DESIGN_SYSTEM.fontWeight.bold, marginLeft: 10, flexShrink: 0 }}>{s.percentage}%</span>
                             </div>
                           ))}
                         </div>
