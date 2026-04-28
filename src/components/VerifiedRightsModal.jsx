@@ -35,14 +35,44 @@ function SplitTable({ label, icon, accentColor, splits }) {
       </div>
       {splits.map((s, i) => (
         <div key={i} style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '8px 12px', background: DESIGN_SYSTEM.colors.bg.elevated,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+          padding: '10px 12px', background: DESIGN_SYSTEM.colors.bg.elevated,
           borderRadius: DESIGN_SYSTEM.radius.sm, marginBottom: 4,
         }}>
-          <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: DESIGN_SYSTEM.fontSize.md }}>
-            {s.name} <span style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: DESIGN_SYSTEM.fontSize.sm }}>({s.role})</span>
-          </span>
-          <span style={{ color: accentColor, fontWeight: 700 }}>{s.percentage}%</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: DESIGN_SYSTEM.fontSize.md, fontWeight: 600 }}>
+              {s.name}
+              {s.role && (
+                <span style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: DESIGN_SYSTEM.fontSize.sm, fontWeight: 400 }}> · {s.role}</span>
+              )}
+            </div>
+            {/* IPI and PRO — shown only if present */}
+            {(s.ipi || s.pro) && (
+              <div style={{ display: 'flex', gap: 10, marginTop: 4, flexWrap: 'wrap' }}>
+                {s.pro && (
+                  <span style={{
+                    fontSize: 11, fontWeight: 600, padding: '2px 7px',
+                    borderRadius: 4, background: `${accentColor}18`,
+                    color: accentColor, border: `1px solid ${accentColor}30`,
+                  }}>
+                    {s.pro}
+                  </span>
+                )}
+                {s.ipi && (
+                  <span style={{
+                    fontSize: 11, fontFamily: 'monospace',
+                    color: DESIGN_SYSTEM.colors.text.muted,
+                    padding: '2px 7px', borderRadius: 4,
+                    background: DESIGN_SYSTEM.colors.bg.primary,
+                    border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
+                  }}>
+                    IPI {s.ipi}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+          <span style={{ color: accentColor, fontWeight: 700, marginLeft: 12, flexShrink: 0 }}>{s.percentage}%</span>
         </div>
       ))}
       <div style={{
