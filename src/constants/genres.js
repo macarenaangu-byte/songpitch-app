@@ -2,11 +2,22 @@ import { DESIGN_SYSTEM } from './designSystem';
 
 // ─── GENRE OPTIONS ──────────────────────────────────────────────────────────
 export const GENRE_OPTIONS = [
+  // Core
   'Classical', 'Jazz', 'Electronic', 'Hip-Hop', 'Pop', 'Film Score',
   'Ambient', 'R&B', 'Afrobeats', 'World Music', 'Musical Theatre',
   'Rock', 'Country', 'Folk', 'Blues', 'Reggae', 'Latin', 'K-Pop', 'EDM', 'Indie',
   'Gospel', 'Lo-Fi', 'Corporate', 'Cinematic', "Children's",
   'Funk/Soul', 'Trap', 'New Age', 'Acoustic', 'House', 'Metal',
+  // Latin sub-genres
+  'Bachata', 'Cumbia', 'Merengue', 'Tango', 'Flamenco', 'Trap Latino', 'Reggaetón', 'Dancehall',
+  // Electronic sub-genres
+  'Techno', 'Trance', 'Drum & Bass', 'Dubstep', 'Synthwave',
+  // Rock / Alt sub-genres
+  'Punk', 'Hard Rock', 'Alternative Rock', 'Grunge', 'Progressive Rock',
+  // Classical sub-genres
+  'Opera', 'Baroque',
+  // Urban
+  'HyperPop', 'Urbano',
 ];
 
 // Profile badge definitions
