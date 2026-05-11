@@ -219,7 +219,7 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
       setEmailChangeMsg({ type: 'success', text: 'Confirmation sent to your new address. Check your inbox.' });
       setNewEmail('');
     } catch (err) {
-      setEmailChangeMsg({ type: 'error', text: friendlyError(err) });
+      setEmailChangeMsg({ type: 'error', text: err?.message || 'Something went wrong. Please try again.' });
     } finally {
       setEmailChanging(false);
     }
@@ -437,7 +437,7 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
             </div>
 
             {/* Email Notification Preferences */}
-            <div style={{ marginTop: 24, paddingTop: 20, borderTop: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
+            <div style={{ margin: '24px 28px 0', paddingTop: 20, borderTop: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
                 <Bell size={16} color={DESIGN_SYSTEM.colors.text.secondary} />
                 <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", margin: 0 }}>Email Notifications</h3>
@@ -725,11 +725,11 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
               )}
             </div>
 
-            <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={handleSave} disabled={saving || !firstName || !lastName} style={{ flex: 1, background: DESIGN_SYSTEM.colors.brand.primary, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 10, padding: "10px", fontWeight: 600, fontSize: 14, cursor: (saving || !firstName || !lastName) ? "not-allowed" : "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", opacity: (saving || !firstName || !lastName) ? 0.6 : 1 }}>
+            <div style={{ marginTop: 24, paddingTop: 20, paddingBottom: 20, borderTop: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, display: "flex", flexDirection: "column", gap: 10 }}>
+              <button onClick={handleSave} disabled={saving || !firstName || !lastName} style={{ width: "100%", background: DESIGN_SYSTEM.colors.brand.primary, color: "#fff", border: "none", borderRadius: 12, padding: "16px", fontWeight: 700, fontSize: 15, cursor: (saving || !firstName || !lastName) ? "not-allowed" : "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", opacity: (saving || !firstName || !lastName) ? 0.5 : 1, letterSpacing: '0.02em' }}>
                 {saving ? "Saving..." : "Save Changes"}
               </button>
-              <button onClick={() => setEditing(false)} style={{ background: "transparent", color: DESIGN_SYSTEM.colors.text.tertiary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 10, padding: "10px 20px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+              <button onClick={() => setEditing(false)} style={{ width: "100%", background: "transparent", color: DESIGN_SYSTEM.colors.text.secondary, border: `1.5px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 12, padding: "14px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
                 Cancel
               </button>
             </div>
