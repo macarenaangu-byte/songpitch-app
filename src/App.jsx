@@ -1010,7 +1010,7 @@ export default function SongPitch() {
       case "catalog": return (isExecutive || isAdmin) ? <CatalogPage audioPlayer={audioPlayer} isMobile={isMobileView} userProfile={userProfile} /> : fallback;
       case "opportunities": return <OpportunitiesPage userProfile={userProfile} onBadgeRefresh={loadSidebarBadges} isMobile={isMobileView} />;
       case "responses": return (isExecutive || isAdmin) ? <ResponsesPage userProfile={userProfile} onNavigate={setPage} onViewProfile={setViewingProfile} audioPlayer={audioPlayer} isMobile={isMobileView} /> : fallback;
-      case "messages": return <MessagesPage userProfile={userProfile} supportTargetUserId={supportTargetUserId} supportOpenToken={supportOpenToken} onBadgeRefresh={loadSidebarBadges} onActiveConversationChange={setActiveMessageConversationId} isMobile={isMobileView} />;
+      case "messages": return <MessagesPage userProfile={userProfile} supportTargetUserId={supportTargetUserId} supportOpenToken={supportOpenToken} onBadgeRefresh={loadSidebarBadges} onActiveConversationChange={setActiveMessageConversationId} isMobile={isMobileView} audioPlayer={audioPlayer} />;
       case "portfolio": return (isComposer || isAdmin) ? <PortfolioPage userProfile={userProfile} audioPlayer={audioPlayer} isMobile={isMobileView} /> : fallback;
       case "profile": return <ProfilePage user={{ ...userProfile, email: session.user.email }} onSignOut={handleSignOut} onProfileUpdate={() => loadUserProfile(session.user)} onDeleteAccount={handleDeleteAccount} />;
       case "splits": return (isComposer || isAdmin) ? <SplitGenerator userProfile={userProfile} /> : fallback;

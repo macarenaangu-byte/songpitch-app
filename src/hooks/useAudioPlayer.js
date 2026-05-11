@@ -21,7 +21,16 @@ export function useAudioPlayer() {
       setPlayingSong(null);
       setCurrentTime(0);
     };
-    const onTimeUpdate = () => setCurrentTime(audio.currentTime);
+    const onTimeUpdate = () => {
+      if (audio.currentTime >= 40) {
+        audio.pause();
+        audio.currentTime = 0;
+        setIsPlaying(false);
+        setCurrentTime(0);
+        return;
+      }
+      setCurrentTime(audio.currentTime);
+    };
     const onLoadedMetadata = () => setDuration(audio.duration);
     const onDurationChange = () => setDuration(audio.duration);
     const onError = () => {

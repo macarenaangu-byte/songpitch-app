@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Edit, LogOut, Upload, Trash2, Bell, CheckCircle, Plus, X } from 'lucide-react';
+import { Edit, LogOut, Upload, Trash2, Bell, CheckCircle, Plus, X, Music } from 'lucide-react';
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { GENRE_OPTIONS } from '../constants/genres';
 import { supabase } from '../lib/supabase';
@@ -41,6 +41,12 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
   const [company, setCompany] = useState(user.company || "");
   const [jobTitle, setJobTitle] = useState(user.job_title || "");
   const [projectTypes, setProjectTypes] = useState(user.project_types || []);
+
+  // Email change state
+  const [showEmailChange, setShowEmailChange] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [emailChanging, setEmailChanging] = useState(false);
+  const [emailChangeMsg, setEmailChangeMsg] = useState(null);
 
   // Avatar upload state
   const [avatarFile, setAvatarFile] = useState(null);
@@ -200,6 +206,25 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
     }
   };
 
+  const handleEmailChange = async () => {
+    if (!newEmail.trim() || !newEmail.includes('@')) {
+      setEmailChangeMsg({ type: 'error', text: 'Please enter a valid email address.' });
+      return;
+    }
+    setEmailChanging(true);
+    setEmailChangeMsg(null);
+    try {
+      const { error } = await supabase.auth.updateUser({ email: newEmail.trim() });
+      if (error) throw error;
+      setEmailChangeMsg({ type: 'success', text: 'Confirmation sent to your new address. Check your inbox.' });
+      setNewEmail('');
+    } catch (err) {
+      setEmailChangeMsg({ type: 'error', text: friendlyError(err) });
+    } finally {
+      setEmailChanging(false);
+    }
+  };
+
   return (
     <div className="page-enter" style={{ padding: "32px 36px", minHeight: "100%", overflowY: "auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
@@ -266,9 +291,42 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
             </div>
 
             <div style={{ margin: '0 28px', paddingTop: 20, borderTop: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-                <span style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13 }}>Email</span>
-                <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, fontWeight: 600 }}>{user.email}</span>
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13 }}>Email</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, fontWeight: 600 }}>{user.email}</span>
+                    <button
+                      onClick={() => { setShowEmailChange(v => !v); setEmailChangeMsg(null); setNewEmail(''); }}
+                      style={{ background: "none", border: "none", color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 12, cursor: "pointer", fontWeight: 600, padding: 0, fontFamily: "inherit" }}
+                    >
+                      {showEmailChange ? "Cancel" : "Change"}
+                    </button>
+                  </div>
+                </div>
+                {showEmailChange && (
+                  <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+                    <input
+                      type="email"
+                      value={newEmail}
+                      onChange={e => setNewEmail(e.target.value)}
+                      placeholder="New email address"
+                      style={{ background: DESIGN_SYSTEM.colors.bg.card, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "9px 12px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, outline: "none", fontFamily: "inherit" }}
+                    />
+                    <button
+                      onClick={handleEmailChange}
+                      disabled={emailChanging || !newEmail.trim()}
+                      style={{ background: DESIGN_SYSTEM.colors.brand.primary, border: "none", borderRadius: 8, padding: "9px 14px", color: "#fff", fontSize: 13, fontWeight: 600, cursor: emailChanging || !newEmail.trim() ? "not-allowed" : "pointer", opacity: emailChanging || !newEmail.trim() ? 0.6 : 1, fontFamily: "inherit", alignSelf: "flex-start" }}
+                    >
+                      {emailChanging ? "Sending..." : "Send confirmation"}
+                    </button>
+                    {emailChangeMsg && (
+                      <span style={{ fontSize: 12, color: emailChangeMsg.type === 'success' ? '#4ade80' : '#f87171' }}>
+                        {emailChangeMsg.text}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               {(user.account_type === 'composer' || user.account_type === 'admin') && (
@@ -317,26 +375,30 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
                       </div>
                     </div>
                   )}
-                  {user.sync_credits && user.sync_credits.length > 0 && (
-                    <div style={{ marginBottom: 12 }}>
-                      <span style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13, display: "block", marginBottom: 8 }}>Sync Credits</span>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <div style={{ marginBottom: 12 }}>
+                    <span style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', display: "block", marginBottom: 10 }}>Sync Credits</span>
+                    {user.sync_credits && user.sync_credits.length > 0 ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                         {user.sync_credits.map((c, i) => (
-                          <div key={i} style={{ fontSize: 13, color: DESIGN_SYSTEM.colors.text.primary, background: DESIGN_SYSTEM.colors.bg.primary, borderRadius: 6, padding: "6px 10px", border: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
-                            <span style={{ fontWeight: 600 }}>{c.project}</span>
-                            {c.platform && <span style={{ color: DESIGN_SYSTEM.colors.text.tertiary }}> — {c.platform}</span>}
-                            {c.year && <span style={{ color: DESIGN_SYSTEM.colors.text.muted }}>, {c.year}</span>}
+                          <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, background: DESIGN_SYSTEM.colors.bg.primary, borderRadius: 8, padding: "10px 12px", borderLeft: `3px solid #C9A84C`, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderLeftWidth: 3, borderLeftColor: '#C9A84C' }}>
+                            <div style={{ width: 28, height: 28, borderRadius: 6, background: '#C9A84C18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                              <Music size={13} color="#C9A84C" />
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: DESIGN_SYSTEM.colors.text.primary, lineHeight: 1.3 }}>{c.project}</div>
+                              {(c.platform || c.year) && (
+                                <div style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.text.tertiary, marginTop: 2 }}>
+                                  {c.platform}{c.platform && c.year ? ' · ' : ''}{c.year}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>
-                    </div>
-                  )}
-                  {(!user.sync_credits || user.sync_credits.length === 0) && (
-                    <div style={{ marginBottom: 12 }}>
-                      <span style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 13, display: "block", marginBottom: 4 }}>Sync Credits</span>
+                    ) : (
                       <button onClick={() => setEditing(true)} style={{ background: 'transparent', border: 'none', color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>+ Add your first sync credit</button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </>
               )}
 
@@ -561,13 +623,21 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                           {syncCredits.map((credit, i) => (
-                            <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: 6, alignItems: 'center', background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: '8px 10px' }}>
-                              <input type="text" value={credit.project} onChange={e => { const u = [...syncCredits]; u[i] = { ...u[i], project: e.target.value }; setSyncCredits(u); }} placeholder="Project name *" style={{ background: 'transparent', border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: '6px 8px', color: DESIGN_SYSTEM.colors.text.primary, fontSize: 12, outline: 'none', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }} />
-                              <input type="text" value={credit.platform} onChange={e => { const u = [...syncCredits]; u[i] = { ...u[i], platform: e.target.value }; setSyncCredits(u); }} placeholder="Platform / Network" style={{ background: 'transparent', border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: '6px 8px', color: DESIGN_SYSTEM.colors.text.primary, fontSize: 12, outline: 'none', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }} />
-                              <input type="text" value={credit.year} onChange={e => { const u = [...syncCredits]; u[i] = { ...u[i], year: e.target.value }; setSyncCredits(u); }} placeholder="Year" style={{ background: 'transparent', border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: '6px 8px', color: DESIGN_SYSTEM.colors.text.primary, fontSize: 12, outline: 'none', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", width: 60 }} />
-                              <button type="button" onClick={() => setSyncCredits(prev => prev.filter((_, idx) => idx !== i))} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 4, color: DESIGN_SYSTEM.colors.text.muted, display: 'flex', alignItems: 'center' }}>
-                                <X size={14} />
-                              </button>
+                            <div key={i} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderLeftWidth: 3, borderLeftColor: '#C9A84C', borderRadius: 8, padding: '10px 12px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                                <div style={{ width: 24, height: 24, borderRadius: 5, background: '#C9A84C18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                  <Music size={12} color="#C9A84C" />
+                                </div>
+                                <span style={{ fontSize: 12, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.secondary }}>Credit {i + 1}</span>
+                                <button type="button" onClick={() => setSyncCredits(prev => prev.filter((_, idx) => idx !== i))} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 2, color: DESIGN_SYSTEM.colors.text.muted, display: 'flex', alignItems: 'center', marginLeft: 'auto' }}>
+                                  <X size={14} />
+                                </button>
+                              </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px', gap: 6 }}>
+                                <input type="text" value={credit.project} onChange={e => { const u = [...syncCredits]; u[i] = { ...u[i], project: e.target.value }; setSyncCredits(u); }} placeholder="Project name *" style={{ background: DESIGN_SYSTEM.colors.bg.card, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: '7px 10px', color: DESIGN_SYSTEM.colors.text.primary, fontSize: 12, outline: 'none', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }} />
+                                <input type="text" value={credit.platform} onChange={e => { const u = [...syncCredits]; u[i] = { ...u[i], platform: e.target.value }; setSyncCredits(u); }} placeholder="Platform / Network" style={{ background: DESIGN_SYSTEM.colors.bg.card, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: '7px 10px', color: DESIGN_SYSTEM.colors.text.primary, fontSize: 12, outline: 'none', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }} />
+                                <input type="text" value={credit.year} onChange={e => { const u = [...syncCredits]; u[i] = { ...u[i], year: e.target.value }; setSyncCredits(u); }} placeholder="Year" style={{ background: DESIGN_SYSTEM.colors.bg.card, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, padding: '7px 10px', color: DESIGN_SYSTEM.colors.text.primary, fontSize: 12, outline: 'none', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }} />
+                              </div>
                             </div>
                           ))}
                         </div>

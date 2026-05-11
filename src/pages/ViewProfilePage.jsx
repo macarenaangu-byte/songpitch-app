@@ -137,7 +137,7 @@ export function ViewProfilePage({ profileUser, currentUser, onBack, onOpenMessag
 
           <div style={{ flex: 1 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-              <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 28, fontWeight: 800, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", margin: 0 }}>
+              <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 30, fontWeight: 800, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", margin: 0, letterSpacing: '-0.02em' }}>
                 {profileUser.first_name} {profileUser.last_name}
               </h1>
               {profileUser.is_one_stop && (
@@ -148,13 +148,13 @@ export function ViewProfilePage({ profileUser, currentUser, onBack, onOpenMessag
               )}
             </div>
             
-            <Badge color={DESIGN_SYSTEM.colors.brand.primary} style={{ marginBottom: 8 }}>
+            <Badge color={DESIGN_SYSTEM.colors.brand.primary} style={{ marginBottom: 8, padding: '5px 12px', fontSize: 12, fontWeight: 700, letterSpacing: '0.03em' }}>
               {profileUser.account_type === "admin" ? "👋 Founder" : profileUser.account_type === "music_executive" ? "Music Executive" : "Composer"}
             </Badge>
             <div style={{ marginBottom: 12 }}><ProfileBadges user={profileUser} /></div>
 
             {profileUser.bio && (
-              <p style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>{profileUser.bio}</p>
+              <p style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 15, lineHeight: 1.7, marginBottom: 16 }}>{profileUser.bio}</p>
             )}
 
             {/* UPGRADE: Portfolio & Social Links displayed neatly */}
@@ -183,10 +183,10 @@ export function ViewProfilePage({ profileUser, currentUser, onBack, onOpenMessag
               </div>
             )}
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 20, padding: "16px", background: DESIGN_SYSTEM.colors.bg.primary, borderRadius: 12, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 20 }}>
               {profileUser.location && (
-                <div>
-                  <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, marginBottom: 4 }}>Location</div>
+                <div style={{ background: DESIGN_SYSTEM.colors.bg.primary, borderRadius: 12, padding: "12px 14px", border: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
+                  <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Location</div>
                   <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, fontWeight: 600 }}>{profileUser.location}</div>
                 </div>
               )}
@@ -194,32 +194,32 @@ export function ViewProfilePage({ profileUser, currentUser, onBack, onOpenMessag
               {(profileUser.account_type === 'composer' || profileUser.account_type === 'admin') && (
                 <>
                   {(profileUser.pro_name || profileUser.pro) && (
-                    <div>
-                      <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, marginBottom: 4 }}>PRO</div>
+                    <div style={{ background: DESIGN_SYSTEM.colors.bg.primary, borderRadius: 12, padding: "12px 14px", border: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
+                      <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>PRO</div>
                       <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, fontWeight: 600 }}>{profileUser.pro_name || profileUser.pro}</div>
                     </div>
                   )}
                   {profileUser.cae_ipi && (
-                    <div>
-                      <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, marginBottom: 4 }}>CAE/IPI #</div>
+                    <div style={{ background: DESIGN_SYSTEM.colors.bg.primary, borderRadius: 12, padding: "12px 14px", border: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
+                      <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>CAE/IPI #</div>
                       <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, fontWeight: 600 }}>{profileUser.cae_ipi}</div>
                     </div>
                   )}
                   {profileUser.publishing_status && (
-                    <div>
-                      <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, marginBottom: 4 }}>Publishing Status</div>
+                    <div style={{ background: DESIGN_SYSTEM.colors.bg.primary, borderRadius: 12, padding: "12px 14px", border: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
+                      <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Publishing</div>
                       <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, fontWeight: 600 }}>{profileUser.publishing_status}</div>
                     </div>
                   )}
                   {profileUser.role && (
-                    <div>
-                      <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, marginBottom: 4 }}>Role</div>
+                    <div style={{ background: DESIGN_SYSTEM.colors.bg.primary, borderRadius: 12, padding: "12px 14px", border: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
+                      <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Role</div>
                       <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, fontWeight: 600 }}>{profileUser.role}</div>
                     </div>
                   )}
                   {profileUser.instruments && (
-                    <div>
-                      <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, marginBottom: 4 }}>Instruments</div>
+                    <div style={{ background: DESIGN_SYSTEM.colors.bg.primary, borderRadius: 12, padding: "12px 14px", border: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
+                      <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Instruments</div>
                       <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, fontWeight: 600 }}>{profileUser.instruments}</div>
                     </div>
                   )}
@@ -229,14 +229,14 @@ export function ViewProfilePage({ profileUser, currentUser, onBack, onOpenMessag
               {(profileUser.account_type === 'music_executive' || profileUser.account_type === 'admin') && (
                 <>
                   {profileUser.company && (
-                    <div>
-                      <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, marginBottom: 4 }}>Company</div>
+                    <div style={{ background: DESIGN_SYSTEM.colors.bg.primary, borderRadius: 12, padding: "12px 14px", border: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
+                      <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Company</div>
                       <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, fontWeight: 600 }}>{profileUser.company}</div>
                     </div>
                   )}
                   {profileUser.job_title && (
-                    <div>
-                      <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, marginBottom: 4 }}>Job Title</div>
+                    <div style={{ background: DESIGN_SYSTEM.colors.bg.primary, borderRadius: 12, padding: "12px 14px", border: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
+                      <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Job Title</div>
                       <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, fontWeight: 600 }}>{profileUser.job_title}</div>
                     </div>
                   )}
@@ -246,7 +246,7 @@ export function ViewProfilePage({ profileUser, currentUser, onBack, onOpenMessag
 
             {profileUser.genres && profileUser.genres.length > 0 && (
               <div style={{ marginBottom: 20 }}>
-                <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, marginBottom: 8 }}>
+                <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>
                   {profileUser.account_type === 'music_executive' ? 'Genres of Interest' : 'Genres'}
                 </div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -257,13 +257,21 @@ export function ViewProfilePage({ profileUser, currentUser, onBack, onOpenMessag
 
             {profileUser.sync_credits && profileUser.sync_credits.length > 0 && (
               <div style={{ marginBottom: 20 }}>
-                <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 12, marginBottom: 8 }}>Sync Credits</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>Sync Credits</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {profileUser.sync_credits.map((c, i) => (
-                    <div key={i} style={{ fontSize: 13, color: DESIGN_SYSTEM.colors.text.primary, background: DESIGN_SYSTEM.colors.bg.elevated || DESIGN_SYSTEM.colors.bg.primary, borderRadius: 6, padding: "6px 10px", border: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
-                      <span style={{ fontWeight: 600 }}>{c.project}</span>
-                      {c.platform && <span style={{ color: DESIGN_SYSTEM.colors.text.tertiary }}> — {c.platform}</span>}
-                      {c.year && <span style={{ color: DESIGN_SYSTEM.colors.text.muted }}>, {c.year}</span>}
+                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, background: DESIGN_SYSTEM.colors.bg.elevated || DESIGN_SYSTEM.colors.bg.primary, borderRadius: 8, padding: "10px 12px", border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderLeftWidth: 3, borderLeftColor: '#C9A84C' }}>
+                      <div style={{ width: 28, height: 28, borderRadius: 6, background: '#C9A84C18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                        <Music size={13} color="#C9A84C" />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: DESIGN_SYSTEM.colors.text.primary, lineHeight: 1.3 }}>{c.project}</div>
+                        {(c.platform || c.year) && (
+                          <div style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.text.tertiary, marginTop: 2 }}>
+                            {c.platform}{c.platform && c.year ? ' · ' : ''}{c.year}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>

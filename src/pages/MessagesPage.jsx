@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Search, MessageCircle, Send, Pin, ArrowLeft } from "lucide-react";
+import { Search, MessageCircle, Send, Pin, ArrowLeft, Music, Play, Pause, X } from "lucide-react";
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { supabase } from '../lib/supabase';
 import { showToast } from '../utils/toast';
@@ -9,7 +9,7 @@ import { MessageListSkeleton } from '../components/Skeleton';
 import { useTier } from '../hooks/useTier';
 import UpgradeModal from '../components/UpgradeModal';
 
-export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToken, onBadgeRefresh, onActiveConversationChange, isMobile = false }) {
+export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToken, onBadgeRefresh, onActiveConversationChange, isMobile = false, audioPlayer }) {
   const { withinLimit, upgradeMessage } = useTier(userProfile);
   const [upgradeModal, setUpgradeModal] = useState({ open: false, feature: '' });
   const [conversations, setConversations] = useState([]);
@@ -20,6 +20,10 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
   const [sending, setSending] = useState(false);
   const [searchConv, setSearchConv] = useState("");
   const [pinnedChats, setPinnedChats] = useState(new Set());
+  const [composerSongs, setComposerSongs] = useState([]);
+  const [showDemoPicker, setShowDemoPicker] = useState(false);
+  const [selectedDemo, setSelectedDemo] = useState(null);
+  const isComposer = userProfile?.account_type === 'composer' || userProfile?.account_type === 'admin';
   const messagesEndRef = useRef(null);
   const currentPinnedUserId = userProfile?.user_id || userProfile?.id;
   const isFounderSupportUser = (u) => u?.account_type === 'admin' || u?.email === 'mangulo@songpitchhub.com';
@@ -36,6 +40,18 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
     loadPinnedChats();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!isComposer || !userProfile?.id) return;
+    supabase
+      .from('songs')
+      .select('id, title, duration, primary_genre, audio_url')
+      .eq('composer_id', userProfile.id)
+      .eq('verification_status', 'verified')
+      .order('created_at', { ascending: false })
+      .then(({ data }) => setComposerSongs(data || []));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfile?.id]);
 
   useEffect(() => {
     if (!supportTargetUserId || !supportOpenToken) return;
@@ -320,6 +336,9 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
             last_name,
             avatar_color,
             avatar_url
+          ),
+          demo_song:songs!messages_demo_song_id_fkey (
+            id, title, duration, primary_genre, audio_url
           )
         `)
         .eq('conversation_id', conversationId)
@@ -335,7 +354,8 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
 
   const sendMessage = async (e) => {
     e.preventDefault();
-    if (!messageText.trim() || !selectedConversation) return;
+    if (!messageText.trim() && !selectedDemo) return;
+    if (!selectedConversation) return;
 
     setSending(true);
     try {
@@ -344,13 +364,16 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
         .insert([{
           conversation_id: selectedConversation.id,
           sender_id: userProfile.id,
-          content: messageText.trim()
+          content: messageText.trim() || '',
+          demo_song_id: selectedDemo?.id ?? null
         }]);
 
       if (error) throw error;
 
       const sentText = messageText.trim();
       setMessageText("");
+      setSelectedDemo(null);
+      setShowDemoPicker(false);
       loadMessages(selectedConversation.id);
       loadConversations(); // Refresh to update last message
 
@@ -636,7 +659,27 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
                         lineHeight: 1.5,
                         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
                       }}>
-                        {msg.content}
+                        {msg.content && <div style={{ marginBottom: msg.demo_song ? 10 : 0 }}>{msg.content}</div>}
+                        {msg.demo_song && (
+                          <div style={{ background: isMe ? 'rgba(0,0,0,0.15)' : DESIGN_SYSTEM.colors.bg.primary, borderRadius: 10, padding: "10px 12px", display: 'flex', alignItems: 'center', gap: 10, border: `1px solid ${isMe ? 'rgba(255,255,255,0.1)' : DESIGN_SYSTEM.colors.border.light}` }}>
+                            <button
+                              type="button"
+                              onClick={() => audioPlayer?.play(msg.demo_song)}
+                              style={{ width: 34, height: 34, borderRadius: '50%', background: '#C9A84C', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                            >
+                              {audioPlayer?.playingSong?.id === msg.demo_song.id && audioPlayer?.isPlaying
+                                ? <Pause size={14} color="#fff" />
+                                : <Play size={14} color="#fff" />}
+                            </button>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: DESIGN_SYSTEM.colors.text.primary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{msg.demo_song.title}</div>
+                              <div style={{ fontSize: 11, color: DESIGN_SYSTEM.colors.text.tertiary, marginTop: 1 }}>
+                                {msg.demo_song.primary_genre}{msg.demo_song.primary_genre && msg.demo_song.duration ? ' · ' : ''}{msg.demo_song.duration ? `${Math.floor(msg.demo_song.duration / 60)}:${String(Math.round(msg.demo_song.duration % 60)).padStart(2, '0')}` : ''}
+                              </div>
+                            </div>
+                            <Music size={14} color="#C9A84C" style={{ flexShrink: 0 }} />
+                          </div>
+                        )}
                       </div>
                       <div style={{
                         color: DESIGN_SYSTEM.colors.text.muted,
@@ -664,12 +707,48 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
 
           {/* Message Input */}
           <div style={{ padding: isMobile ? "12px 16px" : "20px 24px", borderTop: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, background: DESIGN_SYSTEM.colors.bg.secondary }}>
+            {selectedDemo && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, background: '#C9A84C18', border: '1px solid #C9A84C33', borderRadius: 8, padding: '7px 10px' }}>
+                <Music size={13} color="#C9A84C" />
+                <span style={{ fontSize: 12, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.primary, flex: 1 }}>{selectedDemo.title}</span>
+                <button type="button" onClick={() => setSelectedDemo(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: DESIGN_SYSTEM.colors.text.muted, display: 'flex' }}>
+                  <X size={13} />
+                </button>
+              </div>
+            )}
+            {isComposer && showDemoPicker && (
+              <div style={{ marginBottom: 8, background: DESIGN_SYSTEM.colors.bg.card, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 10, maxHeight: 180, overflowY: 'auto' }}>
+                {composerSongs.length === 0 ? (
+                  <div style={{ padding: '12px 14px', fontSize: 13, color: DESIGN_SYSTEM.colors.text.muted }}>No verified songs yet.</div>
+                ) : composerSongs.map(song => (
+                  <button key={song.id} type="button" onClick={() => { setSelectedDemo(song); setShowDemoPicker(false); }} style={{ width: '100%', background: 'none', border: 'none', borderBottom: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left' }}>
+                    <div style={{ width: 28, height: 28, borderRadius: 6, background: '#C9A84C18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Music size={13} color="#C9A84C" />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.primary }}>{song.title}</div>
+                      <div style={{ fontSize: 11, color: DESIGN_SYSTEM.colors.text.tertiary }}>{song.primary_genre}{song.primary_genre && song.duration ? ' · ' : ''}{song.duration ? `${Math.floor(song.duration / 60)}:${String(Math.round(song.duration % 60)).padStart(2, '0')}` : ''}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
             <form onSubmit={sendMessage} style={{ display: "flex", gap: isMobile ? 8 : 12 }}>
+              {isComposer && (
+                <button
+                  type="button"
+                  onClick={() => setShowDemoPicker(v => !v)}
+                  title="Attach a demo"
+                  style={{ background: showDemoPicker ? '#C9A84C22' : DESIGN_SYSTEM.colors.bg.card, border: `1px solid ${showDemoPicker ? '#C9A84C' : DESIGN_SYSTEM.colors.border.light}`, borderRadius: 10, padding: '0 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#C9A84C', flexShrink: 0 }}
+                >
+                  <Music size={18} />
+                </button>
+              )}
               <input
                 type="text"
                 value={messageText}
                 onChange={e => setMessageText(e.target.value)}
-                placeholder="Type a message..."
+                placeholder={selectedDemo ? "Add a message (optional)..." : "Type a message..."}
                 disabled={sending}
                 style={{
                   flex: 1,
@@ -685,7 +764,7 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
               />
               <button
                 type="submit"
-                disabled={sending || !messageText.trim()}
+                disabled={sending || (!messageText.trim() && !selectedDemo)}
                 style={{
                   background: DESIGN_SYSTEM.colors.brand.primary,
                   color: DESIGN_SYSTEM.colors.text.primary,
@@ -694,9 +773,9 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
                   padding: isMobile ? "12px 16px" : "12px 24px",
                   fontWeight: 600,
                   fontSize: 14,
-                  cursor: (sending || !messageText.trim()) ? "not-allowed" : "pointer",
+                  cursor: (sending || (!messageText.trim() && !selectedDemo)) ? "not-allowed" : "pointer",
                   fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-                  opacity: (sending || !messageText.trim()) ? 0.6 : 1,
+                  opacity: (sending || (!messageText.trim() && !selectedDemo)) ? 0.6 : 1,
                   display: "flex",
                   alignItems: "center",
                   gap: 6
