@@ -23,7 +23,7 @@ export function DMCAPage({ onBack }) {
       <p>Please send DMCA takedown notices to:</p>
       <p style={{ background: 'rgba(255,255,255,0.05)', padding: '16px 20px', borderRadius: 8, margin: '12px 0', border: '1px solid rgba(255,255,255,0.1)' }}>
         <strong>Coda-Vault DMCA Agent</strong><br />
-        Email: dmca@songpitchhub.com<br />
+        Email: dmca@coda-vault.com<br />
         Subject line: DMCA Takedown Request
       </p>
 

@@ -27,7 +27,7 @@ export function TermsOfServicePage({ onBack }) {
   const h3Style = { fontSize: 17, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.primary, marginTop: 24, marginBottom: 8 };
   return (
     <LegalPageLayout title="Terms of Service" onBack={onBack}>
-      <p>Welcome to Coda-Vault ("Platform", "we", "us", "our"). By accessing or using our platform at songpitchhub.com, you agree to be bound by these Terms of Service ("Terms"). If you do not agree, do not use the Platform.</p>
+      <p>Welcome to Coda-Vault ("Platform", "we", "us", "our"). By accessing or using our platform at www.coda-vault.com, you agree to be bound by these Terms of Service ("Terms"). If you do not agree, do not use the Platform.</p>
 
       <h2 style={h2Style}>1. Definitions</h2>
       <p><strong>"User"</strong> means any individual who creates an account on the Platform, including Composers and Music Executives.</p>
@@ -83,7 +83,7 @@ export function TermsOfServicePage({ onBack }) {
       <p>These Terms shall be governed by and construed in accordance with the laws of the State of California, United States, without regard to conflict of law provisions.</p>
 
       <h2 style={h2Style}>13. Contact</h2>
-      <p>For questions about these Terms, contact us at <a href="mailto:mangulo@songpitchhub.com" style={{ color: DESIGN_SYSTEM.colors.brand.accent }}>mangulo@songpitchhub.com</a>.</p>
+      <p>For questions about these Terms, contact us at <a href="mailto:hello@coda-vault.com" style={{ color: DESIGN_SYSTEM.colors.brand.accent }}>hello@coda-vault.com</a>.</p>
     </LegalPageLayout>
   );
 }

@@ -26,7 +26,7 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
   const isComposer = userProfile?.account_type === 'composer' || userProfile?.account_type === 'admin';
   const messagesEndRef = useRef(null);
   const currentPinnedUserId = userProfile?.user_id || userProfile?.id;
-  const isFounderSupportUser = (u) => u?.account_type === 'admin' || u?.email === 'mangulo@songpitchhub.com';
+  const isFounderSupportUser = (u) => u?.account_type === 'admin';
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {

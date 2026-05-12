@@ -6,7 +6,7 @@ export function PrivacyPolicyPage({ onBack }) {
   const h3Style = { fontSize: 17, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.primary, marginTop: 24, marginBottom: 8 };
   return (
     <LegalPageLayout title="Privacy Policy" onBack={onBack}>
-      <p>Coda-Vault ("we", "us", "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you use our platform at songpitchhub.com.</p>
+      <p>Coda-Vault ("we", "us", "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you use our platform at www.coda-vault.com.</p>
 
       <h2 style={h2Style}>1. Information We Collect</h2>
       <h3 style={h3Style}>1.1 Account Information</h3>
@@ -66,7 +66,7 @@ export function PrivacyPolicyPage({ onBack }) {
       <p>We may update this Privacy Policy from time to time. We will notify registered Users of material changes via email or in-app notification. The "Last updated" date at the top reflects the most recent revision.</p>
 
       <h2 style={h2Style}>10. Contact</h2>
-      <p>For privacy-related questions or data requests, contact us at <a href="mailto:mangulo@songpitchhub.com" style={{ color: DESIGN_SYSTEM.colors.brand.accent }}>mangulo@songpitchhub.com</a>.</p>
+      <p>For privacy-related questions or data requests, contact us at <a href="mailto:hello@coda-vault.com" style={{ color: DESIGN_SYSTEM.colors.brand.accent }}>hello@coda-vault.com</a>.</p>
     </LegalPageLayout>
   );
 }

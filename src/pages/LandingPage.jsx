@@ -1294,7 +1294,7 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
                       ))}
                     </div>
                     <div style={{ flex: 1, background: 'rgba(255,255,255,0.07)', borderRadius: 7, padding: '5px 14px', fontSize: 12, color: DESIGN_SYSTEM.colors.text.muted, fontFamily: 'monospace' }}>
-                      app.songpitchhub.com
+                      app.coda-vault.com
                     </div>
                     <div style={{ fontSize: 10, color: accent, background: `${accent}15`, border: `1px solid ${accent}35`, borderRadius: 5, padding: '3px 8px', fontWeight: 700, whiteSpace: 'nowrap' }}>
                       {howTab === 'composer' ? '🎵 Composer' : '🎬 Executive'}
