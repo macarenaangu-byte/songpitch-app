@@ -651,7 +651,7 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
       {/* ── Hero ────────────────────────────────────────────────────────── */}
       <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "60px 20px 40px" : "80px 48px 60px", textAlign: "center" }}>
 
-        {/* Founding Member badge */}
+        {/* Composer offer badge */}
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 8,
@@ -661,7 +661,7 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
           }}>
             <Star size={14} color={DESIGN_SYSTEM.colors.brand.primary} fill={DESIGN_SYSTEM.colors.brand.primary} />
             <span style={{ color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 13, fontWeight: 700 }}>
-              Founding Member Access — Free While We Build
+              🎵 Composers · 6 Months Pro Free · Code: FOUNDER2026
             </span>
           </div>
         </div>
@@ -677,9 +677,31 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
           </span>
         </h1>
 
-        <p style={{ fontSize: isMobile ? 16 : 20, color: DESIGN_SYSTEM.colors.text.secondary, maxWidth: isMobile ? '100%' : 560, margin: "0 auto 40px", lineHeight: 1.7 }}>
-          The AI-powered sync licensing platform that handles the metadata, split sheets, and pitching — so you can focus on the music.
+        <p style={{ fontSize: isMobile ? 16 : 20, color: DESIGN_SYSTEM.colors.text.secondary, maxWidth: isMobile ? '100%' : 600, margin: "0 auto 32px", lineHeight: 1.7 }}>
+          Not just a sync marketplace. Generate split sheets, analyze music contracts with AI, polish your pitches, and get your music in front of real supervisors — everything a working composer needs, in one place.
         </p>
+
+        {/* Feature pills */}
+        <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 36 }}>
+          {[
+            { emoji: '📄', label: 'Split Sheets', desc: 'Legal docs in seconds' },
+            { emoji: '🔍', label: 'Deal Analyzer', desc: 'Break down any contract' },
+            { emoji: '✍️', label: 'Pitch Polish', desc: 'AI refines your voice' },
+            { emoji: '🎵', label: 'Song Analyzer', desc: 'BPM, key & mood auto-detected' },
+          ].map(({ emoji, label, desc }) => (
+            <div key={label} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              background: 'rgba(255,255,255,0.04)', border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
+              borderRadius: 12, padding: '9px 14px',
+            }}>
+              <span style={{ fontSize: 15 }}>{emoji}</span>
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, fontWeight: 700, lineHeight: 1.2 }}>{label}</div>
+                <div style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 11, lineHeight: 1.3 }}>{desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
 
         <div className="reveal reveal-delay-1" style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'center', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginBottom: 48 }}>
           <button
@@ -695,7 +717,7 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
             onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 12px 36px rgba(201,168,76,0.5)'; }}
             onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(201,168,76,0.4)'; }}
           >
-            Join Free — No Credit Card
+            Claim 6 Months Pro Free →
           </button>
           <a
             href="#demo"
@@ -737,11 +759,11 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
 
         {/* Trust bar */}
         <div className="reveal reveal-delay-2" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: isMobile ? 20 : 32, flexWrap: 'wrap', opacity: 0.7, marginBottom: 48 }}>
-          <StatCounter value={500} suffix="+" label="Founding Member Spots" />
-          <StatCounter value={100} suffix="%" label="Built for Sync" />
+          <StatCounter value={4} suffix="" label="AI Tools for Composers" />
+          <StatCounter value={100} suffix="%" label="Built for Composers" />
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: isMobile ? 28 : 36, fontWeight: 800, letterSpacing: '-0.02em', color: DESIGN_SYSTEM.colors.brand.primary, lineHeight: 1, fontFamily: DESIGN_SYSTEM.font.display }}>Now</div>
-            <div style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: isMobile ? 11 : 13, marginTop: 4, fontWeight: 500 }}>Free to Join</div>
+            <div style={{ fontSize: isMobile ? 28 : 36, fontWeight: 800, letterSpacing: '-0.02em', color: DESIGN_SYSTEM.colors.brand.primary, lineHeight: 1, fontFamily: DESIGN_SYSTEM.font.display }}>6 Mo</div>
+            <div style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: isMobile ? 11 : 13, marginTop: 4, fontWeight: 500 }}>Pro Free</div>
           </div>
         </div>
 
@@ -762,7 +784,7 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
           <div style={{ position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)', textAlign: 'center', whiteSpace: 'nowrap' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(8,10,18,0.72)', backdropFilter: 'blur(10px)', border: `1px solid ${DESIGN_SYSTEM.colors.border.medium}`, borderRadius: 12, padding: '10px 22px' }}>
               <div style={{ width: 7, height: 7, borderRadius: '50%', background: DESIGN_SYSTEM.colors.brand.primary, animation: 'goldPulse 2s ease-in-out infinite' }} />
-              <span style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 500 }}>Where great music meets the right ears</span>
+              <span style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 500 }}>Your music. Your rights. Your next placement.</span>
             </div>
           </div>
         </div>

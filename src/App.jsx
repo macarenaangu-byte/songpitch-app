@@ -850,10 +850,12 @@ export default function SongPitch() {
     }
   };
 
-  const handleSignOut = async () => {
-    await unsubscribeAndRemove(supabase);
-    await supabase.auth.signOut();
+  const handleSignOut = () => {
+    unsubscribeAndRemove(supabase).catch(() => {});
+    supabase.auth.signOut().catch(() => {});
+    setSession(null);
     setUserProfile(null);
+    setShowLanding(true);
     setPage("dashboard");
     window.history.replaceState(null, '', window.location.pathname);
   };
