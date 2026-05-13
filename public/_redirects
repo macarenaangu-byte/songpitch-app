@@ -1,7 +1,8 @@
+# FORCE REDIRECTS FOR GOOGLE (HTTP + HTTPS)
 http://songpitchhub.com/* https://www.coda-vault.com/:splat  301!
-https://songpitchhub.com/* https://www.coda-vault.com/:splat  301!
 http://www.songpitchhub.com/* https://www.coda-vault.com/:splat  301!
+https://songpitchhub.com/* https://www.coda-vault.com/:splat  301!
 https://www.songpitchhub.com/* https://www.coda-vault.com/:splat  301!
 
-
+# SPA FALLBACK (MUST BE LAST)
 /* /index.html   200
