@@ -1232,185 +1232,259 @@ export default function SplitGenerator({ userProfile }) {
       )}
 
       {/* ═══ GENERATE PDF TAB ═══ */}
-      {activeTab === 'generate' && (
-        <>
-          {genError && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: `${DESIGN_SYSTEM.colors.accent.red}12`, border: `1px solid ${DESIGN_SYSTEM.colors.accent.red}40`, borderRadius: DESIGN_SYSTEM.radius.sm, marginBottom: DESIGN_SYSTEM.spacing.md }}>
-              <AlertTriangle size={16} color={DESIGN_SYSTEM.colors.accent.red} />
-              <span style={{ color: DESIGN_SYSTEM.colors.accent.red, fontSize: DESIGN_SYSTEM.fontSize.sm }}>{genError}</span>
-            </div>
-          )}
+      {activeTab === 'generate' && (() => {
+        const doc = {
+          bg: '#f9f8f5',
+          card: '#ffffff',
+          border: '#d8d4cc',
+          borderLight: '#e8e4dc',
+          labelColor: '#8a8278',
+          textDark: '#1a1814',
+          textMid: '#4a4640',
+          inputBorder: '#c8c4bc',
+          infoBg: '#f0ede8',
+          pillSelected: { background: '#1a1814', color: '#fff', border: '1px solid #1a1814' },
+          pillUnselected: { background: 'transparent', color: '#4a4640', border: '1px solid #c8c4bc' },
+          serif: "Georgia, 'Times New Roman', serif",
+          sans: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+        };
+        const docLabel = { fontFamily: doc.sans, fontSize: 10, fontWeight: 600, color: doc.labelColor, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6, display: 'block' };
+        const docInput = { fontFamily: doc.sans, fontSize: 13, color: doc.textDark, background: 'transparent', border: 'none', borderBottom: `1px solid ${doc.inputBorder}`, borderRadius: 0, padding: '5px 0', width: '100%', outline: 'none' };
 
-          {/* Song info */}
-          <div style={styles.card}>
-            <div style={styles.sectionTitle}>Song Information</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 5 }}>Song Title *</label>
-                <input style={styles.textInput} value={genSongTitle} onChange={e => setGenSongTitle(e.target.value)} placeholder="e.g. Golden Hour" />
+        return (
+          <>
+            {genError && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#fff3f3', border: '1px solid #f5c6c6', borderRadius: 6, marginBottom: 16, fontFamily: doc.sans, fontSize: 13, color: '#c0392b' }}>
+                <AlertTriangle size={15} /> {genError}
               </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 5 }}>Date *</label>
-                <input style={styles.textInput} type="date" value={genDate} onChange={e => setGenDate(e.target.value)} />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 5 }}>ISRC</label>
-                <input style={styles.textInput} value={genIsrc} onChange={e => setGenIsrc(e.target.value)} placeholder="CC-XXX-YY-NNNNN" />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 5 }}>UPC</label>
-                <input style={styles.textInput} value={genUpc} onChange={e => setGenUpc(e.target.value)} placeholder="Optional" />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 5 }}>Record Label</label>
-                <input style={styles.textInput} value={genLabel} onChange={e => setGenLabel(e.target.value)} placeholder="e.g. Independent" />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 5 }}>Split Type *</label>
-                <select style={{ ...styles.textInput, cursor: 'pointer' }} value={genSplitType} onChange={e => setGenSplitType(e.target.value)}>
-                  <option value="composition">Composition</option>
-                  <option value="master">Master</option>
-                  <option value="both">Both</option>
-                </select>
-              </div>
-            </div>
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 5 }}>Notes</label>
-              <textarea style={{ ...styles.textInput, minHeight: 60, resize: 'vertical' }} value={genNotes} onChange={e => setGenNotes(e.target.value)} placeholder="Optional notes" />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <input type="checkbox" id="gen-samples" checked={genHasSamples} onChange={e => setGenHasSamples(e.target.checked)} style={{ width: 16, height: 16, accentColor: DESIGN_SYSTEM.colors.brand.primary, cursor: 'pointer' }} />
-              <label htmlFor="gen-samples" style={{ fontSize: 13, color: DESIGN_SYSTEM.colors.text.secondary, cursor: 'pointer' }}>Contains samples</label>
-            </div>
-            {genHasSamples && (
-              <textarea style={{ ...styles.textInput, marginTop: 10, minHeight: 56, resize: 'vertical' }} value={genSampleInfo} onChange={e => setGenSampleInfo(e.target.value)} placeholder="Describe the sample(s) used…" />
             )}
-          </div>
 
-          {/* Writers */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <div style={styles.categoryLabel(DESIGN_SYSTEM.colors.text.secondary)}><Music size={13} /> Writers ({genWriters.length})</div>
-            <button onClick={() => setGenWriters(prev => [...prev, blankWriter()])} style={styles.addBtn}><Plus size={14} /> Add Writer</button>
-          </div>
+            {/* Document card */}
+            <div style={{ background: doc.card, borderRadius: 10, border: `1px solid ${doc.border}`, overflow: 'hidden', fontFamily: doc.sans }}>
 
-          {genWriters.map((w, i) => (
-            <div key={i} style={{ ...styles.card, marginBottom: 10, borderLeft: `3px solid ${DESIGN_SYSTEM.colors.brand.primary}30` }}>
-              {/* Writer header */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: w._expanded ? 14 : 0 }}>
-                <span style={{ fontWeight: 700, fontSize: 14, color: DESIGN_SYSTEM.colors.text.primary }}>{w.legal_name || `Writer ${i + 1}`}</span>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button onClick={() => updateGenWriter(i, '_expanded', !w._expanded)} style={{ ...styles.removeBtn, color: DESIGN_SYSTEM.colors.text.muted }}>
-                    {w._expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                  </button>
-                  {genWriters.length > 1 && (
-                    <button onClick={() => setGenWriters(prev => prev.filter((_, idx) => idx !== i))} style={{ ...styles.removeBtn, color: DESIGN_SYSTEM.colors.accent.red }}>
-                      <X size={16} />
-                    </button>
-                  )}
+              {/* ── Document header ── */}
+              <div style={{ padding: '28px 32px 20px', borderBottom: `2px solid ${doc.textDark}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <h1 style={{ fontFamily: doc.serif, fontSize: 28, fontWeight: 700, color: doc.textDark, letterSpacing: '0.15em', margin: 0, textTransform: 'uppercase' }}>Split Sheet</h1>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 11, color: doc.labelColor, fontWeight: 600 }}>LegalSplits AI</div>
+                    <div style={{ fontSize: 10, color: doc.labelColor }}>legalsplits.ai</div>
+                  </div>
+                </div>
+
+                {/* Split type pills */}
+                <div style={{ display: 'flex', gap: 8, marginTop: 18, flexWrap: 'wrap' }}>
+                  {[['composition', 'Composition (Publishing)'], ['master', 'Master (Recording)'], ['both', 'Both']].map(([val, label]) => (
+                    <button key={val} onClick={() => setGenSplitType(val)} style={{ ...(genSplitType === val ? doc.pillSelected : doc.pillUnselected), borderRadius: 20, padding: '5px 16px', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: doc.sans, transition: 'all 0.15s' }}>{label}</button>
+                  ))}
                 </div>
               </div>
 
-              {w._expanded && (
-                <>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 4 }}>Legal Name *</label>
-                      <input style={styles.splitInput} value={w.legal_name} onChange={e => updateGenWriter(i, 'legal_name', e.target.value)} placeholder="Full legal name" />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 4 }}>Stage Name</label>
-                      <input style={styles.splitInput} value={w.stage_name} onChange={e => updateGenWriter(i, 'stage_name', e.target.value)} placeholder="Optional" />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 4 }}>Email</label>
-                      <input style={styles.splitInput} type="email" value={w.email} onChange={e => updateGenWriter(i, 'email', e.target.value)} placeholder="Optional" />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 4 }}>Role *</label>
-                      <select style={{ ...styles.splitInput, cursor: 'pointer' }} value={w.role} onChange={e => updateGenWriter(i, 'role', e.target.value)}>
-                        {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-                      </select>
-                    </div>
-                  </div>
+              {/* ── Song title ── */}
+              <div style={{ padding: '20px 32px', borderBottom: `1px solid ${doc.borderLight}` }}>
+                <label style={docLabel}>Song Title</label>
+                <input
+                  style={{ ...docInput, fontFamily: doc.serif, fontSize: 24, fontWeight: 700, letterSpacing: '0.01em', borderBottomColor: genSongTitle ? 'transparent' : doc.inputBorder }}
+                  value={genSongTitle}
+                  onChange={e => setGenSongTitle(e.target.value)}
+                  placeholder="Untitled"
+                />
+              </div>
 
-                  {/* Percentages */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: COMP_COLOR, marginBottom: 4 }}>Composition %</label>
-                      <input style={{ ...styles.pctInput(COMP_COLOR), width: '100%', textAlign: 'left' }} type="number" min="0" max="100" step="0.1" value={w.composition_percentage} onChange={e => updateGenWriter(i, 'composition_percentage', e.target.value)} />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: MASTER_COLOR, marginBottom: 4 }}>Master %</label>
-                      <input style={{ ...styles.pctInput(MASTER_COLOR), width: '100%', textAlign: 'left' }} type="number" min="0" max="100" step="0.1" value={w.master_percentage} onChange={e => updateGenWriter(i, 'master_percentage', e.target.value)} />
-                    </div>
+              {/* ── Date / ISRC / UPC ── */}
+              <div style={{ padding: '20px 32px', borderBottom: `1px solid ${doc.borderLight}` }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 24 }}>
+                  <div>
+                    <label style={docLabel}>Agreement Date *</label>
+                    <input style={docInput} type="date" value={genDate} onChange={e => setGenDate(e.target.value)} />
                   </div>
-
-                  {/* PRO + IPI */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 4 }}>PRO *</label>
-                      <select style={{ ...styles.splitInput, cursor: 'pointer' }} value={w.pro} onChange={e => updateGenWriter(i, 'pro', e.target.value)}>
-                        {PROS.map(p => <option key={p} value={p}>{p}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 4 }}>IPI Number</label>
-                      <input style={styles.splitInput} value={w.ipi} onChange={e => updateGenWriter(i, 'ipi', e.target.value)} placeholder="9–11 digits" />
-                    </div>
+                  <div>
+                    <label style={docLabel}>ISRC</label>
+                    <input style={docInput} value={genIsrc} onChange={e => setGenIsrc(e.target.value)} placeholder="CC-XXX-YY-NNNNN" />
                   </div>
-
-                  {/* Contribution notes */}
-                  <div style={{ marginBottom: 10 }}>
-                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 4 }}>Contribution Notes</label>
-                    <input style={styles.splitInput} value={w.contribution_notes} onChange={e => updateGenWriter(i, 'contribution_notes', e.target.value)} placeholder="e.g. wrote lyrics and melody for chorus" />
+                  <div>
+                    <label style={docLabel}>UPC</label>
+                    <input style={docInput} value={genUpc} onChange={e => setGenUpc(e.target.value)} placeholder="Universal Product Code" />
                   </div>
+                </div>
+              </div>
 
-                  {/* Publisher toggle */}
-                  <button onClick={() => updateGenWriter(i, '_showPublisher', !w._showPublisher)} style={{ ...styles.addBtn, marginBottom: w._showPublisher ? 10 : 0, fontSize: 12 }}>
-                    {w._showPublisher ? <ChevronUp size={13} /> : <Plus size={13} />}
-                    {w._showPublisher ? 'Hide Publisher' : 'Add Publisher'}
+              {/* ── Label / Notes ── */}
+              <div style={{ padding: '20px 32px', borderBottom: `1px solid ${doc.borderLight}` }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+                  <div>
+                    <label style={docLabel}>Record Label</label>
+                    <input style={docInput} value={genLabel} onChange={e => setGenLabel(e.target.value)} placeholder="Unsigned" />
+                  </div>
+                  <div>
+                    <label style={docLabel}>Notes</label>
+                    <input style={docInput} value={genNotes} onChange={e => setGenNotes(e.target.value)} placeholder="Additional notes or special terms" />
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Samples checkbox ── */}
+              <div style={{ padding: '16px 32px', borderBottom: `1px solid ${doc.borderLight}` }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13, color: doc.textMid, fontFamily: doc.sans }}>
+                  <input type="checkbox" checked={genHasSamples} onChange={e => setGenHasSamples(e.target.checked)} style={{ width: 15, height: 15, cursor: 'pointer', accentColor: doc.textDark }} />
+                  This song contains a sample from another recording
+                </label>
+                {genHasSamples && (
+                  <textarea style={{ ...docInput, marginTop: 12, borderBottom: `1px solid ${doc.inputBorder}`, resize: 'vertical', minHeight: 52, fontSize: 13 }} value={genSampleInfo} onChange={e => setGenSampleInfo(e.target.value)} placeholder="Describe the sample(s) used…" />
+                )}
+              </div>
+
+              {/* ── Legal boilerplate ── */}
+              <div style={{ padding: '16px 32px', borderBottom: `1px solid ${doc.borderLight}` }}>
+                <p style={{ fontFamily: doc.serif, fontStyle: 'italic', fontSize: 12, color: doc.labelColor, lineHeight: 1.6, margin: 0 }}>
+                  This Split Sheet Agreement is entered into by the parties listed below regarding the musical composition and/or sound recording identified herein. All parties agree that the ownership percentages set forth below are accurate and legally binding upon execution by all parties.
+                </p>
+              </div>
+
+              {/* ── Writer's share info box ── */}
+              <div style={{ padding: '14px 32px', borderBottom: `1px solid ${doc.borderLight}` }}>
+                <div style={{ background: doc.infoBg, borderRadius: 6, padding: '12px 16px' }}>
+                  <p style={{ fontFamily: doc.sans, fontSize: 12, color: doc.textMid, lineHeight: 1.6, margin: 0 }}>
+                    <strong>Writer's Share vs. Publisher's Share:</strong> Per industry standard (ASCAP/BMI/SESAC), each writer's ownership percentage is divided equally at the PRO level — 50% is paid as the Writer's Share (directly to the writer) and 50% as the Publisher's Share (to their publisher). Both shares are listed per writer below.
+                  </p>
+                </div>
+              </div>
+
+              {/* ── Contributors & Publishers ── */}
+              <div style={{ padding: '24px 32px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <h2 style={{ fontFamily: doc.sans, fontSize: 11, fontWeight: 700, color: doc.textDark, textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>Contributors &amp; Publishers</h2>
+                  <button onClick={() => setGenWriters(prev => [...prev, blankWriter()])} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', background: 'transparent', border: `1px solid ${doc.border}`, borderRadius: 6, fontSize: 12, color: doc.textMid, cursor: 'pointer', fontFamily: doc.sans, fontWeight: 500 }}>
+                    <Plus size={13} /> Add Writer
                   </button>
+                </div>
 
-                  {w._showPublisher && (
-                    <div style={{ padding: '12px 14px', background: DESIGN_SYSTEM.colors.bg.elevated, borderRadius: DESIGN_SYSTEM.radius.sm }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: DESIGN_SYSTEM.colors.text.muted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Publisher</div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
-                        <div>
-                          <label style={{ display: 'block', fontSize: 11, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 4 }}>Publisher Name</label>
-                          <input style={styles.splitInput} value={w.publisher.name} onChange={e => updateGenWriterPublisher(i, 'name', e.target.value)} placeholder="Publisher LLC" />
-                        </div>
-                        <div>
-                          <label style={{ display: 'block', fontSize: 11, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 4 }}>PRO</label>
-                          <select style={{ ...styles.splitInput, cursor: 'pointer' }} value={w.publisher.pro} onChange={e => updateGenWriterPublisher(i, 'pro', e.target.value)}>
-                            {PROS.map(p => <option key={p} value={p}>{p}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <label style={{ display: 'block', fontSize: 11, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 4 }}>Publisher IPI</label>
-                          <input style={styles.splitInput} value={w.publisher.ipi} onChange={e => updateGenWriterPublisher(i, 'ipi', e.target.value)} placeholder="Optional" />
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 20 }}>
-                          <input type="checkbox" id={`self-pub-${i}`} checked={w.publisher.is_self_published} onChange={e => updateGenWriterPublisher(i, 'is_self_published', e.target.checked)} style={{ width: 15, height: 15, accentColor: DESIGN_SYSTEM.colors.brand.primary, cursor: 'pointer' }} />
-                          <label htmlFor={`self-pub-${i}`} style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.text.secondary, cursor: 'pointer' }}>Self-published</label>
-                        </div>
+                {genWriters.map((w, i) => (
+                  <div key={i} style={{ border: `1px solid ${doc.border}`, borderRadius: 6, marginBottom: 12, overflow: 'hidden' }}>
+                    {/* Writer card header */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: doc.infoBg, borderBottom: w._expanded ? `1px solid ${doc.border}` : 'none' }}>
+                      <button onClick={() => updateGenWriter(i, '_expanded', !w._expanded)} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                        <span style={{ fontFamily: doc.sans, fontWeight: 600, fontSize: 13, color: doc.textDark }}>
+                          Writer {i + 1}{w.legal_name ? ` — ${w.legal_name}` : ''}
+                        </span>
+                        {w._expanded ? <ChevronUp size={14} color={doc.labelColor} /> : <ChevronDown size={14} color={doc.labelColor} />}
+                      </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <span style={{ fontFamily: doc.sans, fontSize: 12, color: doc.textMid }}>
+                          Comp: <strong>{w.composition_percentage || 0}%</strong>
+                        </span>
+                        {genWriters.length > 1 && (
+                          <button onClick={() => setGenWriters(prev => prev.filter((_, idx) => idx !== i))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: doc.labelColor, padding: 2, display: 'flex', alignItems: 'center' }}>
+                            <X size={15} />
+                          </button>
+                        )}
                       </div>
                     </div>
-                  )}
-                </>
-              )}
-            </div>
-          ))}
 
-          {/* Generate button */}
-          <button onClick={handleGeneratePdf} disabled={generating} style={{ ...styles.primaryBtn(generating), display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 4 }}>
-            {generating ? (
-              <><div style={styles.spinner} /> Generating PDF…</>
-            ) : (
-              <><Sparkles size={16} /> Generate & Download Split Sheet PDF</>
-            )}
-          </button>
-        </>
-      )}
+                    {/* Writer card body */}
+                    {w._expanded && (
+                      <div style={{ padding: '18px 16px' }}>
+                        {/* Row 1: Legal name / Stage name / Email */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20, marginBottom: 18 }}>
+                          <div>
+                            <label style={docLabel}>Legal Name *</label>
+                            <input style={docInput} value={w.legal_name} onChange={e => updateGenWriter(i, 'legal_name', e.target.value)} placeholder="Full legal name" />
+                          </div>
+                          <div>
+                            <label style={docLabel}>Stage / Artist Name</label>
+                            <input style={docInput} value={w.stage_name} onChange={e => updateGenWriter(i, 'stage_name', e.target.value)} placeholder="Optional" />
+                          </div>
+                          <div>
+                            <label style={docLabel}>Email Address</label>
+                            <input style={docInput} type="email" value={w.email} onChange={e => updateGenWriter(i, 'email', e.target.value)} placeholder="writer@email.com" />
+                          </div>
+                        </div>
+
+                        {/* Row 2: Role / PRO / IPI */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20, marginBottom: 18 }}>
+                          <div>
+                            <label style={docLabel}>Role / Contribution *</label>
+                            <select style={{ ...docInput, cursor: 'pointer' }} value={w.role} onChange={e => updateGenWriter(i, 'role', e.target.value)}>
+                              {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <label style={docLabel}>PRO Affiliation *</label>
+                            <select style={{ ...docInput, cursor: 'pointer' }} value={w.pro} onChange={e => updateGenWriter(i, 'pro', e.target.value)}>
+                              {PROS.map(p => <option key={p} value={p}>{p}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <label style={docLabel}>IPI / CAE Number</label>
+                            <input style={docInput} value={w.ipi} onChange={e => updateGenWriter(i, 'ipi', e.target.value)} placeholder="9–11 digit number" />
+                          </div>
+                        </div>
+
+                        {/* Row 3: Comp % / Master % / Contribution notes */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20, marginBottom: 14 }}>
+                          <div>
+                            <label style={{ ...docLabel, color: COMP_COLOR }}>Composition % *</label>
+                            <input style={{ ...docInput, borderBottomColor: COMP_COLOR + '80' }} type="number" min="0" max="100" step="0.1" value={w.composition_percentage} onChange={e => updateGenWriter(i, 'composition_percentage', e.target.value)} placeholder="0" />
+                          </div>
+                          <div>
+                            <label style={{ ...docLabel, color: MASTER_COLOR }}>Master %</label>
+                            <input style={{ ...docInput, borderBottomColor: MASTER_COLOR + '80' }} type="number" min="0" max="100" step="0.1" value={w.master_percentage} onChange={e => updateGenWriter(i, 'master_percentage', e.target.value)} placeholder="0" />
+                          </div>
+                          <div>
+                            <label style={docLabel}>Specific Contribution (Optional)</label>
+                            <input style={docInput} value={w.contribution_notes} onChange={e => updateGenWriter(i, 'contribution_notes', e.target.value)} placeholder="e.g. wrote chorus melody" />
+                          </div>
+                        </div>
+
+                        {/* Publisher toggle */}
+                        <button onClick={() => updateGenWriter(i, '_showPublisher', !w._showPublisher)} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: doc.labelColor, fontFamily: doc.sans, padding: 0, marginBottom: w._showPublisher ? 14 : 0 }}>
+                          {w._showPublisher ? <ChevronUp size={13} /> : <Plus size={13} />}
+                          {w._showPublisher ? 'Hide Publisher Details' : '+ Add Publisher Details'}
+                        </button>
+
+                        {w._showPublisher && (
+                          <div style={{ background: doc.infoBg, borderRadius: 6, padding: '14px 16px' }}>
+                            <div style={{ fontFamily: doc.sans, fontSize: 10, fontWeight: 700, color: doc.labelColor, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>Publisher</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 20, alignItems: 'end' }}>
+                              <div>
+                                <label style={docLabel}>Publisher Name</label>
+                                <input style={docInput} value={w.publisher.name} onChange={e => updateGenWriterPublisher(i, 'name', e.target.value)} placeholder="Publisher LLC" />
+                              </div>
+                              <div>
+                                <label style={docLabel}>PRO</label>
+                                <select style={{ ...docInput, cursor: 'pointer' }} value={w.publisher.pro} onChange={e => updateGenWriterPublisher(i, 'pro', e.target.value)}>
+                                  {PROS.map(p => <option key={p} value={p}>{p}</option>)}
+                                </select>
+                              </div>
+                              <div>
+                                <label style={docLabel}>Publisher IPI</label>
+                                <input style={docInput} value={w.publisher.ipi} onChange={e => updateGenWriterPublisher(i, 'ipi', e.target.value)} placeholder="Optional" />
+                              </div>
+                              <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 12, color: doc.textMid, fontFamily: doc.sans, paddingBottom: 6, whiteSpace: 'nowrap' }}>
+                                <input type="checkbox" checked={w.publisher.is_self_published} onChange={e => updateGenWriterPublisher(i, 'is_self_published', e.target.checked)} style={{ width: 14, height: 14, cursor: 'pointer' }} />
+                                Self-published
+                              </label>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Generate button */}
+            <button onClick={handleGeneratePdf} disabled={generating} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', marginTop: 16, padding: '13px 0', background: generating ? '#888' : '#1a1814', color: '#fff', border: 'none', borderRadius: 8, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", fontWeight: 600, fontSize: 14, cursor: generating ? 'not-allowed' : 'pointer', letterSpacing: '0.02em' }}>
+              {generating ? (
+                <><div style={styles.spinner} /> Generating PDF…</>
+              ) : (
+                <><Download size={16} /> Generate &amp; Download Split Sheet PDF</>
+              )}
+            </button>
+          </>
+        );
+      })()}
 
       {/* ═══ HISTORY TAB ═══ */}
       {activeTab === 'history' && (
