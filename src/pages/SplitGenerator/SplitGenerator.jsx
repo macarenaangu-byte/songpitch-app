@@ -271,17 +271,6 @@ const distributeEvenly = (splits) => {
   }));
 };
 
-/** Round all percentages to 2 decimals, adjust first contributor so total is exactly 100 */
-const normalizePercentages = (splits) => {
-  if (!splits || splits.length === 0) return splits;
-  const rounded = splits.map(s => ({ ...s, percentage: Math.round((parseFloat(s.percentage) || 0) * 100) / 100 }));
-  const sum = rounded.reduce((acc, s) => acc + s.percentage, 0);
-  const diff = Math.round((100 - sum) * 100) / 100;
-  if (diff !== 0 && rounded.length > 0) {
-    rounded[0] = { ...rounded[0], percentage: Math.round((rounded[0].percentage + diff) * 100) / 100 };
-  }
-  return rounded;
-};
 
 const formatDate = (iso) => {
   const d = new Date(iso);

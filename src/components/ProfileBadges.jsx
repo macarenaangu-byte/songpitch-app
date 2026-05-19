@@ -4,22 +4,14 @@ export function ProfileBadges({ user }) {
   // Derive badges from user data
   const badges = [];
 
-  // All alpha users get this badge except founders/admins
-  if (user.account_type !== 'admin') {
-    badges.push('alpha_tester');
-  }
-
-  // Profile completion badges — milestone tiers
+  // Profile completion badges — only show when fully complete
   const isComposer = user.account_type === 'composer';
   const fields = isComposer
     ? [user.bio, user.location, user.avatar_url, user.pro_name || user.pro, user.role, Array.isArray(user.genres) && user.genres.length > 0, user.instruments]
     : [user.bio, user.location, user.avatar_url, user.company, user.job_title, Array.isArray(user.genres) && user.genres.length > 0];
   const filled = fields.filter(Boolean).length;
-  const completionPct = Math.round((filled / fields.length) * 100);
   if (filled >= fields.length) {
     badges.push(isComposer ? 'verified_composer' : 'verified_exec');
-  } else if (completionPct >= 50) {
-    badges.push('rising_star');
   }
 
   // Also include any badges stored in the database
