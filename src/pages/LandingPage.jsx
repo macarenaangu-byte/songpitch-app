@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Music, Briefcase, Headphones, MessageCircle, Users, Shield, ChevronDown, ChevronUp, Play, Star, CheckCircle, Lock, Zap, Wand2, FileText, Download } from 'lucide-react';
+import { Play, Star, CheckCircle, Download } from 'lucide-react';
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
 
