@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Edit, LogOut, Upload, Trash2, Bell, CheckCircle, Plus, X, Music } from 'lucide-react';
+import { Edit, LogOut, Upload, Trash2, Bell, CheckCircle, Plus, X, Music, CreditCard, AlertCircle } from 'lucide-react';
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { GENRE_OPTIONS } from '../constants/genres';
 import { supabase } from '../lib/supabase';
@@ -47,6 +47,28 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
   const [newEmail, setNewEmail] = useState('');
   const [emailChanging, setEmailChanging] = useState(false);
   const [emailChangeMsg, setEmailChangeMsg] = useState(null);
+
+  // Subscription cancel state
+  const [cancelingSubscription, setCancelingSubscription] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState(user.subscription_status || 'active');
+
+  const handleCancelSubscription = async () => {
+    if (!window.confirm('Your plan stays active until the end of the billing period, then downgrades to Free. Continue?')) return;
+    setCancelingSubscription(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await supabase.functions.invoke('cancel-subscription', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (res.error) throw new Error(res.error.message);
+      setSubscriptionStatus('canceling');
+      showToast.success('Subscription cancelled — active until end of billing period.');
+    } catch (err) {
+      showToast.error(err.message || 'Could not cancel subscription. Please try again.');
+    } finally {
+      setCancelingSubscription(false);
+    }
+  };
 
   // Avatar upload state
   const [avatarFile, setAvatarFile] = useState(null);
@@ -483,6 +505,48 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
             </div>
 
             <div style={{ padding: '0 28px 28px' }}>
+
+              {/* ── Subscription section ── */}
+              {user.subscription_tier && user.subscription_tier !== 'free' && user.subscription_tier !== 'admin' && (
+                <div style={{ marginTop: 20, padding: '14px 16px', background: DESIGN_SYSTEM.colors.bg.elevated, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <CreditCard size={14} color={DESIGN_SYSTEM.colors.brand.primary} />
+                      <span style={{ fontSize: 13, fontWeight: 700, color: DESIGN_SYSTEM.colors.text.primary, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", textTransform: 'capitalize' }}>
+                        {user.subscription_tier} Plan
+                      </span>
+                    </div>
+                    {subscriptionStatus === 'canceling' ? (
+                      <span style={{ fontSize: 11, fontWeight: 600, color: DESIGN_SYSTEM.colors.accent.amber, background: `${DESIGN_SYSTEM.colors.accent.amber}15`, border: `1px solid ${DESIGN_SYSTEM.colors.accent.amber}30`, borderRadius: 20, padding: '2px 8px' }}>
+                        Cancels at period end
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: 11, fontWeight: 600, color: '#4ade80', background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.25)', borderRadius: 20, padding: '2px 8px' }}>
+                        Active
+                      </span>
+                    )}
+                  </div>
+
+                  {user.subscription_ends_at && (
+                    <p style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.text.muted, margin: '0 0 10px', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+                      {subscriptionStatus === 'canceling' ? 'Access ends' : 'Renews'}{' '}
+                      {new Date(user.subscription_ends_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </p>
+                  )}
+
+                  {subscriptionStatus !== 'canceling' && (
+                    <button
+                      onClick={handleCancelSubscription}
+                      disabled={cancelingSubscription}
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: DESIGN_SYSTEM.colors.accent.red, background: 'transparent', border: 'none', cursor: cancelingSubscription ? 'not-allowed' : 'pointer', padding: 0, opacity: cancelingSubscription ? 0.5 : 1, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}
+                    >
+                      <AlertCircle size={13} />
+                      {cancelingSubscription ? 'Cancelling…' : 'Cancel subscription'}
+                    </button>
+                  )}
+                </div>
+              )}
+
               <button onClick={onSignOut} style={{ width: "100%", marginTop: 20, background: "transparent", color: DESIGN_SYSTEM.colors.accent.red, border: `1px solid ${DESIGN_SYSTEM.colors.accent.red}33`, borderRadius: 10, padding: "10px", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                 <LogOut size={15} /> Sign Out
               </button>
