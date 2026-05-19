@@ -76,7 +76,8 @@ export default function SongPitch() {
   // eslint-disable-next-line no-unused-vars
   const [savingRole, setSavingRole] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [showLanding, setShowLanding] = useState(true);  // NEW: Show landing page first
+  const [showLanding, setShowLanding] = useState(true);
+  const [showEmailConfirmed, setShowEmailConfirmed] = useState(false);
   const [legalPage, setLegalPage] = useState(() => getLegalPageFromHash()); // 'terms', 'privacy', 'dmca', or null
   const [page, setPage] = useState(() => getPageFromHash() || "dashboard");
   const [deleteAccountModal, setDeleteAccountModal] = useState({ open: false, typed: '', loading: false });
@@ -106,6 +107,7 @@ export default function SongPitch() {
     window.location.hash.includes('access_token') ||
     new URLSearchParams(window.location.search).has('code')
   );
+  const isEmailConfirmRef = useRef(window.location.hash.includes('type=signup'));
   const legalPageFromHashRef = useRef(!!getLegalPageFromHash()); // true if legal page was loaded from URL
   const suppressLegalPushRef = useRef(false); // prevent double history push on popstate
   const [authError, setAuthError] = useState(null);
@@ -298,7 +300,14 @@ export default function SongPitch() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       if (session && (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
-          setShowLanding(false);
+        // Email confirmation redirect — show success page instead of loading the app
+        if (event === 'SIGNED_IN' && isEmailConfirmRef.current) {
+          isEmailConfirmRef.current = false;
+          setShowEmailConfirmed(true);
+          setLoading(false);
+          return;
+        }
+        setShowLanding(false);
         if (skipProfileLoadRef.current) {
           // Signup just set the profile directly — skip redundant query
           skipProfileLoadRef.current = false;
@@ -559,18 +568,81 @@ export default function SongPitch() {
 
       if (error) {
         if (error.code === 'PGRST116') {
-          // Check if this is a newly email-confirmed user or an OAuth user whose profile hasn't been created yet
-          const pendingEmail = localStorage.getItem('sp_pending_signup_email');
           const isOAuthUser = authUser?.app_metadata?.provider && authUser.app_metadata.provider !== 'email';
-          // Also detect users who verified email on a different device (no localStorage flag but email is confirmed)
+          const pendingProfileRaw = localStorage.getItem('sp_pending_profile');
+
+          if (pendingProfileRaw) {
+            // Silently create profile from stored signup data (email-confirmation flow)
+            try {
+              const pending = JSON.parse(pendingProfileRaw);
+              const accountType = pending.role === 'executive' ? 'music_executive' : 'composer';
+              const profileRow = {
+                user_id: userId,
+                role: pending.role,
+                account_type: accountType,
+                first_name: pending.firstName,
+                last_name: pending.lastName,
+                bio: pending.bio || null,
+                location: pending.location || null,
+                avatar_color: `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`,
+              };
+              const { data: profileData, error: profileError } = await supabase
+                .from('user_profiles')
+                .insert([profileRow])
+                .select('*, composers(*)')
+                .single();
+              if (profileError) throw profileError;
+
+              if (pending.role === 'composer' && pending.genres?.length > 0) {
+                await supabase.from('composers').insert([{
+                  user_profile_id: profileData.id,
+                  genres: pending.genres,
+                }]);
+                // Refetch to get composers row
+                const { data: refreshed } = await supabase
+                  .from('user_profiles')
+                  .select('*, composers(*)')
+                  .eq('user_id', userId)
+                  .single();
+                localStorage.removeItem('sp_pending_profile');
+                localStorage.removeItem('sp_pending_signup_email');
+                setUserProfile(refreshed ?? profileData);
+                setLoading(false);
+                return;
+              }
+
+              localStorage.removeItem('sp_pending_profile');
+              localStorage.removeItem('sp_pending_signup_email');
+              setUserProfile(profileData);
+              setLoading(false);
+              return;
+            } catch (createErr) {
+              console.error('Auto-create profile failed:', createErr);
+              localStorage.removeItem('sp_pending_profile');
+              localStorage.removeItem('sp_pending_signup_email');
+              setUserProfile(null);
+              setShowLanding(false); // fall back to AccountSetupPage
+              return;
+            }
+          }
+
+          if (isOAuthUser) {
+            setUserProfile(null);
+            setShowLanding(false); // Route to AccountSetupPage
+            return;
+          }
+
+          // Legacy flag or recently confirmed on another device
+          const pendingEmail = localStorage.getItem('sp_pending_signup_email');
           const emailConfirmedAt = authUser?.email_confirmed_at;
-          const isNewlyConfirmed = emailConfirmedAt && (Date.now() - new Date(emailConfirmedAt).getTime()) < 15 * 60 * 1000; // within 15 min
-          if (pendingEmail || isOAuthUser || isNewlyConfirmed) {
+          const isNewlyConfirmed = emailConfirmedAt && (Date.now() - new Date(emailConfirmedAt).getTime()) < 15 * 60 * 1000;
+          if (pendingEmail || isNewlyConfirmed) {
             localStorage.removeItem('sp_pending_signup_email');
             setUserProfile(null);
             setShowLanding(false); // Route to AccountSetupPage
             return;
           }
+
           // Auth account exists but no profile row — sign out and show error on AuthPage
           setAuthError("No account found for this email. Please create an account first.");
           stayOnAuthRef.current = true;
@@ -936,6 +1008,46 @@ export default function SongPitch() {
     return <Suspense fallback={null}><DMCAPage onBack={() => setLegalPage(null)} /></Suspense>;
   }
 
+  // ── Email confirmed success page ─────────────────────────────────────────
+  if (showEmailConfirmed) {
+    // User is already authenticated from the confirmation link — just load their profile
+    // and proceed straight into the app. No sign-out/re-sign-in loop needed.
+    const handleContinue = () => {
+      setShowEmailConfirmed(false);
+      setShowLanding(false);
+      if (session?.user) {
+        loadUserProfile(session.user);
+      }
+    };
+    return (
+      <div className="hero-animated-bg" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+        <div style={{ width: '100%', maxWidth: 420, background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 24, padding: 48, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, boxShadow: '0 16px 48px rgba(0,0,0,0.4)', textAlign: 'center' }}>
+          {/* Gold checkmark */}
+          <div style={{ width: 80, height: 80, borderRadius: '50%', background: `${DESIGN_SYSTEM.colors.brand.primary}18`, border: `2px solid ${DESIGN_SYSTEM.colors.brand.primary}50`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px' }}>
+            <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+              <path d="M8 18L15 25L28 11" stroke="#C9A84C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 28, fontWeight: 800, marginBottom: 10 }}>Email Confirmed!</h1>
+          <p style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 15, lineHeight: 1.6, marginBottom: 8 }}>
+            Your account is ready.
+          </p>
+          <p style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, lineHeight: 1.6, marginBottom: 36 }}>
+            You're signed in — tap below to start using Coda-Vault.
+          </p>
+          <button
+            onClick={handleContinue}
+            style={{ width: '100%', background: DESIGN_SYSTEM.colors.brand.primary, color: DESIGN_SYSTEM.colors.text.primary, border: 'none', borderRadius: 10, padding: '14px', fontWeight: 700, fontSize: 15, cursor: 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", boxShadow: '0 4px 16px rgba(201,168,76,0.3)', transition: 'all 0.2s ease' }}
+            onMouseEnter={e => { e.currentTarget.style.background = DESIGN_SYSTEM.colors.brand.light; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = DESIGN_SYSTEM.colors.brand.primary; e.currentTarget.style.transform = 'translateY(0)'; }}
+          >
+            Start Using Coda-Vault →
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: 16, background: DESIGN_SYSTEM.colors.bg.primary, fontFamily: DESIGN_SYSTEM.font.body }}>
@@ -1013,7 +1125,7 @@ export default function SongPitch() {
       case "opportunities": return <OpportunitiesPage userProfile={userProfile} onBadgeRefresh={loadSidebarBadges} isMobile={isMobileView} />;
       case "responses": return (isExecutive || isAdmin) ? <ResponsesPage userProfile={userProfile} onNavigate={setPage} onViewProfile={setViewingProfile} audioPlayer={audioPlayer} isMobile={isMobileView} /> : fallback;
       case "messages": return <MessagesPage userProfile={userProfile} supportTargetUserId={supportTargetUserId} supportOpenToken={supportOpenToken} onBadgeRefresh={loadSidebarBadges} onActiveConversationChange={setActiveMessageConversationId} isMobile={isMobileView} audioPlayer={audioPlayer} />;
-      case "portfolio": return (isComposer || isAdmin) ? <PortfolioPage userProfile={userProfile} audioPlayer={audioPlayer} isMobile={isMobileView} /> : fallback;
+      case "portfolio": return (isComposer || isAdmin) ? <PortfolioPage userProfile={userProfile} audioPlayer={audioPlayer} isMobile={isMobileView} onNavigate={setPage} /> : fallback;
       case "profile": return <ProfilePage user={{ ...userProfile, email: session.user.email }} onSignOut={handleSignOut} onProfileUpdate={() => loadUserProfile(session.user)} onDeleteAccount={handleDeleteAccount} />;
       case "splits": return (isComposer || isAdmin) ? <SplitGenerator userProfile={userProfile} /> : fallback;
       case "deal-analyzer": return (isComposer || isAdmin) ? <DealAnalyzerPage userProfile={userProfile} /> : fallback;
