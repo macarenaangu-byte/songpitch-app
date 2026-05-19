@@ -28,6 +28,51 @@ const API_KEY  = process.env.REACT_APP_LEGALSPLITS_API_KEY ?? ''
  *   sources: string[]
  * }>}
  */
+/**
+ * Analyzes a split sheet PDF and returns structured data.
+ * POST /api/dashboard/split-sheets/analyze
+ * @param {File} file — PDF file, max 10MB
+ */
+export async function analyzeSplitSheet(file) {
+  if (!API_KEY) throw new Error('LegalSplits API key not configured (REACT_APP_LEGALSPLITS_API_KEY)');
+  const fd = new FormData();
+  fd.append('file', file);
+  const res = await fetch(`${BASE_URL}/api/dashboard/split-sheets/analyze`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${API_KEY}` },
+    body: fd,
+  });
+  if (!res.ok) {
+    let message = `LegalSplits API error (${res.status})`;
+    try { const d = await res.json(); if (d.error) message = d.error; } catch { /* ignore */ }
+    throw new Error(message);
+  }
+  return res.json();
+}
+
+/**
+ * Generates a split sheet PDF from structured data.
+ * POST /api/dashboard/split-sheets/generate-pdf
+ * Returns a Blob (application/pdf).
+ */
+export async function generateSplitSheetPdf(data) {
+  if (!API_KEY) throw new Error('LegalSplits API key not configured (REACT_APP_LEGALSPLITS_API_KEY)');
+  const res = await fetch(`${BASE_URL}/api/dashboard/split-sheets/generate-pdf`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${API_KEY}`,
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    let message = `LegalSplits API error (${res.status})`;
+    try { const d = await res.json(); if (d.error) message = d.error; } catch { /* ignore */ }
+    throw new Error(message);
+  }
+  return res.blob();
+}
+
 export async function enrichSplits({ song_title, composition_splits, master_splits }) {
   if (!API_KEY) {
     throw new Error('LegalSplits API key not configured (REACT_APP_LEGALSPLITS_API_KEY)')

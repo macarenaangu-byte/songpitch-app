@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { FileText, Plus, Trash2, ChevronDown, ChevronUp, Clock, X, Music, Disc, Search, CheckCircle, AlertTriangle, Equal } from 'lucide-react';
+import { FileText, Plus, Trash2, ChevronDown, ChevronUp, Clock, X, Music, Disc, Search, CheckCircle, AlertTriangle, Equal, Upload, Download, Sparkles, Flag, ShieldCheck } from 'lucide-react';
 import { DESIGN_SYSTEM } from '../../constants/designSystem';
 import { supabase } from '../../lib/supabase';
 import { showToast } from '../../utils/toast';
 import { ConfirmModal } from '../../components/ConfirmModal';
-import { enrichSplits } from '../../services/legalsplits';
+import { enrichSplits, analyzeSplitSheet, generateSplitSheetPdf } from '../../services/legalsplits';
 import { useTier } from '../../hooks/useTier';
 import UpgradeModal from '../../components/UpgradeModal';
 
@@ -365,8 +365,41 @@ export default function SplitGenerator({ userProfile }) {
 
   // PRO / IPI enrichment (via LegalSplits AI)
   const [proEnriching, setProEnriching] = useState(false);
-  const [proEnrichedData, setProEnrichedData] = useState(null); // EnrichSplitsResponse
+  const [proEnrichedData, setProEnrichedData] = useState(null);
   const [proEnrichError, setProEnrichError] = useState(null);
+
+  // --- Analyze PDF state ---
+  const analyzeInputRef = useRef(null);
+  const [analyzeFile, setAnalyzeFile] = useState(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyzeResult, setAnalyzeResult] = useState(null);
+  const [analyzeError, setAnalyzeError] = useState(null);
+  const [analyzeDragOver, setAnalyzeDragOver] = useState(false);
+
+  // --- Generate PDF state ---
+  const ROLES = ['Songwriter', 'Composer', 'Lyricist', 'Producer', 'Beatmaker', 'Arranger', 'Other'];
+  const PROS  = ['ASCAP', 'BMI', 'SESAC', 'SOCAN', 'PRS', 'APRA', 'Other', 'None'];
+
+  const blankWriter = () => ({
+    legal_name: '', stage_name: '', email: '', role: 'Songwriter',
+    composition_percentage: 0, master_percentage: 0,
+    pro: 'ASCAP', ipi: '',
+    publisher: { name: '', ipi: '', pro: 'ASCAP', is_self_published: true },
+    contribution_notes: '', _expanded: true, _showPublisher: false,
+  });
+
+  const [genSongTitle, setGenSongTitle]     = useState('');
+  const [genDate, setGenDate]               = useState(new Date().toISOString().slice(0, 10));
+  const [genIsrc, setGenIsrc]               = useState('');
+  const [genUpc, setGenUpc]                 = useState('');
+  const [genLabel, setGenLabel]             = useState('');
+  const [genNotes, setGenNotes]             = useState('');
+  const [genSplitType, setGenSplitType]     = useState('composition');
+  const [genHasSamples, setGenHasSamples]   = useState(false);
+  const [genSampleInfo, setGenSampleInfo]   = useState('');
+  const [genWriters, setGenWriters]         = useState([blankWriter()]);
+  const [generating, setGenerating]         = useState(false);
+  const [genError, setGenError]             = useState(null);
 
   // --- Song Selector State ---
   const [coOwnedSongs, setCoOwnedSongs] = useState([]);
@@ -581,6 +614,120 @@ export default function SplitGenerator({ userProfile }) {
     }
   };
 
+  // ─── Analyze PDF handler ─────────────────────────────────────────────────
+  const handleAnalyzeFile = async (file) => {
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
+      setAnalyzeError('Only PDF files are supported.'); return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setAnalyzeError('File too large. Maximum 10MB.'); return;
+    }
+    setAnalyzeFile(file);
+    setAnalyzeError(null);
+    setAnalyzeResult(null);
+    setAnalyzing(true);
+    try {
+      const result = await analyzeSplitSheet(file);
+      setAnalyzeResult(result);
+    } catch (err) {
+      setAnalyzeError(err.message || 'Analysis failed. Please try again.');
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  // Populate Generate tab from Analyze result
+  const applyAnalyzeResult = (result) => {
+    setGenSongTitle(result.song_title || '');
+    setGenDate(result.date || new Date().toISOString().slice(0, 10));
+    setGenIsrc(result.isrc || '');
+    setGenUpc(result.upc || '');
+    setGenLabel(result.record_label || '');
+    setGenSplitType(result.split_type || 'composition');
+    setGenHasSamples(result.has_samples || false);
+    setGenSampleInfo(result.sample_info || '');
+    if (result.writers?.length > 0) {
+      setGenWriters(result.writers.map(w => ({
+        legal_name: w.legal_name || '',
+        stage_name: w.stage_name || '',
+        email: w.email || '',
+        role: w.role || 'Songwriter',
+        composition_percentage: w.composition_percentage ?? 0,
+        master_percentage: w.master_percentage ?? 0,
+        pro: w.pro || 'None',
+        ipi: w.ipi || '',
+        publisher: w.publisher ? {
+          name: w.publisher.name || '',
+          ipi: w.publisher.ipi || '',
+          pro: w.publisher.pro || 'None',
+          is_self_published: w.publisher.is_self_published ?? false,
+        } : { name: '', ipi: '', pro: 'None', is_self_published: true },
+        contribution_notes: w.contribution_notes || '',
+        _expanded: true,
+        _showPublisher: !!w.publisher,
+      })));
+    }
+    setActiveTab('generate');
+    showToast.success('Splits imported — review and download your PDF.');
+  };
+
+  // ─── Generate PDF handler ─────────────────────────────────────────────────
+  const handleGeneratePdf = async () => {
+    if (!genSongTitle.trim()) { setGenError('Song title is required.'); return; }
+    if (!genDate) { setGenError('Date is required.'); return; }
+    if (genWriters.length === 0) { setGenError('At least one writer is required.'); return; }
+    if (genHasSamples && !genSampleInfo.trim()) { setGenError('Sample info is required when has_samples is true.'); return; }
+
+    setGenerating(true);
+    setGenError(null);
+    try {
+      const payload = {
+        song_title: genSongTitle.trim(),
+        date: genDate,
+        ...(genIsrc  && { isrc: genIsrc }),
+        ...(genUpc   && { upc: genUpc }),
+        ...(genLabel && { record_label: genLabel }),
+        ...(genNotes && { notes: genNotes }),
+        split_type: genSplitType,
+        has_samples: genHasSamples,
+        ...(genHasSamples && { sample_info: genSampleInfo }),
+        writers: genWriters.map(({ _expanded, _showPublisher, ...w }) => ({
+          ...w,
+          composition_percentage: parseFloat(w.composition_percentage) || 0,
+          master_percentage: parseFloat(w.master_percentage) || 0,
+          ...(w.ipi ? { ipi: w.ipi } : {}),
+          ...((_showPublisher && w.publisher?.name) ? { publisher: {
+            name: w.publisher.name,
+            ...(w.publisher.ipi ? { ipi: w.publisher.ipi } : {}),
+            ...(w.publisher.pro ? { pro: w.publisher.pro } : {}),
+            is_self_published: w.publisher.is_self_published,
+          }} : {}),
+        })),
+      };
+
+      const blob = await generateSplitSheetPdf(payload);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `split-sheet-${genSongTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 50)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast.success('Split sheet PDF downloaded!');
+    } catch (err) {
+      setGenError(err.message || 'PDF generation failed. Please try again.');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const updateGenWriter = (i, field, value) => {
+    setGenWriters(prev => prev.map((w, idx) => idx === i ? { ...w, [field]: value } : w));
+  };
+  const updateGenWriterPublisher = (i, field, value) => {
+    setGenWriters(prev => prev.map((w, idx) => idx === i ? { ...w, publisher: { ...w.publisher, [field]: value } } : w));
+  };
+
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <div style={styles.page}>
@@ -603,6 +750,16 @@ export default function SplitGenerator({ userProfile }) {
         <button style={styles.tab(activeTab === 'new')} onClick={() => setActiveTab('new')}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
             <Plus size={15} /> New Split
+          </span>
+        </button>
+        <button style={styles.tab(activeTab === 'analyze')} onClick={() => setActiveTab('analyze')}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+            <Search size={15} /> Analyze PDF
+          </span>
+        </button>
+        <button style={styles.tab(activeTab === 'generate')} onClick={() => setActiveTab('generate')}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+            <Download size={15} /> Generate PDF
           </span>
         </button>
         <button style={styles.tab(activeTab === 'history')} onClick={() => setActiveTab('history')}>
@@ -901,6 +1058,357 @@ export default function SplitGenerator({ userProfile }) {
               </div>
           </>
           )}
+        </>
+      )}
+
+      {/* ═══ ANALYZE PDF TAB ═══ */}
+      {activeTab === 'analyze' && (
+        <>
+          {/* Upload zone */}
+          {!analyzeResult && (
+            <div
+              onDragOver={e => { e.preventDefault(); setAnalyzeDragOver(true); }}
+              onDragLeave={() => setAnalyzeDragOver(false)}
+              onDrop={e => { e.preventDefault(); setAnalyzeDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleAnalyzeFile(f); }}
+              onClick={() => analyzeInputRef.current?.click()}
+              style={{ ...styles.card, border: `2px dashed ${analyzeDragOver ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.border.medium}`, background: analyzeDragOver ? `${DESIGN_SYSTEM.colors.brand.primary}08` : DESIGN_SYSTEM.colors.bg.card, textAlign: 'center', padding: '48px 32px', cursor: 'pointer', transition: DESIGN_SYSTEM.transition.fast }}
+            >
+              <Upload size={36} color={DESIGN_SYSTEM.colors.brand.primary} style={{ marginBottom: 14 }} />
+              <p style={{ color: DESIGN_SYSTEM.colors.text.primary, fontWeight: 700, fontSize: 16, margin: '0 0 6px' }}>
+                {analyzeFile ? analyzeFile.name : 'Drop your split sheet PDF here'}
+              </p>
+              <p style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, margin: 0 }}>
+                {analyzeFile ? `${(analyzeFile.size / 1024).toFixed(0)} KB · Click to change` : 'or click to browse · PDF only · Max 10MB'}
+              </p>
+              <input ref={analyzeInputRef} type="file" accept=".pdf,application/pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files[0]; if (f) handleAnalyzeFile(f); e.target.value = null; }} />
+            </div>
+          )}
+
+          {analyzeFile && !analyzing && !analyzeResult && (
+            <button onClick={() => handleAnalyzeFile(analyzeFile)} style={{ ...styles.primaryBtn(false), marginTop: -8 }}>
+              Analyze Split Sheet
+            </button>
+          )}
+
+          {/* Loading */}
+          {analyzing && (
+            <div style={styles.loadingSpinner}>
+              <div style={styles.spinner} />
+              <p style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontWeight: 600 }}>LegalSplits AI is reading your PDF…</p>
+            </div>
+          )}
+
+          {/* Error */}
+          {analyzeError && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: `${DESIGN_SYSTEM.colors.accent.red}12`, border: `1px solid ${DESIGN_SYSTEM.colors.accent.red}40`, borderRadius: DESIGN_SYSTEM.radius.sm, marginTop: 12 }}>
+              <AlertTriangle size={16} color={DESIGN_SYSTEM.colors.accent.red} />
+              <span style={{ color: DESIGN_SYSTEM.colors.accent.red, fontSize: DESIGN_SYSTEM.fontSize.sm }}>{analyzeError}</span>
+            </div>
+          )}
+
+          {/* Results */}
+          {analyzeResult && !analyzing && (
+            <>
+              {/* Song info */}
+              <div style={{ ...styles.card, borderTop: `3px solid ${DESIGN_SYSTEM.colors.brand.primary}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
+                  <div>
+                    <h2 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 20, fontWeight: 800, margin: '0 0 4px' }}>{analyzeResult.song_title || 'Untitled'}</h2>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                      {analyzeResult.date && <span style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.text.muted }}>{analyzeResult.date}</span>}
+                      {analyzeResult.isrc && <span style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.text.muted }}>ISRC: {analyzeResult.isrc}</span>}
+                      {analyzeResult.record_label && <span style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.text.muted }}>{analyzeResult.record_label}</span>}
+                      {analyzeResult.split_type && <span style={{ fontSize: 11, fontWeight: 700, color: DESIGN_SYSTEM.colors.brand.primary, background: `${DESIGN_SYSTEM.colors.brand.primary}15`, padding: '2px 8px', borderRadius: 20, textTransform: 'capitalize' }}>{analyzeResult.split_type}</span>}
+                      <span style={{ fontSize: 11, fontWeight: 700, color: analyzeResult.overall_confidence === 'high' ? '#4ade80' : analyzeResult.overall_confidence === 'medium' ? DESIGN_SYSTEM.colors.accent.amber : DESIGN_SYSTEM.colors.accent.red, background: analyzeResult.overall_confidence === 'high' ? 'rgba(74,222,128,0.12)' : analyzeResult.overall_confidence === 'medium' ? `${DESIGN_SYSTEM.colors.accent.amber}15` : `${DESIGN_SYSTEM.colors.accent.red}15`, padding: '2px 8px', borderRadius: 20 }}>
+                        {analyzeResult.overall_confidence} confidence
+                      </span>
+                    </div>
+                  </div>
+                  <button onClick={() => applyAnalyzeResult(analyzeResult)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: DESIGN_SYSTEM.colors.brand.primary, color: '#fff', border: 'none', borderRadius: DESIGN_SYSTEM.radius.sm, fontWeight: 700, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+                    <Download size={14} /> Use for PDF Generation →
+                  </button>
+                </div>
+                {analyzeResult.summary && (
+                  <p style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, lineHeight: 1.6, margin: '14px 0 0' }}>{analyzeResult.summary}</p>
+                )}
+              </div>
+
+              {/* Flags */}
+              {(analyzeResult.red_flags?.length > 0 || analyzeResult.green_flags?.length > 0) && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: DESIGN_SYSTEM.spacing.lg }}>
+                  {analyzeResult.red_flags?.length > 0 && (
+                    <div style={{ ...styles.card, borderTop: `3px solid ${DESIGN_SYSTEM.colors.accent.red}`, padding: DESIGN_SYSTEM.spacing.md }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, fontSize: 12, fontWeight: 700, color: DESIGN_SYSTEM.colors.accent.red, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        <Flag size={12} /> Red Flags
+                      </div>
+                      {analyzeResult.red_flags.map((f, i) => (
+                        <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 6 }}>
+                          <AlertTriangle size={13} color={DESIGN_SYSTEM.colors.accent.red} style={{ flexShrink: 0, marginTop: 2 }} />
+                          <span style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.text.secondary, lineHeight: 1.5 }}>{f}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {analyzeResult.green_flags?.length > 0 && (
+                    <div style={{ ...styles.card, borderTop: '3px solid #4ade80', padding: DESIGN_SYSTEM.spacing.md }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, fontSize: 12, fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        <ShieldCheck size={12} /> Green Flags
+                      </div>
+                      {analyzeResult.green_flags.map((f, i) => (
+                        <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 6 }}>
+                          <CheckCircle size={13} color="#4ade80" style={{ flexShrink: 0, marginTop: 2 }} />
+                          <span style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.text.secondary, lineHeight: 1.5 }}>{f}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Totals */}
+              {analyzeResult.totals && (
+                <div style={{ ...styles.card, display: 'flex', gap: 24, flexWrap: 'wrap', marginBottom: DESIGN_SYSTEM.spacing.lg }}>
+                  {analyzeResult.totals.composition_total != null && (
+                    <div>
+                      <div style={{ fontSize: 11, color: DESIGN_SYSTEM.colors.text.muted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Composition</div>
+                      <span style={{ fontSize: 20, fontWeight: 800, color: analyzeResult.totals.composition_sums_to_100 ? '#4ade80' : DESIGN_SYSTEM.colors.accent.red }}>{analyzeResult.totals.composition_total}%</span>
+                      {analyzeResult.totals.composition_unassigned != null && <span style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.accent.amber, marginLeft: 8 }}>{analyzeResult.totals.composition_unassigned}% unassigned</span>}
+                    </div>
+                  )}
+                  {analyzeResult.totals.master_total != null && (
+                    <div>
+                      <div style={{ fontSize: 11, color: DESIGN_SYSTEM.colors.text.muted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Master</div>
+                      <span style={{ fontSize: 20, fontWeight: 800, color: analyzeResult.totals.master_sums_to_100 ? '#4ade80' : DESIGN_SYSTEM.colors.accent.red }}>{analyzeResult.totals.master_total}%</span>
+                      {analyzeResult.totals.master_unassigned != null && <span style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.accent.amber, marginLeft: 8 }}>{analyzeResult.totals.master_unassigned}% unassigned</span>}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Writers */}
+              <div style={{ ...styles.card, marginBottom: DESIGN_SYSTEM.spacing.lg }}>
+                <div style={styles.categoryLabel(DESIGN_SYSTEM.colors.text.secondary)}><Music size={13} /> Writers ({analyzeResult.writers?.length || 0})</div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ background: DESIGN_SYSTEM.colors.bg.elevated }}>
+                        {['Name', 'Role', 'Comp %', 'Master %', 'PRO', 'IPI', 'Confidence'].map(h => (
+                          <th key={h} style={{ textAlign: 'left', padding: '8px 10px', fontSize: 11, fontWeight: 700, color: DESIGN_SYSTEM.colors.text.muted, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', borderBottom: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(analyzeResult.writers || []).map((w, i) => (
+                        <tr key={i} style={{ borderBottom: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
+                          <td style={{ padding: '10px 10px' }}>
+                            <div style={{ fontWeight: 600, color: DESIGN_SYSTEM.colors.text.primary }}>{w.legal_name}</div>
+                            {w.stage_name && <div style={{ fontSize: 11, color: DESIGN_SYSTEM.colors.text.muted }}>"{w.stage_name}"</div>}
+                          </td>
+                          <td style={{ padding: '10px 10px', color: DESIGN_SYSTEM.colors.text.secondary }}>{w.role || '—'}</td>
+                          <td style={{ padding: '10px 10px', color: COMP_COLOR, fontWeight: 700 }}>{w.composition_percentage != null ? `${w.composition_percentage}%` : '—'}</td>
+                          <td style={{ padding: '10px 10px', color: MASTER_COLOR, fontWeight: 700 }}>{w.master_percentage != null ? `${w.master_percentage}%` : '—'}</td>
+                          <td style={{ padding: '10px 10px', color: DESIGN_SYSTEM.colors.text.secondary }}>{w.pro || '—'}</td>
+                          <td style={{ padding: '10px 10px', fontFamily: 'monospace', fontSize: 12, color: w.ipi_format_valid === false ? DESIGN_SYSTEM.colors.accent.red : DESIGN_SYSTEM.colors.text.secondary }}>
+                            {w.ipi || '—'}
+                            {w.ipi_format_valid === false && <span style={{ marginLeft: 4, fontSize: 10, color: DESIGN_SYSTEM.colors.accent.red }}>invalid</span>}
+                          </td>
+                          <td style={{ padding: '10px 10px' }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: w.confidence === 'high' ? '#4ade80' : w.confidence === 'medium' ? DESIGN_SYSTEM.colors.accent.amber : DESIGN_SYSTEM.colors.accent.red }}>{w.confidence}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Analyze another */}
+              <button onClick={() => { setAnalyzeFile(null); setAnalyzeResult(null); setAnalyzeError(null); }} style={{ ...styles.addBtn, width: '100%', justifyContent: 'center', marginBottom: 8 }}>
+                <Upload size={14} /> Analyze another PDF
+              </button>
+            </>
+          )}
+        </>
+      )}
+
+      {/* ═══ GENERATE PDF TAB ═══ */}
+      {activeTab === 'generate' && (
+        <>
+          {genError && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: `${DESIGN_SYSTEM.colors.accent.red}12`, border: `1px solid ${DESIGN_SYSTEM.colors.accent.red}40`, borderRadius: DESIGN_SYSTEM.radius.sm, marginBottom: DESIGN_SYSTEM.spacing.md }}>
+              <AlertTriangle size={16} color={DESIGN_SYSTEM.colors.accent.red} />
+              <span style={{ color: DESIGN_SYSTEM.colors.accent.red, fontSize: DESIGN_SYSTEM.fontSize.sm }}>{genError}</span>
+            </div>
+          )}
+
+          {/* Song info */}
+          <div style={styles.card}>
+            <div style={styles.sectionTitle}>Song Information</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 5 }}>Song Title *</label>
+                <input style={styles.textInput} value={genSongTitle} onChange={e => setGenSongTitle(e.target.value)} placeholder="e.g. Golden Hour" />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 5 }}>Date *</label>
+                <input style={styles.textInput} type="date" value={genDate} onChange={e => setGenDate(e.target.value)} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 5 }}>ISRC</label>
+                <input style={styles.textInput} value={genIsrc} onChange={e => setGenIsrc(e.target.value)} placeholder="CC-XXX-YY-NNNNN" />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 5 }}>UPC</label>
+                <input style={styles.textInput} value={genUpc} onChange={e => setGenUpc(e.target.value)} placeholder="Optional" />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 5 }}>Record Label</label>
+                <input style={styles.textInput} value={genLabel} onChange={e => setGenLabel(e.target.value)} placeholder="e.g. Independent" />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 5 }}>Split Type *</label>
+                <select style={{ ...styles.textInput, cursor: 'pointer' }} value={genSplitType} onChange={e => setGenSplitType(e.target.value)}>
+                  <option value="composition">Composition</option>
+                  <option value="master">Master</option>
+                  <option value="both">Both</option>
+                </select>
+              </div>
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 5 }}>Notes</label>
+              <textarea style={{ ...styles.textInput, minHeight: 60, resize: 'vertical' }} value={genNotes} onChange={e => setGenNotes(e.target.value)} placeholder="Optional notes" />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <input type="checkbox" id="gen-samples" checked={genHasSamples} onChange={e => setGenHasSamples(e.target.checked)} style={{ width: 16, height: 16, accentColor: DESIGN_SYSTEM.colors.brand.primary, cursor: 'pointer' }} />
+              <label htmlFor="gen-samples" style={{ fontSize: 13, color: DESIGN_SYSTEM.colors.text.secondary, cursor: 'pointer' }}>Contains samples</label>
+            </div>
+            {genHasSamples && (
+              <textarea style={{ ...styles.textInput, marginTop: 10, minHeight: 56, resize: 'vertical' }} value={genSampleInfo} onChange={e => setGenSampleInfo(e.target.value)} placeholder="Describe the sample(s) used…" />
+            )}
+          </div>
+
+          {/* Writers */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <div style={styles.categoryLabel(DESIGN_SYSTEM.colors.text.secondary)}><Music size={13} /> Writers ({genWriters.length})</div>
+            <button onClick={() => setGenWriters(prev => [...prev, blankWriter()])} style={styles.addBtn}><Plus size={14} /> Add Writer</button>
+          </div>
+
+          {genWriters.map((w, i) => (
+            <div key={i} style={{ ...styles.card, marginBottom: 10, borderLeft: `3px solid ${DESIGN_SYSTEM.colors.brand.primary}30` }}>
+              {/* Writer header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: w._expanded ? 14 : 0 }}>
+                <span style={{ fontWeight: 700, fontSize: 14, color: DESIGN_SYSTEM.colors.text.primary }}>{w.legal_name || `Writer ${i + 1}`}</span>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button onClick={() => updateGenWriter(i, '_expanded', !w._expanded)} style={{ ...styles.removeBtn, color: DESIGN_SYSTEM.colors.text.muted }}>
+                    {w._expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  </button>
+                  {genWriters.length > 1 && (
+                    <button onClick={() => setGenWriters(prev => prev.filter((_, idx) => idx !== i))} style={{ ...styles.removeBtn, color: DESIGN_SYSTEM.colors.accent.red }}>
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {w._expanded && (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 4 }}>Legal Name *</label>
+                      <input style={styles.splitInput} value={w.legal_name} onChange={e => updateGenWriter(i, 'legal_name', e.target.value)} placeholder="Full legal name" />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 4 }}>Stage Name</label>
+                      <input style={styles.splitInput} value={w.stage_name} onChange={e => updateGenWriter(i, 'stage_name', e.target.value)} placeholder="Optional" />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 4 }}>Email</label>
+                      <input style={styles.splitInput} type="email" value={w.email} onChange={e => updateGenWriter(i, 'email', e.target.value)} placeholder="Optional" />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 4 }}>Role *</label>
+                      <select style={{ ...styles.splitInput, cursor: 'pointer' }} value={w.role} onChange={e => updateGenWriter(i, 'role', e.target.value)}>
+                        {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Percentages */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: COMP_COLOR, marginBottom: 4 }}>Composition %</label>
+                      <input style={{ ...styles.pctInput(COMP_COLOR), width: '100%', textAlign: 'left' }} type="number" min="0" max="100" step="0.1" value={w.composition_percentage} onChange={e => updateGenWriter(i, 'composition_percentage', e.target.value)} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: MASTER_COLOR, marginBottom: 4 }}>Master %</label>
+                      <input style={{ ...styles.pctInput(MASTER_COLOR), width: '100%', textAlign: 'left' }} type="number" min="0" max="100" step="0.1" value={w.master_percentage} onChange={e => updateGenWriter(i, 'master_percentage', e.target.value)} />
+                    </div>
+                  </div>
+
+                  {/* PRO + IPI */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 4 }}>PRO *</label>
+                      <select style={{ ...styles.splitInput, cursor: 'pointer' }} value={w.pro} onChange={e => updateGenWriter(i, 'pro', e.target.value)}>
+                        {PROS.map(p => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 4 }}>IPI Number</label>
+                      <input style={styles.splitInput} value={w.ipi} onChange={e => updateGenWriter(i, 'ipi', e.target.value)} placeholder="9–11 digits" />
+                    </div>
+                  </div>
+
+                  {/* Contribution notes */}
+                  <div style={{ marginBottom: 10 }}>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 4 }}>Contribution Notes</label>
+                    <input style={styles.splitInput} value={w.contribution_notes} onChange={e => updateGenWriter(i, 'contribution_notes', e.target.value)} placeholder="e.g. wrote lyrics and melody for chorus" />
+                  </div>
+
+                  {/* Publisher toggle */}
+                  <button onClick={() => updateGenWriter(i, '_showPublisher', !w._showPublisher)} style={{ ...styles.addBtn, marginBottom: w._showPublisher ? 10 : 0, fontSize: 12 }}>
+                    {w._showPublisher ? <ChevronUp size={13} /> : <Plus size={13} />}
+                    {w._showPublisher ? 'Hide Publisher' : 'Add Publisher'}
+                  </button>
+
+                  {w._showPublisher && (
+                    <div style={{ padding: '12px 14px', background: DESIGN_SYSTEM.colors.bg.elevated, borderRadius: DESIGN_SYSTEM.radius.sm }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: DESIGN_SYSTEM.colors.text.muted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Publisher</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: 11, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 4 }}>Publisher Name</label>
+                          <input style={styles.splitInput} value={w.publisher.name} onChange={e => updateGenWriterPublisher(i, 'name', e.target.value)} placeholder="Publisher LLC" />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: 11, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 4 }}>PRO</label>
+                          <select style={{ ...styles.splitInput, cursor: 'pointer' }} value={w.publisher.pro} onChange={e => updateGenWriterPublisher(i, 'pro', e.target.value)}>
+                            {PROS.map(p => <option key={p} value={p}>{p}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: 11, color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 4 }}>Publisher IPI</label>
+                          <input style={styles.splitInput} value={w.publisher.ipi} onChange={e => updateGenWriterPublisher(i, 'ipi', e.target.value)} placeholder="Optional" />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 20 }}>
+                          <input type="checkbox" id={`self-pub-${i}`} checked={w.publisher.is_self_published} onChange={e => updateGenWriterPublisher(i, 'is_self_published', e.target.checked)} style={{ width: 15, height: 15, accentColor: DESIGN_SYSTEM.colors.brand.primary, cursor: 'pointer' }} />
+                          <label htmlFor={`self-pub-${i}`} style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.text.secondary, cursor: 'pointer' }}>Self-published</label>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          ))}
+
+          {/* Generate button */}
+          <button onClick={handleGeneratePdf} disabled={generating} style={{ ...styles.primaryBtn(generating), display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 4 }}>
+            {generating ? (
+              <><div style={styles.spinner} /> Generating PDF…</>
+            ) : (
+              <><Sparkles size={16} /> Generate & Download Split Sheet PDF</>
+            )}
+          </button>
         </>
       )}
 
