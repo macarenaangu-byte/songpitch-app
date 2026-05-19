@@ -400,6 +400,7 @@ export default function SplitGenerator({ userProfile }) {
   const [genWriters, setGenWriters]         = useState([blankWriter()]);
   const [generating, setGenerating]         = useState(false);
   const [genError, setGenError]             = useState(null);
+  const [genSaving, setGenSaving]           = useState(false);
 
   // --- Song Selector State ---
   const [coOwnedSongs, setCoOwnedSongs] = useState([]);
@@ -434,7 +435,7 @@ export default function SplitGenerator({ userProfile }) {
   };
 
   useEffect(() => {
-    if (activeTab === 'history' && userProfile?.id) {
+    if ((activeTab === 'history' || activeTab === 'generate') && userProfile?.id) {
       loadHistory();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -719,6 +720,41 @@ export default function SplitGenerator({ userProfile }) {
     } finally {
       setGenerating(false);
     }
+  };
+
+  // ─── Save generate form to dashboard ────────────────────────────────────────
+  const handleSaveToDashboard = async () => {
+    if (!genSongTitle.trim()) { setGenError('Add a song title to save.'); return; }
+    setGenSaving(true);
+    setGenError(null);
+    try {
+      const compSplits = genWriters.map(w => ({ name: w.legal_name || w.stage_name || 'Unknown', role: w.role, percentage: parseFloat(w.composition_percentage) || 0, pro: w.pro !== 'None' ? w.pro : null, ipi: w.ipi || null }));
+      const mastSplits = genWriters.map(w => ({ name: w.legal_name || w.stage_name || 'Unknown', role: w.role, percentage: parseFloat(w.master_percentage) || 0, pro: w.pro !== 'None' ? w.pro : null, ipi: w.ipi || null }));
+      const { error } = await supabase.from('split_sheets').insert([{
+        user_id: userProfile.id,
+        song_title: genSongTitle.trim(),
+        splits: { composition: compSplits, master: mastSplits },
+        input_method: 'pdf_generated',
+      }]);
+      if (error) throw error;
+      showToast.success('Split sheet saved to dashboard!');
+      loadHistory();
+    } catch (err) {
+      setGenError(err.message || 'Failed to save.');
+    } finally {
+      setGenSaving(false);
+    }
+  };
+
+  // ─── Reset generate form ─────────────────────────────────────────────────
+  const handleNewSplitSheet = () => {
+    setGenSongTitle('');
+    setGenDate(new Date().toISOString().slice(0, 10));
+    setGenIsrc(''); setGenUpc(''); setGenLabel(''); setGenNotes('');
+    setGenSplitType('composition');
+    setGenHasSamples(false); setGenSampleInfo('');
+    setGenWriters([blankWriter()]);
+    setGenError(null);
   };
 
   const updateGenWriter = (i, field, value) => {
@@ -1352,11 +1388,8 @@ export default function SplitGenerator({ userProfile }) {
 
               {/* ── Contributors & Publishers ── */}
               <div style={{ padding: '24px 32px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <div style={{ marginBottom: 16 }}>
                   <h2 style={{ fontFamily: doc.sans, fontSize: 11, fontWeight: 700, color: doc.textDark, textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>Contributors &amp; Publishers</h2>
-                  <button onClick={() => setGenWriters(prev => [...prev, blankWriter()])} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', background: 'transparent', border: `1px solid ${doc.border}`, borderRadius: 6, fontSize: 12, color: doc.textMid, cursor: 'pointer', fontFamily: doc.sans, fontWeight: 500 }}>
-                    <Plus size={13} /> Add Writer
-                  </button>
                 </div>
 
                 {genWriters.map((w, i) => (
@@ -1472,16 +1505,94 @@ export default function SplitGenerator({ userProfile }) {
                   </div>
                 ))}
               </div>
+
+              {/* ── + Add Writer / Contributor link ── */}
+              <div style={{ padding: '0 32px 20px', borderBottom: `1px solid ${doc.borderLight}` }}>
+                <button onClick={() => setGenWriters(prev => [...prev, blankWriter()])} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', fontSize: 13, fontFamily: doc.sans, padding: 0, textDecoration: 'underline' }}>
+                  + Add Writer / Contributor
+                </button>
+              </div>
+
+              {/* ── Composition % tracker ── */}
+              <div style={{ padding: '12px 32px', borderBottom: `1px solid ${doc.borderLight}`, display: 'flex', justifyContent: 'flex-end' }}>
+                {(() => {
+                  const assigned = genWriters.reduce((sum, w) => sum + (parseFloat(w.composition_percentage) || 0), 0);
+                  const unassigned = Math.max(0, 100 - assigned);
+                  const over = assigned > 100;
+                  return (
+                    <span style={{ fontFamily: doc.sans, fontSize: 12, color: over ? '#c0392b' : doc.labelColor }}>
+                      ○ Composition: {assigned}%{unassigned > 0 ? ` — ${unassigned}% unassigned` : over ? ' — over 100%' : ' — ✓ complete'}
+                    </span>
+                  );
+                })()}
+              </div>
+
+              {/* ── Signatures ── */}
+              <div style={{ padding: '28px 32px', borderBottom: `1px solid ${doc.borderLight}` }}>
+                <h2 style={{ fontFamily: doc.sans, fontSize: 11, fontWeight: 700, color: doc.textDark, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Signatures</h2>
+                <p style={{ fontFamily: doc.serif, fontStyle: 'italic', fontSize: 12, color: doc.labelColor, lineHeight: 1.6, marginBottom: 24 }}>
+                  By signing below, each party confirms that the information is accurate and agrees to the ownership splits stated herein.
+                </p>
+                {genWriters.map((w, i) => (
+                  <div key={i} style={{ marginBottom: 28 }}>
+                    <div style={{ borderBottom: `1px solid ${doc.textDark}`, width: '55%', marginBottom: 6 }} />
+                    <div style={{ fontFamily: doc.serif, fontWeight: 700, fontSize: 14, color: doc.textDark, marginBottom: 4 }}>{w.legal_name || `Writer ${i + 1}`}</div>
+                    <div style={{ fontFamily: doc.sans, fontSize: 12, color: doc.labelColor }}>Date: <span style={{ display: 'inline-block', borderBottom: `1px solid ${doc.inputBorder}`, minWidth: 140, marginLeft: 4 }} /></div>
+                  </div>
+                ))}
+              </div>
+
+              {/* ── Document footer ── */}
+              <div style={{ padding: '14px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontFamily: doc.sans, fontSize: 11, color: doc.labelColor }}>Generated by LegalSplits AI · {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                <span style={{ fontFamily: doc.sans, fontSize: 11, color: doc.labelColor }}>This document does not constitute legal advice.</span>
+              </div>
             </div>
 
-            {/* Generate button */}
-            <button onClick={handleGeneratePdf} disabled={generating} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', marginTop: 16, padding: '13px 0', background: generating ? '#888' : '#1a1814', color: '#fff', border: 'none', borderRadius: 8, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", fontWeight: 600, fontSize: 14, cursor: generating ? 'not-allowed' : 'pointer', letterSpacing: '0.02em' }}>
-              {generating ? (
-                <><div style={styles.spinner} /> Generating PDF…</>
-              ) : (
-                <><Download size={16} /> Generate &amp; Download Split Sheet PDF</>
+            {/* ── Action bar ── */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 16, flexWrap: 'wrap' }}>
+              <button onClick={handleSaveToDashboard} disabled={genSaving} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 18px', background: '#1e293b', color: '#fff', border: 'none', borderRadius: 7, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", fontWeight: 600, fontSize: 13, cursor: genSaving ? 'not-allowed' : 'pointer', opacity: genSaving ? 0.7 : 1 }}>
+                {genSaving ? <><div style={styles.spinner} /> Saving…</> : <><FileText size={14} /> Save to Dashboard</>}
+              </button>
+              <button onClick={handleGeneratePdf} disabled={generating} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 18px', background: '#1e293b', color: '#fff', border: 'none', borderRadius: 7, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", fontWeight: 600, fontSize: 13, cursor: generating ? 'not-allowed' : 'pointer', opacity: generating ? 0.7 : 1 }}>
+                {generating ? <><div style={styles.spinner} /> Generating…</> : <><Download size={14} /> Generate PDF</>}
+              </button>
+              <button onClick={handleNewSplitSheet} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 18px', background: 'transparent', color: DESIGN_SYSTEM.colors.text.primary, border: `2px solid ${DESIGN_SYSTEM.colors.text.primary}`, borderRadius: 7, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                <Plus size={14} /> + New Split Sheet
+              </button>
+              {!genSongTitle.trim() && (
+                <span style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", fontSize: 12, color: DESIGN_SYSTEM.colors.text.muted }}>Add a song title to continue</span>
               )}
-            </button>
+            </div>
+
+            {/* ── Saved Split Sheets ── */}
+            {(savedSheets.length > 0 || loadingHistory) && (
+              <div style={{ marginTop: 28 }}>
+                <h3 style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", fontSize: 14, fontWeight: 700, color: DESIGN_SYSTEM.colors.text.secondary, marginBottom: 12 }}>Saved Split Sheets</h3>
+                {loadingHistory ? (
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13 }}><div style={styles.spinner} /> Loading…</div>
+                ) : (
+                  savedSheets.map(sheet => (
+                    <div key={sheet.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: DESIGN_SYSTEM.colors.bg.card, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, marginBottom: 8 }}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: DESIGN_SYSTEM.colors.text.primary, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>{sheet.song_title || 'Untitled'}</div>
+                        <div style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.text.muted, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", marginTop: 2 }}>
+                          {sheet.created_at ? new Date(sheet.created_at).toLocaleDateString() : ''} · {((sheet.splits?.composition || []).length + (sheet.splits?.master || []).length)} writers · saved {sheet.created_at ? new Date(sheet.created_at).toLocaleDateString() : ''}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button onClick={() => {
+                          const comp = sheet.splits?.composition || [];
+                          setGenSongTitle(sheet.song_title || '');
+                          setGenWriters(comp.length > 0 ? comp.map(s => ({ ...blankWriter(), legal_name: s.name || '', role: s.role || 'Songwriter', composition_percentage: s.percentage || 0, pro: s.pro || 'ASCAP', ipi: s.ipi || '' })) : [blankWriter()]);
+                        }} style={{ padding: '5px 14px', background: DESIGN_SYSTEM.colors.bg.elevated, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", color: DESIGN_SYSTEM.colors.text.primary }}>Load</button>
+                        <button onClick={() => setDeleteTarget(sheet)} style={{ padding: '5px 14px', background: 'transparent', border: `1px solid ${DESIGN_SYSTEM.colors.accent.red}40`, borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", color: DESIGN_SYSTEM.colors.accent.red }}>Delete</button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </>
         );
       })()}
