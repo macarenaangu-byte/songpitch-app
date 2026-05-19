@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { FileText, Mic, Camera, Upload, Plus, Trash2, ChevronDown, ChevronUp, Clock, X, Music, Disc, Search, CheckCircle, AlertTriangle, Equal } from 'lucide-react';
+import { FileText, Plus, Trash2, ChevronDown, ChevronUp, Clock, X, Music, Disc, Search, CheckCircle, AlertTriangle, Equal } from 'lucide-react';
 import { DESIGN_SYSTEM } from '../../constants/designSystem';
 import { supabase } from '../../lib/supabase';
 import { showToast } from '../../utils/toast';
@@ -367,12 +367,9 @@ export default function SplitGenerator({ userProfile }) {
   const [activeTab, setActiveTab] = useState('new');
 
   // --- New Split State ---
-  const [activeInput, setActiveInput] = useState(null);
-  const [compositionSplits, setCompositionSplits] = useState(null);
-  const [masterSplits, setMasterSplits] = useState(null);
+  const [compositionSplits, setCompositionSplits] = useState([]);
+  const [masterSplits, setMasterSplits] = useState([]);
   const [songTitle, setSongTitle] = useState('');
-  const [transcription, setTranscription] = useState(null);
-  const [uploadedTrackPath, setUploadedTrackPath] = useState(null);
   const [isAttested, setIsAttested] = useState(false);
   const [signature, setSignature] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -381,20 +378,6 @@ export default function SplitGenerator({ userProfile }) {
   const [proEnriching, setProEnriching] = useState(false);
   const [proEnrichedData, setProEnrichedData] = useState(null); // EnrichSplitsResponse
   const [proEnrichError, setProEnrichError] = useState(null);
-
-  // Microphone
-  const [isRecording, setIsRecording] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const mediaRecorderRef = useRef(null);
-  const audioChunksRef = useRef([]);
-
-  // Image scanner
-  const fileInputRef = useRef(null);
-  const [isScanning, setIsScanning] = useState(false);
-
-  // Track drop
-  const trackInputRef = useRef(null);
-  const [isUploadingTrack, setIsUploadingTrack] = useState(false);
 
   // --- Song Selector State ---
   const [coOwnedSongs, setCoOwnedSongs] = useState([]);
@@ -478,158 +461,7 @@ export default function SplitGenerator({ userProfile }) {
 
   const selectedSong = coOwnedSongs.find(s => s.id === selectedSongId);
 
-  // Whether we have AI results to show
-  const hasResults = compositionSplits !== null || masterSplits !== null;
-
-  // ─── Set AI results (handles both old and new edge function formats) ────────
-  const applyAIResults = (data) => {
-    if (data.composition || data.master) {
-      // New format: { composition: [...], master: [...] }
-      setCompositionSplits(normalizePercentages((data.composition || []).map(s => ({ ...s }))));
-      setMasterSplits(normalizePercentages((data.master || []).map(s => ({ ...s }))));
-    } else if (data.splits) {
-      // Old format: { splits: [...] } — auto-classify by role
-      const comp = [];
-      const mast = [];
-      const masterRoles = ['producer', 'engineer', 'mix engineer', 'recording engineer', 'mastering engineer', 'featured artist', 'artist'];
-      for (const s of data.splits) {
-        const roleLower = (s.role || '').toLowerCase();
-        if (masterRoles.some(r => roleLower.includes(r))) {
-          mast.push({ ...s });
-        } else {
-          comp.push({ ...s });
-        }
-      }
-      setCompositionSplits(normalizePercentages(comp));
-      setMasterSplits(normalizePercentages(mast));
-    }
-  };
-
-  // ─── 1. Voice Memo ────────────────────────────────────────────────────────
-  const handleVoiceRecord = async () => {
-    if (isRecording) {
-      mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
-      setIsRecording(false);
-      setIsProcessing(true);
-      setActiveInput('voice');
-    } else {
-      if (!can('fullSplitAnalysis')) {
-        setUpgradeModal({ open: true, feature: upgradeMessage('fullSplitAnalysis') });
-        return;
-      }
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const mediaRecorder = new MediaRecorder(stream);
-        mediaRecorderRef.current = mediaRecorder;
-        audioChunksRef.current = [];
-
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) audioChunksRef.current.push(e.data);
-        };
-
-        mediaRecorder.onstop = async () => {
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-          try {
-            const formData = new FormData();
-            formData.append('audio', audioBlob, 'voice-memo.webm');
-
-            const { data, error } = await supabase.functions.invoke('process-audio-splits', {
-              body: formData,
-            });
-
-            if (error) throw error;
-            if (data?.composition || data?.master || data?.splits) {
-              applyAIResults(data);
-              if (data.transcription) setTranscription(data.transcription);
-            } else {
-              throw new Error("AI didn't return splits.");
-            }
-          } catch (err) {
-            console.error('Failed to process audio:', err);
-            showToast.error('The AI had trouble hearing that. Try speaking more clearly.');
-          } finally {
-            setIsProcessing(false);
-          }
-        };
-
-        mediaRecorder.start();
-        setIsRecording(true);
-        setCompositionSplits(null);
-        setMasterSplits(null);
-        setTranscription(null);
-      } catch (err) {
-        console.error('Microphone access denied:', err);
-        showToast.error('Please allow microphone permissions to use Voice Memo.');
-      }
-    }
-  };
-
-  // ─── 2. Image Scanner ─────────────────────────────────────────────────────
-  const handleImageUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    if (!can('fullSplitAnalysis')) {
-      setUpgradeModal({ open: true, feature: upgradeMessage('fullSplitAnalysis') });
-      return;
-    }
-
-    setIsScanning(true);
-    setActiveInput('scan');
-    setCompositionSplits(null);
-    setMasterSplits(null);
-    setTranscription(null);
-
-    try {
-      const formData = new FormData();
-      formData.append('image', file);
-
-      const { data, error } = await supabase.functions.invoke('process-image-splits', {
-        body: formData,
-      });
-
-      if (error) throw error;
-      if (data?.composition || data?.master || data?.splits) {
-        applyAIResults(data);
-      } else {
-        throw new Error("AI didn't return splits.");
-      }
-    } catch (err) {
-      console.error('Failed to process image:', err);
-      showToast.error("The AI couldn't read that image. Try a clearer photo or screenshot.");
-    } finally {
-      setIsScanning(false);
-      event.target.value = null;
-    }
-  };
-
-  // ─── 3. Track Upload ──────────────────────────────────────────────────────
-  const handleTrackUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    setIsUploadingTrack(true);
-    setActiveInput('track');
-
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-
-      const { data, error } = await supabase.storage.from('tracks').upload(fileName, file);
-      if (error) throw error;
-      setUploadedTrackPath(data.path);
-      showToast.success(`"${file.name}" uploaded to vault. Use Voice Memo or Scan Notes to add splits.`);
-    } catch (err) {
-      console.error('Failed to upload track:', err);
-      showToast.error('Failed to upload track. Make sure the tracks bucket exists in Supabase.');
-    } finally {
-      setIsUploadingTrack(false);
-      event.target.value = null;
-    }
-  };
-
-  // ─── 4. Inline Edit Helpers ───────────────────────────────────────────────
+  // ─── Inline Edit Helpers ─────────────────────────────────────────────────
   const makeUpdater = (setter) => (index, field, value) => {
     setter(prev => {
       const updated = [...prev];
@@ -659,7 +491,7 @@ export default function SplitGenerator({ userProfile }) {
   const bothHaveContributors = (compositionSplits || []).length > 0 || (masterSplits || []).length > 0;
   const bothValid = compValid && masterValid && bothHaveContributors;
 
-  // ─── 5. Save to Database ──────────────────────────────────────────────────
+  // ─── Save to Database ─────────────────────────────────────────────────────
   const handleSaveToDatabase = async () => {
     if (!bothValid) {
       showToast.error('Each split category with contributors must total exactly 100%.');
@@ -678,9 +510,7 @@ export default function SplitGenerator({ userProfile }) {
         splits: { composition: compositionSplits || [], master: masterSplits || [] },
         signature,
         attested: isAttested,
-        input_method: activeInput,
-        transcription: transcription || null,
-        track_path: uploadedTrackPath || null,
+        input_method: 'manual',
       }]);
 
       if (error) throw error;
@@ -698,16 +528,15 @@ export default function SplitGenerator({ userProfile }) {
       ));
 
       // Reset form
-      setCompositionSplits(null);
-      setMasterSplits(null);
+      setCompositionSplits([]);
+      setMasterSplits([]);
       setSongTitle('');
       setSelectedSongId(null);
       setSongSearchQuery('');
       setSignature('');
       setIsAttested(false);
-      setActiveInput(null);
-      setTranscription(null);
-      setUploadedTrackPath(null);
+      setProEnrichedData(null);
+      setProEnrichError(null);
     } catch (err) {
       console.error('Failed to save:', err);
       showToast.error('Failed to save split sheet. Please try again.');
@@ -777,7 +606,7 @@ export default function SplitGenerator({ userProfile }) {
       {/* Header */}
       <div style={styles.header}>
         <h1 style={styles.title}>Rights Verification Dashboard</h1>
-        <p style={styles.subtitle}>Verify ownership splits for your co-owned songs. Voice it, scan it, or upload your track.</p>
+        <p style={styles.subtitle}>Enter composition and master splits for your co-owned songs. PRO &amp; IPI verification powered by LegalSplits ML.</p>
       </div>
 
       {/* Tabs */}
@@ -902,7 +731,7 @@ export default function SplitGenerator({ userProfile }) {
             )}
           </div>
 
-          {/* Gate: show AI inputs only when song is selected */}
+          {/* Gate: show split form only when song is selected */}
           {!selectedSongId ? (
             <div style={{ ...styles.card, textAlign: 'center', padding: '40px 20px' }}>
               <Search size={32} color={DESIGN_SYSTEM.colors.text.muted} style={{ marginBottom: 12 }} />
@@ -912,70 +741,6 @@ export default function SplitGenerator({ userProfile }) {
             </div>
           ) : (
           <>
-          {/* Input method buttons */}
-          <div style={styles.inputGrid}>
-            <button onClick={() => trackInputRef.current.click()} disabled={isRecording || isScanning || isUploadingTrack}
-              style={{ ...styles.inputCard(isUploadingTrack, DESIGN_SYSTEM.colors.brand.blue), opacity: (isRecording || isScanning) ? 0.5 : 1 }}>
-              <div style={styles.inputIcon}><Upload size={24} color={DESIGN_SYSTEM.colors.brand.blue} /></div>
-              <span style={styles.inputLabel}>{isUploadingTrack ? 'Uploading...' : 'Drop Track'}</span>
-              <span style={styles.inputHint}>Upload the audio file to vault</span>
-              <input type="file" accept="audio/*" ref={trackInputRef} onChange={handleTrackUpload} style={{ display: 'none' }} />
-            </button>
-
-            <button onClick={handleVoiceRecord} disabled={isScanning || isUploadingTrack}
-              style={{ ...styles.inputCard(isRecording, DESIGN_SYSTEM.colors.accent.red), borderColor: isRecording ? DESIGN_SYSTEM.colors.accent.red : undefined, opacity: (isScanning || isUploadingTrack) ? 0.5 : 1 }}>
-              <div style={styles.inputIcon}><Mic size={24} color={isRecording ? DESIGN_SYSTEM.colors.accent.red : DESIGN_SYSTEM.colors.accent.purple} /></div>
-              <span style={{ ...styles.inputLabel, color: isRecording ? DESIGN_SYSTEM.colors.accent.red : DESIGN_SYSTEM.colors.text.primary }}>
-                {isRecording ? 'Recording... Tap to Stop' : 'Voice Memo'}
-              </span>
-              <span style={styles.inputHint}>{isRecording ? 'Speak your deal terms clearly' : 'Speak the deal terms directly'}</span>
-            </button>
-
-            <button onClick={() => fileInputRef.current.click()} disabled={isRecording || isProcessing || isUploadingTrack}
-              style={{ ...styles.inputCard(isScanning, DESIGN_SYSTEM.colors.brand.primary), opacity: (isRecording || isProcessing || isUploadingTrack) ? 0.5 : 1 }}>
-              <div style={styles.inputIcon}><Camera size={24} color={DESIGN_SYSTEM.colors.brand.primary} /></div>
-              <span style={styles.inputLabel}>{isScanning ? 'Scanning...' : 'Scan Notes'}</span>
-              <span style={styles.inputHint}>Upload a photo or screenshot of your notes</span>
-              <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageUpload} style={{ display: 'none' }} />
-            </button>
-          </div>
-
-          {/* Loading spinner */}
-          {(isProcessing || isScanning) && (
-            <div style={styles.loadingSpinner}>
-              <div style={styles.spinner} />
-              <p style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontWeight: DESIGN_SYSTEM.fontWeight.medium }}>
-                {isScanning ? 'AI is reading your image and calculating splits...' : 'AI is transcribing and calculating splits...'}
-              </p>
-            </div>
-          )}
-
-          {/* Track uploaded indicator */}
-          {uploadedTrackPath && !hasResults && !isProcessing && !isScanning && (
-            <div style={{ ...styles.card, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Upload size={16} color={DESIGN_SYSTEM.colors.brand.blue} />
-              <span style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: DESIGN_SYSTEM.fontSize.sm }}>
-                Track uploaded to vault. Now use <strong>Voice Memo</strong> or <strong>Scan Notes</strong> to add splits.
-              </span>
-            </div>
-          )}
-
-          {/* ═══ RESULTS & EDIT SECTION ═══ */}
-          {hasResults && !isProcessing && !isScanning && (
-            <>
-              {/* Song title — auto-filled from selector, read-only */}
-              <div style={{ marginBottom: DESIGN_SYSTEM.spacing.md }}>
-                <label style={{ display: 'block', fontSize: DESIGN_SYSTEM.fontSize.sm, fontWeight: DESIGN_SYSTEM.fontWeight.medium, color: DESIGN_SYSTEM.colors.text.secondary, marginBottom: 6 }}>
-                  Song
-                </label>
-                <input type="text" value={songTitle} readOnly style={{ ...styles.textInput, opacity: 0.7, cursor: 'not-allowed' }} />
-              </div>
-
-              {/* AI source badge */}
-              <div style={{ marginBottom: DESIGN_SYSTEM.spacing.md, fontSize: DESIGN_SYSTEM.fontSize.xs, color: DESIGN_SYSTEM.colors.text.tertiary }}>
-                AI suggested splits via {activeInput === 'scan' ? 'Image Scan' : 'Voice Memo'} — edit any field below
-              </div>
-
               {/* Composition splits */}
               <SplitSection
                 label="Composition / Publishing"
@@ -1018,7 +783,7 @@ export default function SplitGenerator({ userProfile }) {
                 </div>
               )}
 
-              {/* PRO & IPI Enrichment */}
+              {/* PRO & IPI Enrichment — only show when there are contributors */}
               {((compositionSplits || []).length > 0 || (masterSplits || []).length > 0) && (
                 <div style={{ ...styles.card, marginBottom: DESIGN_SYSTEM.spacing.md }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: DESIGN_SYSTEM.spacing.sm }}>
@@ -1145,8 +910,6 @@ export default function SplitGenerator({ userProfile }) {
                   {isSaving ? 'Saving...' : 'Confirm & Save to Database'}
                 </button>
               </div>
-            </>
-          )}
           </>
           )}
         </>

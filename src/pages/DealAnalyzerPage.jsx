@@ -646,15 +646,19 @@ function VaultResultsPanel({ result, userProfile }) {
     setAssigning(true);
     try {
       const song = songs.find(s => s.id === selectedSong);
-      const splitsPayload = result.parties.map(p => ({
-        name:       p.name,
-        role:       p.role ?? '',
-        percentage: p.composition_percentage ?? p.master_percentage ?? 0,
-        ipi:        p.ipi ?? null,
-        pro:        p.pro ?? null,
-      }));
+      const compositionSplits = result.parties
+        .filter(p => p.composition_percentage != null && p.composition_percentage > 0)
+        .map(p => ({ name: p.name, role: p.role ?? '', percentage: p.composition_percentage, ipi: p.ipi ?? null, pro: p.pro ?? null }));
+      const masterSplits = result.parties
+        .filter(p => p.master_percentage != null && p.master_percentage > 0)
+        .map(p => ({ name: p.name, role: p.role ?? '', percentage: p.master_percentage, ipi: p.ipi ?? null, pro: p.pro ?? null }));
+      const fallbackSplits = result.parties.map(p => ({ name: p.name, role: p.role ?? '', percentage: p.composition_percentage ?? p.master_percentage ?? 0, ipi: p.ipi ?? null, pro: p.pro ?? null }));
+      const splitsPayload = (compositionSplits.length > 0 || masterSplits.length > 0)
+        ? { composition: compositionSplits, master: masterSplits }
+        : fallbackSplits;
       const { error } = await supabase.from('split_sheets').insert({
         user_id:      userProfile.id,
+        song_id:      selectedSong,
         song_title:   song?.title ?? 'Unknown',
         splits:       splitsPayload,
         signature:    `deal_analyzer_${Date.now()}`,
@@ -662,6 +666,10 @@ function VaultResultsPanel({ result, userProfile }) {
         input_method: 'deal_analyzer',
       });
       if (error) throw error;
+
+      // Mark song as verified
+      await supabase.from('songs').update({ verification_status: 'verified' }).eq('id', selectedSong);
+
       setAssigned(true);
       showToast.success(`Split sheet created for "${song?.title}" ✓`);
     } catch (err) {
