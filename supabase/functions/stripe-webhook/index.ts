@@ -98,7 +98,7 @@ async function setTier(stripeCustomerId: string, tier: 'free' | 'basic' | 'pro',
       subscription_tier:      tier,
       stripe_subscription_id: subscriptionId ?? null,
       subscription_status:    tier === 'free' ? 'canceled' : 'active',
-      subscription_ends_at:   endsAt?.toISOString() ?? null,
+      subscription_ends_at:   (endsAt && !isNaN(endsAt.getTime())) ? endsAt.toISOString() : null,
     })
     .eq('stripe_customer_id', stripeCustomerId);
   if (error) console.error('[stripe-webhook] setTier error:', error);
@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
           const tier    = PRICE_TO_TIER[priceId];
 
           if (tier) {
-            const endsAt = new Date(sub.current_period_end * 1000);
+            const endsAt = sub.current_period_end ? new Date(sub.current_period_end * 1000) : undefined;
             await setTier(customerId, tier, sub.id, endsAt);
             console.log(`[stripe-webhook] checkout.session.completed: tier=${tier} customer=${customerId}`);
 
