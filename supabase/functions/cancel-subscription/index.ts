@@ -60,10 +60,24 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ── Cancel at period end (not immediately) ────────────────────────────────
+    // ── Determine when to cancel ──────────────────────────────────────────────
+    // If the subscription has an active promotional discount (e.g. 6-month free promo),
+    // cancel at the end of the promo period so the user keeps access for the full
+    // promotional duration they were promised. Otherwise cancel at period end.
+    const existingSub = await stripe.subscriptions.retrieve(profile.stripe_subscription_id);
+
+    let cancelAt: number | undefined;
+    const discountEnd = existingSub.discount?.end; // Unix timestamp when repeating coupon expires
+    if (discountEnd && discountEnd > Math.floor(Date.now() / 1000)) {
+      // Promo is still active — cancel at the promo end date
+      cancelAt = discountEnd;
+    }
+
     const subscription = await stripe.subscriptions.update(
       profile.stripe_subscription_id,
-      { cancel_at_period_end: true },
+      cancelAt
+        ? { cancel_at: cancelAt }
+        : { cancel_at_period_end: true },
     );
 
     // Mark as "canceling" in our DB so the UI can reflect it
