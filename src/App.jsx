@@ -306,11 +306,13 @@ export default function SongPitch() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       if (session && (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
-        // Email confirmation redirect — show success page instead of loading the app
+        // Email confirmation redirect — show success page instead of loading the app.
+        // Also kick off profile creation immediately so it's ready before the user clicks.
         if (event === 'SIGNED_IN' && isEmailConfirmRef.current) {
           isEmailConfirmRef.current = false;
           setShowEmailConfirmed(true);
           setLoading(false);
+          loadUserProfile(session.user); // create profile from sp_pending_profile in background
           return;
         }
         setShowLanding(false);
@@ -1019,12 +1021,13 @@ export default function SongPitch() {
 
   // ── Email confirmed success page ─────────────────────────────────────────
   if (showEmailConfirmed) {
-    // User is already authenticated from the confirmation link — just load their profile
-    // and proceed straight into the app. No sign-out/re-sign-in loop needed.
+    // Profile creation was already kicked off in the SIGNED_IN handler.
+    // By the time the user clicks, userProfile may already be set.
+    // Only reload if it's still missing (e.g. creation hasn't finished yet).
     const handleContinue = () => {
       setShowEmailConfirmed(false);
       setShowLanding(false);
-      if (session?.user) {
+      if (!userProfile && session?.user) {
         loadUserProfile(session.user);
       }
     };
