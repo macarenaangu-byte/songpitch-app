@@ -86,14 +86,14 @@ Deno.serve(async (req) => {
       .update({ subscription_status: 'canceling' })
       .eq('user_id', user.id);
 
-    const cancelAt = subscription.cancel_at
+    const cancelAtIso = subscription.cancel_at
       ? new Date(subscription.cancel_at * 1000).toISOString()
       : null;
 
-    console.log(`[cancel-subscription] Scheduled cancellation for user=${user.id} at ${cancelAt}`);
+    console.log(`[cancel-subscription] Scheduled cancellation for user=${user.id} at ${cancelAtIso}`);
 
     return new Response(
-      JSON.stringify({ success: true, cancel_at: cancelAt }),
+      JSON.stringify({ success: true, cancel_at: cancelAtIso }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
 
