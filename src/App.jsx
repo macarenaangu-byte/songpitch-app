@@ -565,107 +565,110 @@ export default function SongPitch() {
     }
 
     try {
+      // Use maybeSingle() so 0 rows → data:null,error:null instead of throwing PGRST116/406
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*, composers(*)')
         .eq('user_id', userId)
-        .or('is_deleted.is.null,is_deleted.eq.false')
-        .single();
+        .is('is_deleted', null)
+        .maybeSingle();
 
       if (error) {
-        if (error.code === 'PGRST116') {
-          const isOAuthUser = authUser?.app_metadata?.provider && authUser.app_metadata.provider !== 'email';
-          const pendingProfileRaw = localStorage.getItem('sp_pending_profile');
-
-          if (pendingProfileRaw) {
-            // Silently create profile from stored signup data (email-confirmation flow)
-            try {
-              const pending = JSON.parse(pendingProfileRaw);
-              const accountType = pending.role === 'executive' ? 'music_executive' : 'composer';
-              const profileRow = {
-                user_id: userId,
-                role: pending.role,
-                account_type: accountType,
-                first_name: pending.firstName,
-                last_name: pending.lastName,
-                bio: pending.bio || null,
-                location: pending.location || null,
-                avatar_color: `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`,
-              };
-              const { data: profileData, error: profileError } = await supabase
-                .from('user_profiles')
-                .insert([profileRow])
-                .select('*, composers(*)')
-                .single();
-              if (profileError) throw profileError;
-
-              if (pending.role === 'composer' && pending.genres?.length > 0) {
-                await supabase.from('composers').insert([{
-                  user_profile_id: profileData.id,
-                  genres: pending.genres,
-                }]);
-                // Refetch to get composers row
-                const { data: refreshed } = await supabase
-                  .from('user_profiles')
-                  .select('*, composers(*)')
-                  .eq('user_id', userId)
-                  .single();
-                localStorage.removeItem('sp_pending_profile');
-                localStorage.removeItem('sp_pending_signup_email');
-                setUserProfile(refreshed ?? profileData);
-                setLoading(false);
-                return;
-              }
-
-              localStorage.removeItem('sp_pending_profile');
-              localStorage.removeItem('sp_pending_signup_email');
-              setUserProfile(profileData);
-              setLoading(false);
-              return;
-            } catch (createErr) {
-              console.error('Auto-create profile failed:', createErr);
-              localStorage.removeItem('sp_pending_profile');
-              localStorage.removeItem('sp_pending_signup_email');
-              setUserProfile(null);
-              setShowLanding(false); // fall back to AccountSetupPage
-              return;
-            }
-          }
-
-          if (isOAuthUser) {
-            setUserProfile(null);
-            setShowLanding(false); // Route to AccountSetupPage
-            return;
-          }
-
-          // Legacy flag or recently confirmed on another device
-          const pendingEmail = localStorage.getItem('sp_pending_signup_email');
-          const emailConfirmedAt = authUser?.email_confirmed_at;
-          const isNewlyConfirmed = emailConfirmedAt && (Date.now() - new Date(emailConfirmedAt).getTime()) < 15 * 60 * 1000;
-          if (pendingEmail || isNewlyConfirmed) {
-            localStorage.removeItem('sp_pending_signup_email');
-            setUserProfile(null);
-            setShowLanding(false); // Route to AccountSetupPage
-            return;
-          }
-
-          // Auth account exists but no profile row — sign out and show error on AuthPage
-          setAuthError("No account found for this email. Please create an account first.");
-          stayOnAuthRef.current = true;
-          setUserProfile(null);
-          await supabase.auth.signOut();
-          return;
-        } else if (error.code === '42501' || String(error.message).toLowerCase().includes('403') || String(error.message).toLowerCase().includes('jwt')) {
-          // 403 / RLS / JWT not ready — session expired or not yet set, sign out cleanly
+        // Permission / JWT errors — sign out cleanly
+        if (error.code === '42501' || String(error.message).toLowerCase().includes('403') || String(error.message).toLowerCase().includes('jwt')) {
           stayOnAuthRef.current = true;
           setAuthError("Session error. Please sign in again.");
           setUserProfile(null);
           setNeedsOnboarding(false);
           await supabase.auth.signOut();
-        } else {
-          throw error;
+          return;
         }
-      } else {
+        throw error;
+      }
+
+      if (!data) {
+        // No profile row found — try auto-create from pending signup data, then fallback
+        const isOAuthUser = authUser?.app_metadata?.provider && authUser.app_metadata.provider !== 'email';
+        const pendingProfileRaw = localStorage.getItem('sp_pending_profile');
+
+        if (pendingProfileRaw) {
+          try {
+            const pending = JSON.parse(pendingProfileRaw);
+            const accountType = pending.role === 'executive' ? 'music_executive' : 'composer';
+            const profileRow = {
+              user_id: userId,
+              role: pending.role,
+              account_type: accountType,
+              first_name: pending.firstName,
+              last_name: pending.lastName,
+              bio: pending.bio || null,
+              location: pending.location || null,
+              avatar_color: `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`,
+            };
+            const { data: profileData, error: profileError } = await supabase
+              .from('user_profiles')
+              .insert([profileRow])
+              .select('*, composers(*)')
+              .single();
+            if (profileError) throw profileError;
+
+            if (pending.role === 'composer' && pending.genres?.length > 0) {
+              await supabase.from('composers').insert([{
+                user_profile_id: profileData.id,
+                genres: pending.genres,
+              }]);
+              const { data: refreshed } = await supabase
+                .from('user_profiles')
+                .select('*, composers(*)')
+                .eq('user_id', userId)
+                .maybeSingle();
+              localStorage.removeItem('sp_pending_profile');
+              localStorage.removeItem('sp_pending_signup_email');
+              setUserProfile(refreshed ?? profileData);
+              setLoading(false);
+              return;
+            }
+
+            localStorage.removeItem('sp_pending_profile');
+            localStorage.removeItem('sp_pending_signup_email');
+            setUserProfile(profileData);
+            setLoading(false);
+            return;
+          } catch (createErr) {
+            console.error('Auto-create profile failed:', createErr);
+            localStorage.removeItem('sp_pending_profile');
+            localStorage.removeItem('sp_pending_signup_email');
+            setUserProfile(null);
+            setShowLanding(false);
+            return;
+          }
+        }
+
+        if (isOAuthUser) {
+          setUserProfile(null);
+          setShowLanding(false);
+          return;
+        }
+
+        const pendingEmail = localStorage.getItem('sp_pending_signup_email');
+        const emailConfirmedAt = authUser?.email_confirmed_at;
+        const isNewlyConfirmed = emailConfirmedAt && (Date.now() - new Date(emailConfirmedAt).getTime()) < 15 * 60 * 1000;
+        if (pendingEmail || isNewlyConfirmed) {
+          localStorage.removeItem('sp_pending_signup_email');
+          setUserProfile(null);
+          setShowLanding(false);
+          return;
+        }
+
+        // Auth account exists but no profile — sign out with error
+        setAuthError("No account found for this email. Please create an account first.");
+        stayOnAuthRef.current = true;
+        setUserProfile(null);
+        await supabase.auth.signOut();
+        return;
+      }
+
+      {
         const hasValidRole = !!(data?.account_type || data?.role);
 
         setUserProfile(data);
