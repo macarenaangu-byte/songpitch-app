@@ -48,9 +48,32 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
   const [emailChanging, setEmailChanging] = useState(false);
   const [emailChangeMsg, setEmailChangeMsg] = useState(null);
 
-  // Subscription cancel state
+  // Subscription / billing state
   const [cancelingSubscription, setCancelingSubscription] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState(user.subscription_status || 'active');
+  const [upgradingTo, setUpgradingTo] = useState(null);
+
+  const handleUpgrade = async (tier) => {
+    setUpgradingTo(tier);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await supabase.functions.invoke('create-checkout-session', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: {
+          tier,
+          success_url: `${window.location.origin}#profile`,
+          cancel_url:  `${window.location.origin}#profile`,
+        },
+      });
+      if (res.error) throw new Error(res.error.message);
+      const { url } = res.data;
+      if (url) window.location.href = url;
+    } catch (err) {
+      showToast.error(err.message || 'Could not start checkout. Please try again.');
+    } finally {
+      setUpgradingTo(null);
+    }
+  };
 
   const handleCancelSubscription = async () => {
     if (!window.confirm('Your plan stays active until the end of the billing period, then downgrades to Free. Continue?')) return;
@@ -258,7 +281,8 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
         )}
       </div>
 
-      <div style={{ maxWidth: 600, background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 20, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+      <div style={{ flex: '1 1 520px', maxWidth: 600, background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 20, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, overflow: 'hidden' }}>
         {!editing ? (
           <>
             {/* ── Cover band + floating avatar ── */}
@@ -799,6 +823,124 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
             </div>
           </>
         )}
+      </div>
+
+      {/* ── Billing Card ─────────────────────────────────── */}
+      {user.subscription_tier !== 'admin' && (() => {
+        const tier       = user.subscription_tier || 'free';
+        const isPaid     = tier !== 'free';
+        const isCanceling = subscriptionStatus === 'canceling';
+        const endsAt     = user.subscription_ends_at ? new Date(user.subscription_ends_at) : null;
+        const promoEndsAt = user.promo_ends_at ? new Date(user.promo_ends_at) : null;
+
+        // Progress bar: promo period takes priority; fallback to billing cycle
+        const progressTarget = (promoEndsAt && promoEndsAt > new Date()) ? promoEndsAt : endsAt;
+        const daysLeft  = progressTarget ? Math.max(0, Math.ceil((progressTarget - Date.now()) / 86400000)) : null;
+        const daysTotal = progressTarget
+          ? (promoEndsAt && promoEndsAt > new Date()
+              ? Math.ceil((promoEndsAt - new Date(user.created_at || Date.now())) / 86400000)
+              : 30)
+          : null;
+        const progress  = (daysLeft !== null && daysTotal > 0) ? Math.min(100, Math.round((daysLeft / daysTotal) * 100)) : 0;
+
+        const isComposer = user.account_type === 'composer';
+        const prices     = isComposer
+          ? { basic: '$4.99/mo', pro: '$9.99/mo' }
+          : { basic: '$5.99/mo', pro: '$14.99/mo' };
+
+        const tierColor  = tier === 'pro' ? DESIGN_SYSTEM.colors.brand.primary : tier === 'basic' ? '#60a5fa' : DESIGN_SYSTEM.colors.text.muted;
+
+        return (
+          <div style={{ flex: '0 0 300px', background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 20, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <CreditCard size={16} color={DESIGN_SYSTEM.colors.brand.primary} />
+              <span style={{ fontSize: 15, fontWeight: 700, color: DESIGN_SYSTEM.colors.text.primary, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>Billing</span>
+            </div>
+
+            {/* Plan + status */}
+            <div style={{ background: DESIGN_SYSTEM.colors.bg.elevated, borderRadius: 12, padding: '14px 16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: tierColor, textTransform: 'capitalize', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+                  {tier === 'free' ? 'Free Plan' : `${tier} Plan`}
+                </span>
+                {isPaid && (
+                  <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+                    color:      isCanceling ? DESIGN_SYSTEM.colors.accent.amber : '#4ade80',
+                    background: isCanceling ? `${DESIGN_SYSTEM.colors.accent.amber}15` : 'rgba(74,222,128,0.12)',
+                    border:     isCanceling ? `1px solid ${DESIGN_SYSTEM.colors.accent.amber}30` : '1px solid rgba(74,222,128,0.25)',
+                  }}>
+                    {isCanceling ? 'Canceling' : 'Active'}
+                  </span>
+                )}
+              </div>
+
+              {/* Renewal / access end date */}
+              {endsAt && (
+                <p style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.text.muted, margin: '0 0 10px', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+                  {isCanceling ? 'Access ends' : 'Renews'}{' '}
+                  {endsAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </p>
+              )}
+
+              {/* Promo label */}
+              {promoEndsAt && promoEndsAt > new Date() && (
+                <p style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.brand.primary, margin: '0 0 10px', fontWeight: 600, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+                  🎁 Promo active — ends {promoEndsAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </p>
+              )}
+
+              {/* Days-remaining progress bar */}
+              {daysLeft !== null && isPaid && (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                    <span style={{ fontSize: 11, color: DESIGN_SYSTEM.colors.text.muted, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+                      {promoEndsAt && promoEndsAt > new Date() ? 'Promo remaining' : 'Billing cycle'}
+                    </span>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.secondary, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+                      {daysLeft}d left
+                    </span>
+                  </div>
+                  <div style={{ height: 4, borderRadius: 4, background: DESIGN_SYSTEM.colors.bg.primary, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', borderRadius: 4, width: `${progress}%`, background: promoEndsAt && promoEndsAt > new Date() ? DESIGN_SYSTEM.colors.brand.primary : '#60a5fa', transition: 'width 0.4s ease' }} />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {/* Free → upgrade both tiers */}
+              {!isPaid && (
+                <>
+                  <button onClick={() => handleUpgrade('basic')} disabled={upgradingTo === 'basic'} style={{ width: '100%', background: '#60a5fa18', color: '#60a5fa', border: '1px solid #60a5fa40', borderRadius: 10, padding: '10px 14px', fontWeight: 700, fontSize: 13, cursor: upgradingTo === 'basic' ? 'not-allowed' : 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", opacity: upgradingTo === 'basic' ? 0.6 : 1, transition: 'all 0.15s ease' }}>
+                    {upgradingTo === 'basic' ? 'Redirecting…' : `Upgrade to Basic — ${prices.basic}`}
+                  </button>
+                  <button onClick={() => handleUpgrade('pro')} disabled={upgradingTo === 'pro'} style={{ width: '100%', background: `${DESIGN_SYSTEM.colors.brand.primary}18`, color: DESIGN_SYSTEM.colors.brand.primary, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}40`, borderRadius: 10, padding: '10px 14px', fontWeight: 700, fontSize: 13, cursor: upgradingTo === 'pro' ? 'not-allowed' : 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", opacity: upgradingTo === 'pro' ? 0.6 : 1, transition: 'all 0.15s ease' }}>
+                    {upgradingTo === 'pro' ? 'Redirecting…' : `Upgrade to Pro — ${prices.pro}`}
+                  </button>
+                </>
+              )}
+
+              {/* Basic → upgrade to pro */}
+              {tier === 'basic' && !isCanceling && (
+                <button onClick={() => handleUpgrade('pro')} disabled={upgradingTo === 'pro'} style={{ width: '100%', background: `${DESIGN_SYSTEM.colors.brand.primary}18`, color: DESIGN_SYSTEM.colors.brand.primary, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}40`, borderRadius: 10, padding: '10px 14px', fontWeight: 700, fontSize: 13, cursor: upgradingTo === 'pro' ? 'not-allowed' : 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", opacity: upgradingTo === 'pro' ? 0.6 : 1, transition: 'all 0.15s ease' }}>
+                  {upgradingTo === 'pro' ? 'Redirecting…' : `Upgrade to Pro — ${prices.pro}`}
+                </button>
+              )}
+
+              {/* Cancel subscription */}
+              {isPaid && !isCanceling && (
+                <button onClick={handleCancelSubscription} disabled={cancelingSubscription} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', background: 'transparent', color: DESIGN_SYSTEM.colors.accent.red, border: `1px solid ${DESIGN_SYSTEM.colors.accent.red}33`, borderRadius: 10, padding: '9px 14px', fontWeight: 600, fontSize: 13, cursor: cancelingSubscription ? 'not-allowed' : 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", opacity: cancelingSubscription ? 0.5 : 1, transition: 'all 0.15s ease' }}>
+                  <AlertCircle size={13} />
+                  {cancelingSubscription ? 'Canceling…' : 'Cancel subscription'}
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })()}
       </div>
     </div>
   );

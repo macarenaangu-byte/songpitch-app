@@ -91,7 +91,7 @@ async function sendUserConfirmationEmail(toEmail: string, tier: string): Promise
 
 // ── Database helpers ──────────────────────────────────────────────────────────
 
-async function setTier(stripeCustomerId: string, tier: 'free' | 'basic' | 'pro', subscriptionId?: string, endsAt?: Date) {
+async function setTier(stripeCustomerId: string, tier: 'free' | 'basic' | 'pro', subscriptionId?: string, endsAt?: Date, promoEndsAt?: Date) {
   const { error } = await supabase
     .from('user_profiles')
     .update({
@@ -99,9 +99,19 @@ async function setTier(stripeCustomerId: string, tier: 'free' | 'basic' | 'pro',
       stripe_subscription_id: subscriptionId ?? null,
       subscription_status:    tier === 'free' ? 'canceled' : 'active',
       subscription_ends_at:   (endsAt && !isNaN(endsAt.getTime())) ? endsAt.toISOString() : null,
+      promo_ends_at:          (promoEndsAt && !isNaN(promoEndsAt.getTime())) ? promoEndsAt.toISOString() : null,
     })
     .eq('stripe_customer_id', stripeCustomerId);
   if (error) console.error('[stripe-webhook] setTier error:', error);
+}
+
+// Extract promo end date from a Stripe subscription's discount (if active)
+function getPromoEndsAt(sub: Stripe.Subscription): Date | undefined {
+  const discountEnd = sub.discount?.end;
+  if (discountEnd && discountEnd > Math.floor(Date.now() / 1000)) {
+    return new Date(discountEnd * 1000);
+  }
+  return undefined;
 }
 
 // ── Main handler ──────────────────────────────────────────────────────────────
@@ -145,7 +155,7 @@ Deno.serve(async (req) => {
 
           if (tier) {
             const endsAt = sub.current_period_end ? new Date(sub.current_period_end * 1000) : undefined;
-            await setTier(customerId, tier, sub.id, endsAt);
+            await setTier(customerId, tier, sub.id, endsAt, getPromoEndsAt(sub));
             console.log(`[stripe-webhook] checkout.session.completed: tier=${tier} customer=${customerId}`);
 
             // Send confirmation email to user
@@ -177,7 +187,7 @@ Deno.serve(async (req) => {
 
       if (tier) {
         const endsAt = new Date(sub.current_period_end * 1000);
-        await setTier(sub.customer as string, tier, sub.id, endsAt);
+        await setTier(sub.customer as string, tier, sub.id, endsAt, getPromoEndsAt(sub));
         console.log(`[stripe-webhook] ${event.type}: tier=${tier} customer=${sub.customer}`);
       } else {
         console.warn(`[stripe-webhook] ${event.type}: unknown price ID "${priceId}" for customer ${sub.customer}`);
