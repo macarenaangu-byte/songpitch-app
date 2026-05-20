@@ -57,6 +57,7 @@ export function AccountSetupPage({ user, onComplete }) {
         bio: bio.trim() || null,
         location: location.trim() || null,
         linkedin_url: linkedInUrl.trim() || null,
+        is_deleted: false, // explicit — required for RLS SELECT policy to return the row
         // Only set a color if they don't have one yet (upsert handles this nicely)
         avatar_color: AVATAR_COLORS[(firstName.trim().length + lastName.trim().length) % AVATAR_COLORS.length],
       };

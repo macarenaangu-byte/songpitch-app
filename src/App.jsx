@@ -608,14 +608,35 @@ export default function SongPitch() {
               last_name: pending.lastName,
               bio: pending.bio || null,
               location: pending.location || null,
+              is_deleted: false, // explicit — don't rely on DB default
               avatar_color: `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`,
             };
-            const { data: profileData, error: profileError } = await supabase
+
+            // Use maybeSingle (not single) so a null result doesn't throw
+            const { data: insertedData, error: insertErr } = await supabase
               .from('user_profiles')
               .insert([profileRow])
               .select('*, composers(*)')
-              .single();
-            if (profileError) throw profileError;
+              .maybeSingle();
+
+            let profileData = insertedData;
+
+            if (insertErr) {
+              // 23505 = unique_violation: profile already exists from a previous attempt
+              // Fetch it rather than giving up
+              if (insertErr.code === '23505') {
+                const { data: existing } = await supabase
+                  .from('user_profiles')
+                  .select('*, composers(*)')
+                  .eq('user_id', userId)
+                  .maybeSingle();
+                profileData = existing;
+              } else {
+                throw insertErr;
+              }
+            }
+
+            if (!profileData) throw new Error('Profile not found after insert');
 
             if (pending.role === 'composer' && pending.genres?.length > 0) {
               await supabase.from('composers').insert([{
@@ -641,8 +662,8 @@ export default function SongPitch() {
             return;
           } catch (createErr) {
             console.error('Auto-create profile failed:', createErr);
-            localStorage.removeItem('sp_pending_profile');
-            localStorage.removeItem('sp_pending_signup_email');
+            // Do NOT clear sp_pending_profile here — keep it so the next
+            // loadUserProfile call can retry rather than losing the data
             setUserProfile(null);
             setShowLanding(false);
             return;
