@@ -33,7 +33,7 @@ const PRICE_TO_TIER: Record<string, 'basic' | 'pro'> = {
 };
 
 const ADMIN_EMAIL = 'manadeau@coda-vault.com';
-const APP_URL     = Deno.env.get('APP_URL') ?? 'https://www.songpitchhub.com';
+const APP_URL     = Deno.env.get('APP_URL') ?? 'https://www.coda-vault.com';
 
 // ── Email helpers ─────────────────────────────────────────────────────────────
 

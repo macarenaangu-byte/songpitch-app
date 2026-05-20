@@ -124,8 +124,8 @@ Deno.serve(async (req) => {
           account_type:        accountType,
         },
       },
-      success_url: success_url ?? `${Deno.env.get('APP_URL') ?? 'https://www.songpitchhub.com'}?upgrade=success`,
-      cancel_url:  cancel_url  ?? `${Deno.env.get('APP_URL') ?? 'https://www.songpitchhub.com'}?upgrade=canceled`,
+      success_url: success_url ?? `${Deno.env.get('APP_URL') ?? 'https://www.coda-vault.com'}?upgrade=success`,
+      cancel_url:  cancel_url  ?? `${Deno.env.get('APP_URL') ?? 'https://www.coda-vault.com'}?upgrade=canceled`,
     };
 
     // Apply promotion code if provided (e.g. FOUNDER2026)
