@@ -107,7 +107,13 @@ export default function SongPitch() {
     window.location.hash.includes('access_token') ||
     new URLSearchParams(window.location.search).has('code')
   );
-  const isEmailConfirmRef = useRef(window.location.hash.includes('type=signup'));
+  // Detect email confirmation — works for both legacy hash flow (#type=signup)
+  // and modern Supabase PKCE flow (?code=...). For PKCE we also require
+  // sp_pending_profile to exist so we don't misfire on OAuth logins.
+  const isEmailConfirmRef = useRef(
+    window.location.hash.includes('type=signup') ||
+    (new URLSearchParams(window.location.search).has('code') && !!localStorage.getItem('sp_pending_profile'))
+  );
   const legalPageFromHashRef = useRef(!!getLegalPageFromHash()); // true if legal page was loaded from URL
   const suppressLegalPushRef = useRef(false); // prevent double history push on popstate
   const [authError, setAuthError] = useState(null);
