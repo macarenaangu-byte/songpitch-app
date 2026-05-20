@@ -575,7 +575,8 @@ export default function SongPitch() {
         .from('user_profiles')
         .select('*, composers(*)')
         .eq('user_id', userId)
-        .or('is_deleted.is.null,is_deleted.eq.false')
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (error) {
