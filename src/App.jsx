@@ -567,12 +567,15 @@ export default function SongPitch() {
     }
 
     try {
-      // Use maybeSingle() so 0 rows → data:null,error:null instead of throwing PGRST116/406
+      // Use maybeSingle() so 0 rows → data:null,error:null instead of throwing PGRST116/406.
+      // Filter covers both is_deleted=false (normal active profiles) and is_deleted IS NULL
+      // (profiles created before the column existed). UNIQUE constraint on user_id means
+      // at most 1 row matches, so maybeSingle() is always safe with the OR filter.
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*, composers(*)')
         .eq('user_id', userId)
-        .is('is_deleted', null)
+        .or('is_deleted.is.null,is_deleted.eq.false')
         .maybeSingle();
 
       if (error) {
