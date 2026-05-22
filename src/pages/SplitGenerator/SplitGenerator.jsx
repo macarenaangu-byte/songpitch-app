@@ -347,7 +347,7 @@ function SplitSection({ label, icon, accentColor, splits, onUpdate, onRemove, on
 }
 
 // ─── Main Component ──────────────────────────────────────────────────────────
-export default function SplitGenerator({ userProfile }) {
+export default function SplitGenerator({ userProfile, isMobile = false }) {
   // Tier gates
   const { can, upgradeMessage } = useTier(userProfile);
   const [upgradeModal, setUpgradeModal] = useState({ open: false, feature: '' });
@@ -809,7 +809,7 @@ export default function SplitGenerator({ userProfile }) {
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
-    <div style={styles.page}>
+    <div style={{ ...styles.page, padding: isMobile ? '16px' : DESIGN_SYSTEM.spacing.xl }}>
       <UpgradeModal
         isOpen={upgradeModal.open}
         onClose={() => setUpgradeModal({ open: false, feature: '' })}
@@ -1342,7 +1342,7 @@ export default function SplitGenerator({ userProfile }) {
             <div style={{ background: doc.card, borderRadius: 10, border: `1px solid ${doc.border}`, overflow: 'hidden', fontFamily: doc.sans }}>
 
               {/* ── Document header ── */}
-              <div style={{ padding: '28px 32px 20px', borderBottom: `2px solid ${doc.textDark}` }}>
+              <div style={{ padding: isMobile ? '16px' : '28px 32px 20px', borderBottom: `2px solid ${doc.textDark}` }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <h1 style={{ fontFamily: doc.serif, fontSize: 28, fontWeight: 700, color: doc.textDark, letterSpacing: '0.15em', margin: 0, textTransform: 'uppercase' }}>Split Sheet</h1>
                   <div style={{ textAlign: 'right' }}>
@@ -1371,8 +1371,8 @@ export default function SplitGenerator({ userProfile }) {
               </div>
 
               {/* ── Date / ISRC / UPC ── */}
-              <div style={{ padding: '20px 32px', borderBottom: `1px solid ${doc.borderLight}` }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 24 }}>
+              <div style={{ padding: isMobile ? '12px 16px' : '20px 32px', borderBottom: `1px solid ${doc.borderLight}` }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: isMobile ? 12 : 24 }}>
                   <div>
                     <label style={docLabel}>Agreement Date *</label>
                     <input style={docInput} type="date" value={genDate} onChange={e => setGenDate(e.target.value)} />
@@ -1389,8 +1389,8 @@ export default function SplitGenerator({ userProfile }) {
               </div>
 
               {/* ── Label / Notes ── */}
-              <div style={{ padding: '20px 32px', borderBottom: `1px solid ${doc.borderLight}` }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+              <div style={{ padding: isMobile ? '12px 16px' : '20px 32px', borderBottom: `1px solid ${doc.borderLight}` }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 12 : 24 }}>
                   <div>
                     <label style={docLabel}>Record Label</label>
                     <input style={docInput} value={genLabel} onChange={e => setGenLabel(e.target.value)} placeholder="Unsigned" />
@@ -1461,7 +1461,7 @@ export default function SplitGenerator({ userProfile }) {
                     {w._expanded && (
                       <div style={{ padding: '18px 16px' }}>
                         {/* Row 1: Legal name / Stage name / Email */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20, marginBottom: 18 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: isMobile ? 10 : 20, marginBottom: 18 }}>
                           <div>
                             <label style={docLabel}>Legal Name *</label>
                             <input style={docInput} value={w.legal_name} onChange={e => updateGenWriter(i, 'legal_name', e.target.value)} placeholder="Full legal name" />
@@ -1477,7 +1477,7 @@ export default function SplitGenerator({ userProfile }) {
                         </div>
 
                         {/* Row 2: Role / PRO / IPI */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20, marginBottom: 18 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: isMobile ? 10 : 20, marginBottom: 18 }}>
                           <div>
                             <label style={docLabel}>Role / Contribution *</label>
                             <select style={{ ...docInput, cursor: 'pointer' }} value={w.role} onChange={e => updateGenWriter(i, 'role', e.target.value)}>

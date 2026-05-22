@@ -9,7 +9,7 @@ import { Avatar } from '../components/Avatar';
 import { Badge } from '../components/Badge';
 import { ProfileBadges } from '../components/ProfileBadges';
 
-export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount }) {
+export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount, isMobile = false }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -271,7 +271,7 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
   };
 
   return (
-    <div className="page-enter" style={{ padding: "32px 36px", minHeight: "100%", overflowY: "auto" }}>
+    <div className="page-enter" style={{ padding: isMobile ? "16px" : "32px 36px", minHeight: "100%", overflowY: "auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 28, fontWeight: 800, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>My Profile</h1>
         {!editing && (
@@ -281,8 +281,8 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
         )}
       </div>
 
-      <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-      <div style={{ flex: '1 1 520px', maxWidth: 600, background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 20, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap', flexDirection: isMobile ? 'column' : 'row' }}>
+      <div style={{ flex: isMobile ? '1 1 100%' : '1 1 520px', maxWidth: isMobile ? '100%' : 600, width: isMobile ? '100%' : undefined, background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 20, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, overflow: 'hidden' }}>
         {!editing ? (
           <>
             {/* ── Cover band + floating avatar ── */}
@@ -851,7 +851,7 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
         const tierColor  = tier === 'pro' ? DESIGN_SYSTEM.colors.brand.primary : tier === 'basic' ? '#60a5fa' : DESIGN_SYSTEM.colors.text.muted;
 
         return (
-          <div style={{ flex: '0 0 300px', background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 20, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ flex: isMobile ? '1 1 100%' : '0 0 300px', width: isMobile ? '100%' : 300, boxSizing: 'border-box', background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 20, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
 
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -914,10 +914,10 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
               {/* Free → upgrade both tiers */}
               {!isPaid && (
                 <>
-                  <button onClick={() => handleUpgrade('basic')} disabled={upgradingTo === 'basic'} style={{ width: '100%', background: '#60a5fa18', color: '#60a5fa', border: '1px solid #60a5fa40', borderRadius: 10, padding: '10px 14px', fontWeight: 700, fontSize: 13, cursor: upgradingTo === 'basic' ? 'not-allowed' : 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", opacity: upgradingTo === 'basic' ? 0.6 : 1, transition: 'all 0.15s ease' }}>
+                  <button onClick={() => handleUpgrade('basic')} disabled={upgradingTo === 'basic'} style={{ width: '100%', boxSizing: 'border-box', background: '#60a5fa18', color: '#60a5fa', border: '1px solid #60a5fa40', borderRadius: 10, padding: '10px 14px', fontWeight: 700, fontSize: 13, cursor: upgradingTo === 'basic' ? 'not-allowed' : 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", opacity: upgradingTo === 'basic' ? 0.6 : 1, transition: 'all 0.15s ease' }}>
                     {upgradingTo === 'basic' ? 'Redirecting…' : `Upgrade to Basic — ${prices.basic}`}
                   </button>
-                  <button onClick={() => handleUpgrade('pro')} disabled={upgradingTo === 'pro'} style={{ width: '100%', background: `${DESIGN_SYSTEM.colors.brand.primary}18`, color: DESIGN_SYSTEM.colors.brand.primary, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}40`, borderRadius: 10, padding: '10px 14px', fontWeight: 700, fontSize: 13, cursor: upgradingTo === 'pro' ? 'not-allowed' : 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", opacity: upgradingTo === 'pro' ? 0.6 : 1, transition: 'all 0.15s ease' }}>
+                  <button onClick={() => handleUpgrade('pro')} disabled={upgradingTo === 'pro'} style={{ width: '100%', boxSizing: 'border-box', background: `${DESIGN_SYSTEM.colors.brand.primary}18`, color: DESIGN_SYSTEM.colors.brand.primary, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}40`, borderRadius: 10, padding: '10px 14px', fontWeight: 700, fontSize: 13, cursor: upgradingTo === 'pro' ? 'not-allowed' : 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", opacity: upgradingTo === 'pro' ? 0.6 : 1, transition: 'all 0.15s ease' }}>
                     {upgradingTo === 'pro' ? 'Redirecting…' : `Upgrade to Pro — ${prices.pro}`}
                   </button>
                 </>
@@ -925,7 +925,7 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount 
 
               {/* Basic → upgrade to pro */}
               {tier === 'basic' && !isCanceling && (
-                <button onClick={() => handleUpgrade('pro')} disabled={upgradingTo === 'pro'} style={{ width: '100%', background: `${DESIGN_SYSTEM.colors.brand.primary}18`, color: DESIGN_SYSTEM.colors.brand.primary, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}40`, borderRadius: 10, padding: '10px 14px', fontWeight: 700, fontSize: 13, cursor: upgradingTo === 'pro' ? 'not-allowed' : 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", opacity: upgradingTo === 'pro' ? 0.6 : 1, transition: 'all 0.15s ease' }}>
+                <button onClick={() => handleUpgrade('pro')} disabled={upgradingTo === 'pro'} style={{ width: '100%', boxSizing: 'border-box', background: `${DESIGN_SYSTEM.colors.brand.primary}18`, color: DESIGN_SYSTEM.colors.brand.primary, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}40`, borderRadius: 10, padding: '10px 14px', fontWeight: 700, fontSize: 13, cursor: upgradingTo === 'pro' ? 'not-allowed' : 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", opacity: upgradingTo === 'pro' ? 0.6 : 1, transition: 'all 0.15s ease' }}>
                   {upgradingTo === 'pro' ? 'Redirecting…' : `Upgrade to Pro — ${prices.pro}`}
                 </button>
               )}

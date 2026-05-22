@@ -172,60 +172,89 @@ export function DashboardPage({ user, stats, onNavigate, isMobile = false, analy
           padding: isMobile ? '14px 16px' : '14px 20px',
           marginBottom: 16,
           display: 'flex',
-          alignItems: 'center',
-          gap: 14,
-          flexWrap: isMobile ? 'wrap' : 'nowrap',
+          flexDirection: isMobile ? 'column' : 'row',
+          alignItems: isMobile ? 'flex-start' : 'center',
+          gap: isMobile ? 10 : 14,
           position: 'relative',
         }}>
-          {/* Gold star icon */}
-          <div style={{
-            flexShrink: 0,
-            width: 36, height: 36,
-            borderRadius: 10,
-            background: 'rgba(201,168,76,0.15)',
-            border: '1px solid rgba(201,168,76,0.3)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Star size={18} color="#C9A84C" fill="#C9A84C" />
-          </div>
-
-          {/* Text */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ color: '#C9A84C', fontWeight: 700, fontSize: 13, fontFamily: DESIGN_SYSTEM.font.display }}>
-              🎉 Founding Member Offer
-            </span>
-            <span style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, marginLeft: 8 }}>
-              Get <strong style={{ color: DESIGN_SYSTEM.colors.text.primary }}>6 months of Pro free</strong> — use code{' '}
-              <span style={{
-                background: 'rgba(201,168,76,0.15)', color: '#C9A84C',
-                padding: '1px 8px', borderRadius: 6, fontFamily: 'monospace',
-                fontSize: 12, fontWeight: 700, letterSpacing: '0.5px',
-              }}>FOUNDER2026</span>
-              {' '}at checkout.
-            </span>
-          </div>
-
-          {/* CTA */}
-          <button
-            onClick={() => setFounderModalOpen(true)}
-            style={{
+          {/* Top row on mobile: icon + title + dismiss */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}>
+            {/* Gold star icon */}
+            <div style={{
               flexShrink: 0,
-              background: '#C9A84C',
-              color: '#0D0B0F',
-              border: 'none',
-              borderRadius: 8,
-              padding: '8px 16px',
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: 'pointer',
-              fontFamily: DESIGN_SYSTEM.font.body,
-              whiteSpace: 'nowrap',
-            }}
-            onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
-            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-          >
-            Claim Offer →
-          </button>
+              width: 36, height: 36,
+              borderRadius: 10,
+              background: 'rgba(201,168,76,0.15)',
+              border: '1px solid rgba(201,168,76,0.3)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Star size={18} color="#C9A84C" fill="#C9A84C" />
+            </div>
+
+            {/* Text */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ color: '#C9A84C', fontWeight: 700, fontSize: 13, fontFamily: DESIGN_SYSTEM.font.display }}>
+                🎉 Founding Member Offer
+              </div>
+              <div style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 12, marginTop: 2 }}>
+                Get <strong style={{ color: DESIGN_SYSTEM.colors.text.primary }}>6 months of Pro free</strong> — use code{' '}
+                <span style={{
+                  background: 'rgba(201,168,76,0.15)', color: '#C9A84C',
+                  padding: '1px 6px', borderRadius: 6, fontFamily: 'monospace',
+                  fontSize: 11, fontWeight: 700, letterSpacing: '0.5px',
+                }}>FOUNDER2026</span>
+                {' '}at checkout.
+              </div>
+            </div>
+
+            {!isMobile && (
+              /* CTA desktop */
+              <button
+                onClick={() => setFounderModalOpen(true)}
+                style={{
+                  flexShrink: 0,
+                  background: '#C9A84C',
+                  color: '#0D0B0F',
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '8px 16px',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontFamily: DESIGN_SYSTEM.font.body,
+                  whiteSpace: 'nowrap',
+                }}
+                onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+              >
+                Claim Offer →
+              </button>
+            )}
+          </div>
+
+          {/* CTA mobile — full width below text */}
+          {isMobile && (
+            <button
+              onClick={() => setFounderModalOpen(true)}
+              style={{
+                width: '100%',
+                boxSizing: 'border-box',
+                background: '#C9A84C',
+                color: '#0D0B0F',
+                border: 'none',
+                borderRadius: 8,
+                padding: '10px 16px',
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontFamily: DESIGN_SYSTEM.font.body,
+              }}
+              onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+              onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+            >
+              Claim Offer →
+            </button>
+          )}
 
           {/* Dismiss */}
           <button

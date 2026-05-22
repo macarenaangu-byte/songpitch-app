@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Eye, EyeOff, Mail, RefreshCw } from "lucide-react";
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { supabase } from '../lib/supabase';
@@ -17,8 +17,10 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
   // Step 1 fields
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Step 2 fields
+  // Step 1+2 fields
   const [role, setRole] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -29,12 +31,21 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(initialError);
   const [showPassword, setShowPassword] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 480);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 480);
+    window.addEventListener('resize', onResize, { passive: true });
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const switchView = (view) => {
     setAuthView(view);
     setSignupStep(1);
     setError("");
     setShowPassword(false);
+    setConfirmPassword("");
+    setShowConfirmPassword(false);
+    setRole("");
   };
 
   // Password strength checker
@@ -57,6 +68,10 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
   const handleNextStep = (e) => {
     e.preventDefault();
     setError("");
+    if (!role) {
+      setError("Please select your role to continue.");
+      return;
+    }
     if (password.length < 8) {
       setError("Password must be at least 8 characters.");
       return;
@@ -67,6 +82,10 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
     }
     if (!/[0-9]/.test(password)) {
       setError("Password must include at least one number.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Passwords don't match. Please check and try again.");
       return;
     }
     setSignupStep(2);
@@ -80,7 +99,6 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
 
     try {
       if (authView === 'signup') {
-        if (!role) { setError("Please select your role."); setLoading(false); return; }
         if (!firstName.trim() || !lastName.trim()) { setError("First and last name are required."); setLoading(false); return; }
 
         // 1. Create auth account
@@ -92,9 +110,17 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
         if (signUpError) throw signUpError;
 
         // 2. If email confirmation is required, no session/JWT exists yet — skip profile insert
-        //    (RLS would block it). A flag is stored so App.jsx routes to AccountSetupPage on first login.
+        //    (RLS would block it). Store profile data so App.jsx can auto-create it on first login.
         if (!data.session) {
           localStorage.setItem('sp_pending_signup_email', email.toLowerCase().trim());
+          localStorage.setItem('sp_pending_profile', JSON.stringify({
+            role,
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            bio: bio.trim(),
+            location: location.trim(),
+            genres,
+          }));
           setAuthView('verify_email');
           setLoading(false);
           return;
@@ -274,48 +300,20 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
   if (authView === 'signup' && signupStep === 2) {
     return (
       <div className="hero-animated-bg" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", overflowY: 'auto' }}>
-        <div style={{ width: "100%", maxWidth: 480, background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 24, padding: 40, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, boxShadow: '0 16px 48px rgba(0,0,0,0.4)', margin: '20px 0' }}>
+        <div style={{ width: "100%", maxWidth: 480, background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 24, padding: isMobile ? 20 : 40, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, boxShadow: '0 16px 48px rgba(0,0,0,0.4)', margin: '20px 0' }}>
 
           <div style={{ textAlign: "center", marginBottom: 24 }}>
             <img src="/songpitch-logo.png" alt="Coda-Vault" style={{ width: 48, height: 48, objectFit: 'contain', margin: '0 auto 12px', display: 'block', filter: undefined }} onError={(e) => { e.target.style.display = 'none'; }} />
             <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 24, fontWeight: 800, marginBottom: 4 }}>Complete Your Profile</h1>
-            <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 14 }}>Step 2 of 2 — Tell us about yourself</p>
+            <p style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: 14 }}>Step 2 of 2 — {role === 'composer' ? '🎵 Composer' : '🎯 Music Executive'} · Tell us about yourself</p>
           </div>
 
           <StepBar step={2} />
 
           <form onSubmit={handleAuth}>
 
-            {/* Role picker */}
-            <div style={{ marginBottom: 20 }}>
-              <label style={labelStyle}>I am a *</label>
-              <div style={{ display: "flex", gap: 12 }}>
-                {[
-                  { type: 'composer', label: 'Composer', desc: 'I create music', icon: '🎵' },
-                  { type: 'executive', label: 'Music Executive', desc: 'I discover talent', icon: '🎯' },
-                ].map(({ type, label, desc, icon }) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => setRole(type)}
-                    style={{
-                      flex: 1, padding: "14px 12px", borderRadius: 12, textAlign: 'center',
-                      border: role === type ? `2px solid ${DESIGN_SYSTEM.colors.brand.primary}` : `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
-                      background: role === type ? `${DESIGN_SYSTEM.colors.brand.primary}15` : DESIGN_SYSTEM.colors.bg.primary,
-                      color: role === type ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.tertiary,
-                      cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", transition: 'all 0.2s ease',
-                    }}
-                  >
-                    <div style={{ fontSize: 22, marginBottom: 4 }}>{icon}</div>
-                    <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 2 }}>{label}</div>
-                    <div style={{ fontSize: 11, color: DESIGN_SYSTEM.colors.text.muted }}>{desc}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Name */}
-            <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
+            <div style={{ display: "flex", flexDirection: isMobile ? 'column' : 'row', gap: 12, marginBottom: 14 }}>
               <div style={{ flex: 1 }}>
                 <label style={labelStyle}>First Name *</label>
                 <input type="text" placeholder="Jane" value={firstName} onChange={e => setFirstName(e.target.value)} required style={inputStyle} onFocus={focusInput} onBlur={blurInput} />
@@ -412,13 +410,13 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
   // ── LOGIN / SIGNUP STEP 1 / FORGOT PASSWORD ──────────────────────────────
   const headings = {
     login:  { title: 'Welcome Back',   subtitle: 'Sign in to Coda-Vault' },
-    signup: { title: 'Create Account', subtitle: 'Step 1 of 2 — Enter your credentials' },
+    signup: { title: 'Create Account', subtitle: 'Step 1 of 2 — Credentials & role' },
     forgot: { title: 'Reset Password', subtitle: "Enter your email and we'll send a reset link" },
   };
 
   return (
     <div className="hero-animated-bg" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
-      <div style={{ width: "100%", maxWidth: 420, background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 24, padding: 40, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}>
+      <div style={{ width: "100%", maxWidth: 420, background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 24, padding: isMobile ? 20 : 40, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}>
 
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <img src="/songpitch-logo.png" alt="Coda-Vault" style={{ width: 56, height: 56, objectFit: 'contain', margin: '0 auto 16px', display: 'block', filter: undefined }} onError={(e) => { e.target.style.display = 'none'; }} />
@@ -494,6 +492,73 @@ export function AuthPage({ onAuthComplete, onBackToLanding, onGoogleSignIn, init
                   <span style={{ fontSize: 11, color: passwordStrength.color, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>{passwordStrength.label}</span>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Confirm password — signup only */}
+          {authView === 'signup' && (
+            <div style={{ marginBottom: 20 }}>
+              <label style={labelStyle}>Confirm Password</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  placeholder="Re-enter your password"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  required
+                  aria-label="Confirm password"
+                  style={{
+                    ...inputStyle,
+                    paddingRight: 44,
+                    borderColor: confirmPassword && confirmPassword !== password
+                      ? DESIGN_SYSTEM.colors.accent.red
+                      : undefined,
+                  }}
+                  onFocus={focusInput}
+                  onBlur={blurInput}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(p => !p)}
+                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center', color: DESIGN_SYSTEM.colors.text.muted }}
+                >
+                  {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              {confirmPassword && confirmPassword !== password && (
+                <span style={{ fontSize: 11, color: DESIGN_SYSTEM.colors.accent.red, marginTop: 4, display: 'block' }}>Passwords don't match</span>
+              )}
+            </div>
+          )}
+
+          {/* Role picker — signup only */}
+          {authView === 'signup' && (
+            <div style={{ marginBottom: 20 }}>
+              <label style={labelStyle}>I am a *</label>
+              <div style={{ display: 'flex', gap: 12 }}>
+                {[
+                  { type: 'composer', label: 'Composer', desc: 'I create music', icon: '🎵' },
+                  { type: 'executive', label: 'Music Executive', desc: 'I discover talent', icon: '🎯' },
+                ].map(({ type, label, desc, icon }) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setRole(type)}
+                    style={{
+                      flex: 1, padding: '14px 12px', borderRadius: 12, textAlign: 'center',
+                      border: role === type ? `2px solid ${DESIGN_SYSTEM.colors.brand.primary}` : `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
+                      background: role === type ? `${DESIGN_SYSTEM.colors.brand.primary}15` : DESIGN_SYSTEM.colors.bg.primary,
+                      color: role === type ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.tertiary,
+                      cursor: 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <div style={{ fontSize: 22, marginBottom: 4 }}>{icon}</div>
+                    <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 2 }}>{label}</div>
+                    <div style={{ fontSize: 11, color: DESIGN_SYSTEM.colors.text.muted }}>{desc}</div>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 

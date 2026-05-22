@@ -885,8 +885,8 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
       {loading && opportunities.length === 0 ? (
         <OpportunityGridSkeleton count={4} />
       ) : filtered.length === 0 ? (
-        <div style={{ display: 'flex', gap: 24, alignItems: 'center', padding: 24 }}>
-          <div style={{ flex: '0 0 320px', background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 16, padding: 24, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, textAlign: 'left' }}>
+        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 24, alignItems: isMobile ? 'stretch' : 'center', padding: isMobile ? '12px 0' : 24 }}>
+          <div style={{ flex: isMobile ? '1 1 100%' : '0 0 320px', boxSizing: 'border-box', background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 16, padding: 24, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, textAlign: 'left' }}>
             <Briefcase size={48} color={DESIGN_SYSTEM.colors.text.muted} style={{ marginBottom: 12 }} />
             <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 18, fontWeight: 800, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", marginBottom: 8 }}>
               {(userProfile.account_type === 'music_executive' || userProfile.account_type === 'admin') ? 'Ready to find your sound?' : 'New opportunities are on the way!'}
@@ -903,11 +903,13 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
               <button onClick={() => showToast('Try adjusting filters or clearing the search', 'info')} style={{ background: 'transparent', color: DESIGN_SYSTEM.colors.text.tertiary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: '8px 14px', cursor: 'pointer' }}>Help</button>
             </div>
           </div>
-          <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
-            {Array.from({ length: 3 }).map((_, i) => (
-              <OpportunityCardSkeleton key={i} />
-            ))}
-          </div>
+          {!isMobile && (
+            <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <OpportunityCardSkeleton key={i} />
+              ))}
+            </div>
+          )}
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>

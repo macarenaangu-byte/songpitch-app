@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
-import { Search, Users, Music, MessageCircle, User, ChevronRight, ChevronLeft, Briefcase, FileText, TrendingUp, Bell, Menu, Shield, BookOpen, Scale, AlertTriangle } from "lucide-react";
+import { Search, Users, Music, MessageCircle, User, ChevronRight, ChevronLeft, Briefcase, FileText, TrendingUp, Bell, Shield, BookOpen, Scale, AlertTriangle } from "lucide-react";
 // ─── Extracted modules ──────────────────────────────────────────────────────
 import { DESIGN_SYSTEM } from './constants/designSystem';
 import { supabase } from './lib/supabase';
@@ -21,6 +21,7 @@ import { Badge } from './components/Badge';
 import { NowPlayingBar } from './components/NowPlayingBar';
 import { NotificationPanel } from './components/NotificationPanel';
 import CommandPalette from './components/CommandPalette';
+import { BottomTabNav } from './components/BottomTabNav';
 
 // ─── Pages (eagerly loaded — needed immediately) ────────────────────────────
 import { AuthPage } from './pages/AuthPage';
@@ -88,7 +89,6 @@ export default function SongPitch() {
   const [viewingProfile, setViewingProfile] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobileView, setIsMobileView] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 768 : false));
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   // Notification system
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -288,7 +288,7 @@ export default function SongPitch() {
     const onResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobileView(mobile);
-      if (!mobile) setIsMobileMenuOpen(false);
+      
     };
 
     onResize();
@@ -298,7 +298,7 @@ export default function SongPitch() {
 
   useEffect(() => {
     if (isMobileView) {
-      setIsMobileMenuOpen(false);
+      
     }
   }, [page, viewingProfile, isMobileView]);
 
@@ -1163,8 +1163,8 @@ export default function SongPitch() {
       case "responses": return (isExecutive || isAdmin) ? <ResponsesPage userProfile={userProfile} onNavigate={setPage} onViewProfile={setViewingProfile} audioPlayer={audioPlayer} isMobile={isMobileView} /> : fallback;
       case "messages": return <MessagesPage userProfile={userProfile} supportTargetUserId={supportTargetUserId} supportOpenToken={supportOpenToken} onBadgeRefresh={loadSidebarBadges} onActiveConversationChange={setActiveMessageConversationId} isMobile={isMobileView} audioPlayer={audioPlayer} />;
       case "portfolio": return (isComposer || isAdmin) ? <PortfolioPage userProfile={userProfile} audioPlayer={audioPlayer} isMobile={isMobileView} onNavigate={setPage} /> : fallback;
-      case "profile": return <ProfilePage user={{ ...userProfile, email: session.user.email }} onSignOut={handleSignOut} onProfileUpdate={() => loadUserProfile(session.user)} onDeleteAccount={handleDeleteAccount} />;
-      case "splits": return (isComposer || isAdmin) ? <SplitGenerator userProfile={userProfile} /> : fallback;
+      case "profile": return <ProfilePage user={{ ...userProfile, email: session.user.email }} onSignOut={handleSignOut} onProfileUpdate={() => loadUserProfile(session.user)} onDeleteAccount={handleDeleteAccount} isMobile={isMobileView} />;
+      case "splits": return (isComposer || isAdmin) ? <SplitGenerator userProfile={userProfile} isMobile={isMobileView} /> : fallback;
       case "deal-analyzer": return (isComposer || isAdmin) ? <DealAnalyzerPage userProfile={userProfile} /> : fallback;
       case "contract-revision": return (isExecutive || isAdmin) ? <ContractRevisionPage userProfile={userProfile} /> : fallback;
       case "admin-dashboard": return isAdmin ? <AdminDashboardPage stats={stats} userProfile={userProfile} onNavigate={setPage} onViewProfile={setViewingProfile} isMobile={isMobileView} analytics={analytics} /> : fallback;
@@ -1179,83 +1179,23 @@ export default function SongPitch() {
     <div className="app-root w-full min-h-screen flex flex-col md:flex-row" style={{ display: "flex", width: '100%', minHeight: '100vh', height: "100vh", background: DESIGN_SYSTEM.colors.bg.secondary, fontFamily: DESIGN_SYSTEM.font.body, color: DESIGN_SYSTEM.colors.text.primary, overflow: "hidden", position: 'relative' }}>
       {/* Skip to content link for keyboard/screen reader users */}
       <a href="#main-content" style={{ position: 'absolute', left: '-9999px', top: 'auto', width: '1px', height: '1px', overflow: 'hidden', zIndex: 9999 }} onFocus={e => { e.currentTarget.style.left = '16px'; e.currentTarget.style.top = '16px'; e.currentTarget.style.width = 'auto'; e.currentTarget.style.height = 'auto'; e.currentTarget.style.overflow = 'visible'; e.currentTarget.style.background = DESIGN_SYSTEM.colors.brand.primary; e.currentTarget.style.color = '#fff'; e.currentTarget.style.padding = '8px 16px'; e.currentTarget.style.borderRadius = '8px'; e.currentTarget.style.fontSize = '14px'; e.currentTarget.style.fontWeight = '600'; e.currentTarget.style.textDecoration = 'none'; }} onBlur={e => { e.currentTarget.style.left = '-9999px'; e.currentTarget.style.width = '1px'; e.currentTarget.style.height = '1px'; e.currentTarget.style.overflow = 'hidden'; }}>Skip to content</a>
-      {isMobileView && (
-        <header style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 56,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0 14px',
-          background: 'rgba(8,10,18,0.88)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
-          zIndex: 1300,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <img
-              src="/songpitch-logo.png"
-              alt="Coda-Vault"
-              style={{ width: 24, height: 24, objectFit: 'contain', filter: undefined }}
-              onError={(e) => { e.target.style.display = 'none'; }}
-            />
-            <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: DESIGN_SYSTEM.font.body }}>Coda-Vault</span>
-          </div>
-          <button
-            aria-label="Toggle menu"
-            onClick={() => setIsMobileMenuOpen(v => !v)}
-            style={{
-              background: 'transparent',
-              border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
-              borderRadius: 8,
-              color: DESIGN_SYSTEM.colors.text.secondary,
-              padding: 8,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-            }}
-          >
-            <Menu size={18} />
-          </button>
-        </header>
-      )}
 
-      {isMobileView && isMobileMenuOpen && (
-        <div
-          onClick={() => setIsMobileMenuOpen(false)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            top: 56,
-            background: 'rgba(4,5,14,0.80)',
-            zIndex: 1190,
-          }}
-        />
-      )}
-
-      <nav aria-label="Main navigation" className={isSidebarCollapsed ? 'sidebar-collapsed' : ''} style={{
-        width: isMobileView ? 280 : desktopSidebarWidth,
-        minWidth: isMobileView ? 280 : desktopSidebarWidth,
+      {!isMobileView && <nav aria-label="Main navigation" className={isSidebarCollapsed ? 'sidebar-collapsed' : ''} style={{
+        width: desktopSidebarWidth,
+        minWidth: desktopSidebarWidth,
         background: DESIGN_SYSTEM.colors.bg.secondary,
         borderRight: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
         display: "flex",
         flexDirection: "column",
         flexShrink: 0,
-        position: isMobileView ? 'fixed' : 'relative',
-        top: isMobileView ? 56 : 0,
+        position: 'relative',
+        top: 0,
         left: 0,
         bottom: 0,
         zIndex: 1200,
         overflow: 'hidden',
-        transform: isMobileView ? (isMobileMenuOpen ? 'translateX(0)' : 'translateX(-100%)') : 'none',
-        transition: isMobileView
-          ? 'transform 0.25s ease'
-          : 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        transform: 'none',
+        transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
       }}>
         <div style={{ padding: "22px 20px", borderBottom: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -1290,7 +1230,7 @@ export default function SongPitch() {
 
         <nav style={{ flex: 1, padding: "12px 10px", overflowY: "auto", display: 'flex', flexDirection: 'column', gap: 2 }}>
           {nav.map(item => (
-            <button key={item.id} aria-label={item.label} onClick={() => { setPage(item.id); setViewingProfile(null); if (isMobileView) setIsMobileMenuOpen(false); }} style={{
+            <button key={item.id} aria-label={item.label} onClick={() => { setPage(item.id); setViewingProfile(null); }} style={{
               width: "100%", display: "flex", alignItems: "center", gap: isSidebarCollapsed ? 0 : 10, padding: isSidebarCollapsed ? "10px 6px" : "10px 12px", borderRadius: 8, border: "none", cursor: "pointer", textAlign: "left", fontFamily: DESIGN_SYSTEM.font.body, fontSize: 14, fontWeight: page === item.id ? 600 : 400, transition: "all 0.15s", position: 'relative',
               background: page === item.id ? 'rgba(201,168,76,0.10)' : "transparent",
               color: page === item.id ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.text.secondary,
@@ -1466,7 +1406,7 @@ export default function SongPitch() {
 
         <div style={{ padding: "14px 14px", borderTop: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
           <div
-            onClick={() => { setPage('profile'); setViewingProfile(null); if (isMobileView) setIsMobileMenuOpen(false); }}
+            onClick={() => { setPage('profile'); setViewingProfile(null); }}
             style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: isSidebarCollapsed ? 'center' : 'flex-start', cursor: 'pointer', padding: '6px 4px', borderRadius: 8, transition: 'background 0.15s' }}
             onMouseEnter={e => e.currentTarget.style.background = DESIGN_SYSTEM.colors.bg.card}
             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
@@ -1514,7 +1454,7 @@ export default function SongPitch() {
             );
           })()}
         </div>
-      </nav>
+      </nav>}
 
       {!isMobileView && isSidebarCollapsed && (
         <button
@@ -1539,11 +1479,23 @@ export default function SongPitch() {
         </button>
       )}
 
-      <main id="main-content" className="page-fade-in flex-1 w-full min-w-0" key={viewingProfile ? `profile-${viewingProfile.id}` : page} style={{ flex: 1, width: '100%', minWidth: 0, overflowY: "auto", background: DESIGN_SYSTEM.colors.bg.primary, paddingBottom: audioPlayer.playingSong ? 70 : 0, position: 'relative', paddingTop: isMobileView ? 56 : 0 }}>
+      <main id="main-content" className="page-fade-in flex-1 w-full min-w-0" key={viewingProfile ? `profile-${viewingProfile.id}` : page} style={{ flex: 1, width: '100%', minWidth: 0, overflowY: "auto", background: DESIGN_SYSTEM.colors.bg.primary, paddingBottom: isMobileView ? 60 + (audioPlayer.playingSong ? 70 : 0) : (audioPlayer.playingSong ? 70 : 0), position: 'relative', paddingTop: 0 }}>
         <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh' }}><div style={{ width: 32, height: 32, border: `3px solid ${DESIGN_SYSTEM.colors.border.light}`, borderTopColor: DESIGN_SYSTEM.colors.brand.primary, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /></div>}>
           {renderPage()}
         </Suspense>
       </main>
+
+      {/* Bottom Tab Navigation — mobile only */}
+      {isMobileView && (
+        <BottomTabNav
+          page={viewingProfile ? 'profile' : page}
+          accountType={userProfile.account_type}
+          badgeCounts={badgeCounts}
+          onNavigate={(id) => { setPage(id); setViewingProfile(null); }}
+          audioPlayerActive={!!audioPlayer.playingSong}
+          onSupportOpen={handleOpenFounderSupport}
+        />
+      )}
 
       {/* Now Playing Bar */}
       <NowPlayingBar

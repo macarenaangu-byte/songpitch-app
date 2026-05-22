@@ -564,7 +564,12 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
   const [howTab, setHowTab] = useState('composer');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', onResize, { passive: true });
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
   const { canInstall, install } = useInstallPrompt();
 
   useScrollReveal();
@@ -585,7 +590,7 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
   }, []);
 
   return (
-    <div className="hero-animated-bg" style={{ minHeight: "100vh", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", color: DESIGN_SYSTEM.colors.text.primary, overflow: "auto" }}>
+    <div className="hero-animated-bg" style={{ minHeight: "100vh", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", color: DESIGN_SYSTEM.colors.text.primary, overflowX: "hidden" }}>
 
       {/* ── Animated gradient orbs ─────────────────────────────────────── */}
       <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: -1 }}>
@@ -659,16 +664,16 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
           A sync licensing platform built for both sides of the deal. Composers get their music placed. Executives find exactly what they need. Everyone closes faster.
         </p>
 
-        <div className="reveal reveal-delay-1" style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'center', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginBottom: 48 }}>
+        <div className="reveal reveal-delay-1" style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'center', alignItems: isMobile ? 'stretch' : 'center', gap: 16, flexWrap: 'wrap', marginBottom: 48 }}>
           <button onClick={onGetStarted} className="cta-primary"
-            style={{ background: DESIGN_SYSTEM.colors.gradient.main, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 12, padding: "16px 40px", fontSize: 17, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", boxShadow: '0 8px 28px rgba(201,168,76,0.4)', transition: 'all 0.3s ease', width: isMobile ? '100%' : 'auto' }}
+            style={{ background: DESIGN_SYSTEM.colors.gradient.main, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 12, padding: "16px 40px", fontSize: 17, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", boxShadow: '0 8px 28px rgba(201,168,76,0.4)', transition: 'all 0.3s ease', width: isMobile ? '100%' : 'auto', boxSizing: 'border-box' }}
             onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 12px 36px rgba(201,168,76,0.5)'; }}
             onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(201,168,76,0.4)'; }}
           >
             Get Started Free →
           </button>
           <a href="#demo" onClick={(e) => { e.preventDefault(); document.getElementById('demo-section')?.scrollIntoView({ behavior: 'smooth' }); }} className="cta-secondary"
-            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'transparent', color: DESIGN_SYSTEM.colors.text.secondary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 12, padding: "16px 32px", fontSize: 16, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", textDecoration: 'none', transition: 'all 0.2s ease', width: isMobile ? '100%' : 'auto' }}
+            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'transparent', color: DESIGN_SYSTEM.colors.text.secondary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 12, padding: "16px 32px", fontSize: 16, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", textDecoration: 'none', transition: 'all 0.2s ease', width: isMobile ? '100%' : 'auto', boxSizing: 'border-box' }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.brand.primary + '60'; e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.primary; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.border.light; e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.secondary; }}
           >
@@ -676,7 +681,7 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
           </a>
           {canInstall && (
             <button onClick={install}
-              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'transparent', color: DESIGN_SYSTEM.colors.text.secondary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 12, padding: '16px 32px', fontSize: 16, fontWeight: 600, cursor: 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", transition: 'all 0.2s ease', width: isMobile ? '100%' : 'auto' }}
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'transparent', color: DESIGN_SYSTEM.colors.text.secondary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 12, padding: '16px 32px', fontSize: 16, fontWeight: 600, cursor: 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", transition: 'all 0.2s ease', width: isMobile ? '100%' : 'auto', boxSizing: 'border-box' }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.brand.primary + '60'; e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.primary; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.border.light; e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.secondary; }}
             >
