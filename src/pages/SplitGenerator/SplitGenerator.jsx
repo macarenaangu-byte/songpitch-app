@@ -825,7 +825,7 @@ export default function SplitGenerator({ userProfile, isMobile = false }) {
       </div>
 
       {/* Tabs */}
-      <div style={styles.tabs}>
+      <div style={{ ...styles.tabs, display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: 4 }}>
         <button style={styles.tab(activeTab === 'new')} onClick={() => setActiveTab('new')}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
             <Plus size={15} /> New Split

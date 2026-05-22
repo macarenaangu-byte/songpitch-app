@@ -305,6 +305,11 @@ export default function SongPitch() {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
+      if (event === 'USER_UPDATED' && session) {
+        // Email change confirmed — reload profile so displayed email updates
+        loadUserProfile(session.user);
+        return;
+      }
       if (session && (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
         // Email confirmation redirect — show success page instead of loading the app.
         // Also kick off profile creation immediately so it's ready before the user clicks.

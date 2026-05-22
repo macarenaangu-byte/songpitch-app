@@ -259,7 +259,10 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount,
     setEmailChanging(true);
     setEmailChangeMsg(null);
     try {
-      const { error } = await supabase.auth.updateUser({ email: newEmail.trim() });
+      const { error } = await supabase.auth.updateUser(
+        { email: newEmail.trim() },
+        { emailRedirectTo: window.location.origin }
+      );
       if (error) throw error;
       setEmailChangeMsg({ type: 'success', text: 'Confirmation sent to your new address. Check your inbox.' });
       setNewEmail('');
