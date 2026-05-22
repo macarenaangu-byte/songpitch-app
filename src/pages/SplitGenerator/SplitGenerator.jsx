@@ -568,6 +568,48 @@ export default function SplitGenerator({ userProfile }) {
     }
   };
 
+  // ─── 6b. Download PDF from history ───────────────────────────────────────
+  const handleDownloadHistoryPdf = async (e, sheet) => {
+    e.stopPropagation();
+    try {
+      const legacy     = isLegacyFormat(sheet.splits);
+      const compSplits = legacy ? sheet.splits : (sheet.splits?.composition || []);
+      const mastSplits = legacy ? [] : (sheet.splits?.master || []);
+
+      // Reconstruct writers array from stored composition/master splits
+      const writerMap = {};
+      compSplits.forEach(s => {
+        const key = s.name;
+        if (!writerMap[key]) writerMap[key] = { legal_name: s.name, role: s.role || '', pro: s.pro || 'None', ipi: s.ipi || '', composition_percentage: 0, master_percentage: 0 };
+        writerMap[key].composition_percentage = s.percentage;
+      });
+      mastSplits.forEach(s => {
+        const key = s.name;
+        if (!writerMap[key]) writerMap[key] = { legal_name: s.name, role: s.role || '', pro: s.pro || 'None', ipi: s.ipi || '', composition_percentage: 0, master_percentage: 0 };
+        writerMap[key].master_percentage = s.percentage;
+      });
+
+      const payload = {
+        song_title:  sheet.song_title || 'Untitled',
+        date:        sheet.created_at ? new Date(sheet.created_at).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+        split_type:  legacy ? 'composition' : (compSplits.length > 0 && mastSplits.length > 0 ? 'both' : mastSplits.length > 0 ? 'master' : 'composition'),
+        has_samples: false,
+        writers:     Object.values(writerMap),
+      };
+
+      const blob = await generateSplitSheetPdf(payload);
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `split-sheet-${(sheet.song_title || 'untitled').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 50)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast.success('PDF downloaded!');
+    } catch (err) {
+      showToast.error(err.message || 'PDF generation failed.');
+    }
+  };
+
   // ─── 6. Delete ─────────────────────────────────────────────────────────────
   const handleDeleteSheet = async (id) => {
     try {
@@ -735,6 +777,7 @@ export default function SplitGenerator({ userProfile }) {
         song_title: genSongTitle.trim(),
         splits: { composition: compSplits, master: mastSplits },
         input_method: 'pdf_generated',
+        signature: genWriters[0]?.legal_name || genWriters[0]?.stage_name || userProfile.first_name + ' ' + userProfile.last_name,
       }]);
       if (error) throw error;
       showToast.success('Split sheet saved to dashboard!');
@@ -1640,6 +1683,10 @@ export default function SplitGenerator({ userProfile }) {
                       </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <button onClick={(e) => handleDownloadHistoryPdf(e, sheet)}
+                        style={{ ...styles.removeBtn, color: DESIGN_SYSTEM.colors.brand.primary }} title="Download PDF">
+                        <Download size={16} />
+                      </button>
                       <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(sheet); }}
                         style={{ ...styles.removeBtn, color: DESIGN_SYSTEM.colors.accent.red }} title="Delete">
                         <Trash2 size={16} />
