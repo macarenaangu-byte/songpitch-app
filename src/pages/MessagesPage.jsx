@@ -210,8 +210,13 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
         };
       });
 
-      setConversations(formatted);
-      return formatted;
+      // Always show most recently active conversation first
+      const sorted = formatted.slice().sort((a, b) =>
+        new Date(b.lastMessageTime || b.updated_at || b.created_at) -
+        new Date(a.lastMessageTime || a.updated_at || a.created_at)
+      );
+      setConversations(sorted);
+      return sorted;
     } catch (err) {
       console.error("Error loading conversations:", err);
       return [];
@@ -369,6 +374,12 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
         }]);
 
       if (error) throw error;
+
+      // Bump conversation updated_at so it sorts to the top
+      await supabase
+        .from('conversations')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', selectedConversation.id);
 
       const sentText = messageText.trim();
       setMessageText("");

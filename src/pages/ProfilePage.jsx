@@ -264,8 +264,9 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount,
         { emailRedirectTo: window.location.origin }
       );
       if (error) throw error;
-      setEmailChangeMsg({ type: 'success', text: 'Confirmation sent to your new address. Check your inbox.' });
+      const sentTo = newEmail.trim();
       setNewEmail('');
+      setEmailChangeMsg({ type: 'success', sentTo });
     } catch (err) {
       setEmailChangeMsg({ type: 'error', text: err?.message || 'Something went wrong. Please try again.' });
     } finally {
@@ -370,9 +371,13 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount,
                       {emailChanging ? "Sending..." : "Send confirmation"}
                     </button>
                     {emailChangeMsg && (
-                      <span style={{ fontSize: 12, color: emailChangeMsg.type === 'success' ? '#4ade80' : '#f87171' }}>
-                        {emailChangeMsg.text}
-                      </span>
+                      <div style={{ fontSize: 12, color: emailChangeMsg.type === 'success' ? '#4ade80' : '#f87171', background: emailChangeMsg.type === 'success' ? 'rgba(74,222,128,0.08)' : 'rgba(248,113,113,0.08)', border: `1px solid ${emailChangeMsg.type === 'success' ? 'rgba(74,222,128,0.25)' : 'rgba(248,113,113,0.25)'}`, borderRadius: 8, padding: '10px 12px', lineHeight: 1.5 }}>
+                        {emailChangeMsg.type === 'success' ? (
+                          <>
+                            <strong>Confirmation sent to {emailChangeMsg.sentTo}.</strong> Click the link in that inbox to complete the change. Once confirmed, you'll be brought back here and your email will update automatically.
+                          </>
+                        ) : emailChangeMsg.text}
+                      </div>
                     )}
                   </div>
                 )}
@@ -862,6 +867,12 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount,
               <span style={{ fontSize: 15, fontWeight: 700, color: DESIGN_SYSTEM.colors.text.primary, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>Billing</span>
             </div>
 
+            {/* Login email */}
+            <div style={{ background: DESIGN_SYSTEM.colors.bg.elevated, borderRadius: 10, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 11, color: DESIGN_SYSTEM.colors.text.muted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Login email</span>
+              <span style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.text.secondary, fontWeight: 500 }}>{user.email}</span>
+            </div>
+
             {/* Plan + status */}
             <div style={{ background: DESIGN_SYSTEM.colors.bg.elevated, borderRadius: 12, padding: '14px 16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -931,6 +942,22 @@ export function ProfilePage({ user, onSignOut, onProfileUpdate, onDeleteAccount,
                 <button onClick={() => handleUpgrade('pro')} disabled={upgradingTo === 'pro'} style={{ width: '100%', boxSizing: 'border-box', background: `${DESIGN_SYSTEM.colors.brand.primary}18`, color: DESIGN_SYSTEM.colors.brand.primary, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}40`, borderRadius: 10, padding: '10px 14px', fontWeight: 700, fontSize: 13, cursor: upgradingTo === 'pro' ? 'not-allowed' : 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", opacity: upgradingTo === 'pro' ? 0.6 : 1, transition: 'all 0.15s ease' }}>
                   {upgradingTo === 'pro' ? 'Redirecting…' : `Upgrade to Pro — ${prices.pro}`}
                 </button>
+              )}
+
+              {/* Cancellation confirmed banner */}
+              {isCanceling && (
+                <div style={{ background: 'rgba(74,222,128,0.07)', border: '1px solid rgba(74,222,128,0.2)', borderRadius: 10, padding: '12px 14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <CheckCircle size={14} color="#4ade80" />
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#4ade80', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>Cancellation confirmed</span>
+                  </div>
+                  <p style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.text.muted, margin: '0 0 10px', lineHeight: 1.5, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+                    Your {tier} plan stays active until {endsAt ? endsAt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'the end of your billing period'}, then downgrades to Free automatically. No further charges.
+                  </p>
+                  <button onClick={() => handleUpgrade(tier)} style={{ width: '100%', boxSizing: 'border-box', background: `${DESIGN_SYSTEM.colors.brand.primary}18`, color: DESIGN_SYSTEM.colors.brand.primary, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}40`, borderRadius: 8, padding: '8px 14px', fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+                    Reactivate subscription
+                  </button>
+                </div>
               )}
 
               {/* Cancel subscription */}

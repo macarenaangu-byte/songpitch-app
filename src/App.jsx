@@ -114,6 +114,9 @@ export default function SongPitch() {
     window.location.hash.includes('type=signup') ||
     (new URLSearchParams(window.location.search).has('code') && !!localStorage.getItem('sp_pending_profile'))
   );
+  // Detect email CHANGE confirmation — hash will contain type=email_change when
+  // the user clicks the confirmation link Supabase sent to their new address.
+  const isEmailChangeRef = useRef(window.location.hash.includes('type=email_change'));
   const legalPageFromHashRef = useRef(!!getLegalPageFromHash()); // true if legal page was loaded from URL
   const suppressLegalPushRef = useRef(false); // prevent double history push on popstate
   const [authError, setAuthError] = useState(null);
@@ -305,9 +308,24 @@ export default function SongPitch() {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
+      // ── Email change confirmation ─────────────────────────────────────────
+      // Fires as USER_UPDATED (same-device) or SIGNED_IN (fresh device/tab).
+      // isEmailChangeRef prevents duplicate handling and keeps the spinner
+      // alive so neither the landing page nor AccountSetupPage can flash.
       if (event === 'USER_UPDATED' && session) {
-        // Email change confirmed — reload profile so displayed email updates
+        isEmailChangeRef.current = false;
+        setShowLanding(false);
+        setPage('profile');
         loadUserProfile(session.user);
+        showToast.success('Email updated successfully!');
+        return;
+      }
+      if (session && event === 'SIGNED_IN' && isEmailChangeRef.current) {
+        isEmailChangeRef.current = false;
+        setShowLanding(false);
+        setPage('profile');
+        loadUserProfile(session.user);
+        showToast.success('Email updated successfully!');
         return;
       }
       if (session && (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
@@ -329,6 +347,9 @@ export default function SongPitch() {
           loadUserProfile(session.user);
         }
       } else if (!session) {
+        // If an email-change confirmation is pending (USER_UPDATED fires shortly),
+        // keep the spinner alive — don't show the landing page in between.
+        if (isEmailChangeRef.current) return;
         setUserProfile(null);
         setNeedsOnboarding(false);
         setLoading(false);
@@ -1171,7 +1192,7 @@ export default function SongPitch() {
       case "profile": return <ProfilePage user={{ ...userProfile, email: session.user.email }} onSignOut={handleSignOut} onProfileUpdate={() => loadUserProfile(session.user)} onDeleteAccount={handleDeleteAccount} isMobile={isMobileView} />;
       case "splits": return (isComposer || isAdmin) ? <SplitGenerator userProfile={userProfile} isMobile={isMobileView} /> : fallback;
       case "deal-analyzer": return (isComposer || isAdmin) ? <DealAnalyzerPage userProfile={userProfile} /> : fallback;
-      case "contract-revision": return (isExecutive || isAdmin) ? <ContractRevisionPage userProfile={userProfile} /> : fallback;
+      case "contract-revision": return (isExecutive || isAdmin) ? <ContractRevisionPage userProfile={userProfile} isMobile={isMobileView} /> : fallback;
       case "admin-dashboard": return isAdmin ? <AdminDashboardPage stats={stats} userProfile={userProfile} onNavigate={setPage} onViewProfile={setViewingProfile} isMobile={isMobileView} analytics={analytics} /> : fallback;
       default: return fallback;
     }
