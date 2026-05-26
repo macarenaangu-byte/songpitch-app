@@ -1505,7 +1505,7 @@ export default function SongPitch() {
         </button>
       )}
 
-      <main id="main-content" className="page-fade-in flex-1 w-full min-w-0" key={viewingProfile ? `profile-${viewingProfile.id}` : page} style={{ flex: 1, width: '100%', minWidth: 0, overflowY: "auto", background: DESIGN_SYSTEM.colors.bg.primary, paddingBottom: isMobileView ? 60 + (audioPlayer.playingSong ? 70 : 0) : (audioPlayer.playingSong ? 70 : 0), position: 'relative', paddingTop: 0 }}>
+      <main id="main-content" className="page-fade-in flex-1 w-full min-w-0" key={viewingProfile ? `profile-${viewingProfile.id}` : page} style={{ flex: 1, width: '100%', minWidth: 0, overflowY: "auto", background: DESIGN_SYSTEM.colors.bg.primary, paddingBottom: isMobileView ? `calc(60px + env(safe-area-inset-bottom, 0px) + ${audioPlayer.playingSong ? 70 : 0}px)` : (audioPlayer.playingSong ? 70 : 0), position: 'relative', paddingTop: 0 }}>
         <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh' }}><div style={{ width: 32, height: 32, border: `3px solid ${DESIGN_SYSTEM.colors.border.light}`, borderTopColor: DESIGN_SYSTEM.colors.brand.primary, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /></div>}>
           {renderPage()}
         </Suspense>
