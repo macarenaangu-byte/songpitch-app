@@ -5,7 +5,7 @@ export const GENRE_OPTIONS = [
   // Core
   'Classical', 'Jazz', 'Electronic', 'Hip-Hop', 'Pop', 'Film Score',
   'Ambient', 'R&B', 'Afrobeats', 'World Music', 'Musical Theatre',
-  'Rock', 'Country', 'Folk', 'Blues', 'Reggae', 'Latin', 'K-Pop', 'EDM', 'Indie',
+  'Rock', 'Alternative', 'Country', 'Folk', 'Blues', 'Reggae', 'Latin', 'K-Pop', 'EDM', 'Indie',
   'Gospel', 'Lo-Fi', 'Corporate', 'Cinematic', "Children's",
   'Funk/Soul', 'Trap', 'New Age', 'Acoustic', 'House', 'Metal',
   // Latin sub-genres
