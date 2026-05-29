@@ -150,11 +150,11 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false, onNa
 
     // 2. Pause for 100ms so the browser can paint the UI before the AI freezes it!
     setTimeout(async () => {
-      // 45-second timeout — if AI server hangs, don't trap the user forever
+      // 90-second timeout — Cloud Run may cold-start; give it time to warm up
       const timeoutId = setTimeout(() => {
         setAnalyzing(false);
         showToast.info("Analysis is taking too long. Fill in the details manually!");
-      }, 45000);
+      }, 90000);
 
       try {
         const analysis = await analyzeAudioFile(file);
