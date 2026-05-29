@@ -12,6 +12,7 @@ let essentiaInstance = null;
 
 const GENRE_LABEL_MAP = {
     'alternative': 'Alternative',
+    'bossa nova': 'Bossa Nova',
     'ambient': 'Ambient',
     'afrobeats': 'Afrobeats',
     'blues': 'Blues',

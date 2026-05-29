@@ -9,7 +9,7 @@ export const GENRE_OPTIONS = [
   'Gospel', 'Lo-Fi', 'Corporate', 'Cinematic', "Children's",
   'Funk/Soul', 'Trap', 'New Age', 'Acoustic', 'House', 'Metal',
   // Latin sub-genres
-  'Bachata', 'Cumbia', 'Merengue', 'Tango', 'Flamenco', 'Trap Latino', 'Reggaetón', 'Dancehall',
+  'Bachata', 'Bossa Nova', 'Cumbia', 'Merengue', 'Tango', 'Flamenco', 'Trap Latino', 'Reggaetón', 'Dancehall',
   // Electronic sub-genres
   'Techno', 'Trance', 'Drum & Bass', 'Dubstep', 'Synthwave',
   // Rock / Alt sub-genres
