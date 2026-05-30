@@ -341,14 +341,27 @@ export default function SongPitch() {
         return;
       }
       if (session && (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
-        // Email confirmation redirect — show success page instead of loading the app.
-        // Also kick off profile creation immediately so it's ready before the user clicks.
-        if (isEmailConfirmRef.current && (event === 'INITIAL_SESSION' || event === 'SIGNED_IN')) {
+        // ── Email confirmation detection ───────────────────────────────────────
+        // Two independent signals — either one triggers the "Email Confirmed!" screen:
+        //   1. sessionStorage flag (set by supabase.js on fresh page load)
+        //   2. sp_pending_profile exists + email was confirmed within the last 15 min
+        //      (catches hash-navigation case where the tab was already open and
+        //       supabase.js module code didn't re-run)
+        const hasPendingProfile = !!localStorage.getItem('sp_pending_profile');
+        const confirmedAt = session.user?.email_confirmed_at;
+        const isRecentConfirm = !!confirmedAt &&
+          (Date.now() - new Date(confirmedAt).getTime()) < 15 * 60 * 1000;
+        const isEmailConfirm =
+          (isEmailConfirmRef.current && (event === 'INITIAL_SESSION' || event === 'SIGNED_IN')) ||
+          (event === 'SIGNED_IN' && hasPendingProfile && isRecentConfirm);
+
+        if (isEmailConfirm) {
           isEmailConfirmRef.current = false;
           sessionStorage.removeItem('_cv_email_confirm');
           setShowEmailConfirmed(true);
+          setShowLanding(false);
           setLoading(false);
-          loadUserProfile(session.user); // create profile from sp_pending_profile in background
+          loadUserProfile(session.user); // auto-creates profile from sp_pending_profile in background
           return;
         }
         setShowLanding(false);
