@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TrendingUp, Music, MessageCircle, Briefcase, User, Users, FileText, BookOpen, MoreHorizontal, X, MessageSquare, Search } from 'lucide-react';
+import { TrendingUp, Music, MessageCircle, Briefcase, User, Users, FileText, BookOpen, MoreHorizontal, X, MessageSquare, Search, CreditCard } from 'lucide-react';
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 
 function getPrimaryTabs(accountType, badgeCounts) {
@@ -31,6 +31,7 @@ function getPrimaryTabs(accountType, badgeCounts) {
 function getMoreItems(accountType) {
   const common = [
     { id: 'profile',            label: 'My Profile',       icon: <User size={20} /> },
+    { id: 'billing',            label: 'Billing',          icon: <CreditCard size={20} /> },
     { id: 'contract-revision',  label: 'Contract Review',  icon: <BookOpen size={20} /> },
     { id: 'support',            label: 'Chat with Support',icon: <MessageSquare size={20} /> },
   ];

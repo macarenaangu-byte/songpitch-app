@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
-import { Search, Users, Music, MessageCircle, User, ChevronRight, ChevronLeft, Briefcase, FileText, TrendingUp, Bell, Shield, BookOpen, Scale, AlertTriangle } from "lucide-react";
+import { Search, Users, Music, MessageCircle, User, ChevronRight, ChevronLeft, Briefcase, FileText, TrendingUp, Bell, Shield, BookOpen, Scale, AlertTriangle, CreditCard } from "lucide-react";
 // ─── Extracted modules ──────────────────────────────────────────────────────
 import { DESIGN_SYSTEM } from './constants/designSystem';
 import { supabase } from './lib/supabase';
@@ -45,6 +45,7 @@ const SplitGenerator = lazy(() => import('./pages/SplitGenerator/SplitGenerator'
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage').then(m => ({ default: m.AdminDashboardPage })));
 const DealAnalyzerPage = lazy(() => import('./pages/DealAnalyzerPage').then(m => ({ default: m.DealAnalyzerPage })));
 const ContractRevisionPage = lazy(() => import('./pages/ContractRevisionPage').then(m => ({ default: m.ContractRevisionPage })));
+const BillingPage = lazy(() => import('./pages/BillingPage').then(m => ({ default: m.BillingPage })));
 
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -55,7 +56,7 @@ const ContractRevisionPage = lazy(() => import('./pages/ContractRevisionPage').t
 const VALID_PAGES = new Set([
   'dashboard', 'roster', 'catalog', 'opportunities', 'responses',
   'messages', 'portfolio', 'profile', 'splits', 'admin-dashboard',
-  'deal-analyzer', 'contract-revision',
+  'deal-analyzer', 'contract-revision', 'billing',
 ]);
 const LEGAL_PAGES = new Set(['privacy', 'terms', 'dmca']);
 
@@ -1149,6 +1150,7 @@ export default function SongPitch() {
     { id: "messages", label: "Messages", icon: <MessageCircle size={17} />, forAll: true, badge: badgeCounts.messages },
     { id: "portfolio", label: "My Portfolio", icon: <Music size={17} />, forComposer: true },
     { id: "profile", label: "My Profile", icon: <User size={17} />, forAll: true },
+    { id: "billing", label: "Billing", icon: <CreditCard size={17} />, forAll: true },
     { id: "splits", label: "Split Sheets", icon: <FileText size={17} />, forComposer: true },
     { id: "deal-analyzer", label: "Deal Analyzer", icon: <Scale size={17} />, forComposer: true },
     { id: "contract-revision", label: "Contract Review", icon: <BookOpen size={17} />, forExecutive: true },
@@ -1194,6 +1196,7 @@ export default function SongPitch() {
       case "deal-analyzer": return (isComposer || isAdmin) ? <DealAnalyzerPage userProfile={userProfile} /> : fallback;
       case "contract-revision": return (isExecutive || isAdmin) ? <ContractRevisionPage userProfile={userProfile} isMobile={isMobileView} /> : fallback;
       case "admin-dashboard": return isAdmin ? <AdminDashboardPage stats={stats} userProfile={userProfile} onNavigate={setPage} onViewProfile={setViewingProfile} isMobile={isMobileView} analytics={analytics} /> : fallback;
+      case "billing": return <BillingPage userProfile={{ ...userProfile, email: session.user.email }} isMobile={isMobileView} />;
       default: return fallback;
     }
   };

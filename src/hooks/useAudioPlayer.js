@@ -22,7 +22,7 @@ export function useAudioPlayer() {
       setCurrentTime(0);
     };
     const onTimeUpdate = () => {
-      if (audio.currentTime >= 40) {
+      if (audio.currentTime >= 90) {
         audio.pause();
         audio.currentTime = 0;
         setIsPlaying(false);
