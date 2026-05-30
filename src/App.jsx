@@ -1098,17 +1098,16 @@ export default function SongPitch() {
 
   // ── Email confirmed success page ─────────────────────────────────────────
   if (showEmailConfirmed) {
-    // Profile creation was already kicked off in the SIGNED_IN handler.
-    // By the time the user clicks, userProfile may already be set.
-    // Only reload if it's still missing (e.g. creation hasn't finished yet).
+    // Sign out then show the sign-in form.
+    // If we left the session active and userProfile was still null, the app
+    // would fall through to AccountSetupPage. Signing out is cleaner:
+    // session=null → AuthPage (sign-in). When they sign in, loadUserProfile
+    // auto-creates their profile from sp_pending_profile → dashboard.
     const handleContinue = () => {
-      sessionStorage.removeItem('_cv_email_confirm'); // always clean up the flag
+      sessionStorage.removeItem('_cv_email_confirm');
       setShowEmailConfirmed(false);
-      setShowLanding(false);
-      if (!userProfile && session?.user) {
-        setLoading(true); // show spinner while profile loads, prevents AccountSetupPage flash
-        loadUserProfile(session.user);
-      }
+      stayOnAuthRef.current = true; // prevents !session effect from redirecting to landing
+      supabase.auth.signOut();      // clears session → AuthPage renders
     };
     return (
       <div className="hero-animated-bg" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
@@ -1121,10 +1120,10 @@ export default function SongPitch() {
           </div>
           <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 28, fontWeight: 800, marginBottom: 10 }}>Email Confirmed!</h1>
           <p style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 15, lineHeight: 1.6, marginBottom: 8 }}>
-            Your account is ready.
+            Thank you for confirming your email.
           </p>
           <p style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, lineHeight: 1.6, marginBottom: 36 }}>
-            You're signed in — tap below to start using Coda-Vault.
+            Your account is all set. Sign in below to start using Coda-Vault.
           </p>
           <button
             onClick={handleContinue}
@@ -1132,7 +1131,7 @@ export default function SongPitch() {
             onMouseEnter={e => { e.currentTarget.style.background = DESIGN_SYSTEM.colors.brand.light; e.currentTarget.style.transform = 'translateY(-1px)'; }}
             onMouseLeave={e => { e.currentTarget.style.background = DESIGN_SYSTEM.colors.brand.primary; e.currentTarget.style.transform = 'translateY(0)'; }}
           >
-            Start Using Coda-Vault →
+            Sign In to Coda-Vault →
           </button>
         </div>
       </div>
