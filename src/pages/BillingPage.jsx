@@ -32,28 +32,32 @@ export function BillingPage({ userProfile, isMobile = false }) {
   const isPaid = !isFree;
 
   useEffect(() => {
+    let cancelled = false;
+    const loadBillingInfo = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('get-billing-info', { body: {} });
+        if (cancelled) return;
+        if (error) throw error;
+        setBillingInfo(data);
+      } catch (err) {
+        if (cancelled) return;
+        console.error('Billing info error:', err);
+        // Fallback to profile data if edge function fails
+        setBillingInfo({
+          tier,
+          status: userProfile?.subscription_status || 'active',
+          ends_at: userProfile?.subscription_ends_at || null,
+          paymentMethod: null,
+        });
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
     loadBillingInfo();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const loadBillingInfo = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('get-billing-info', { body: {} });
-      if (error) throw error;
-      setBillingInfo(data);
-    } catch (err) {
-      console.error('Billing info error:', err);
-      // Fallback to profile data if edge function fails
-      setBillingInfo({
-        tier,
-        status: userProfile?.subscription_status || 'active',
-        ends_at: userProfile?.subscription_ends_at || null,
-        paymentMethod: null,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleCancel = async () => {
     if (!window.confirm('Your plan stays active until the end of the billing period, then downgrades to Free. Are you sure you want to cancel?')) return;

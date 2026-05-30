@@ -108,16 +108,20 @@ export default function SongPitch() {
     window.location.hash.includes('access_token') ||
     new URLSearchParams(window.location.search).has('code')
   );
-  // Detect email confirmation — works for both legacy hash flow (#type=signup)
-  // and modern Supabase PKCE flow (?code=...). For PKCE we also require
-  // sp_pending_profile to exist so we don't misfire on OAuth logins.
+  // Detect email confirmation.
+  // For implicit flow Supabase clears the hash at module-load time (before React
+  // renders), so we read the flag from sessionStorage where supabase.js saved it.
+  // Fallback to the hash/query for edge-cases (e.g. PKCE flow with ?code=).
   const isEmailConfirmRef = useRef(
+    sessionStorage.getItem('_cv_email_confirm') === '1' ||
     window.location.hash.includes('type=signup') ||
     (new URLSearchParams(window.location.search).has('code') && !!localStorage.getItem('sp_pending_profile'))
   );
-  // Detect email CHANGE confirmation — hash will contain type=email_change when
-  // the user clicks the confirmation link Supabase sent to their new address.
-  const isEmailChangeRef = useRef(window.location.hash.includes('type=email_change'));
+  // Detect email CHANGE confirmation — same sessionStorage approach for implicit flow.
+  const isEmailChangeRef = useRef(
+    sessionStorage.getItem('_cv_email_change') === '1' ||
+    window.location.hash.includes('type=email_change')
+  );
   const legalPageFromHashRef = useRef(!!getLegalPageFromHash()); // true if legal page was loaded from URL
   const suppressLegalPushRef = useRef(false); // prevent double history push on popstate
   const [authError, setAuthError] = useState(null);
@@ -315,6 +319,7 @@ export default function SongPitch() {
       // alive so neither the landing page nor AccountSetupPage can flash.
       if (event === 'USER_UPDATED' && session) {
         isEmailChangeRef.current = false;
+        sessionStorage.removeItem('_cv_email_change');
         setShowLanding(false);
         setPage('profile');
         loadUserProfile(session.user);
@@ -323,6 +328,7 @@ export default function SongPitch() {
       }
       if (session && event === 'SIGNED_IN' && isEmailChangeRef.current) {
         isEmailChangeRef.current = false;
+        sessionStorage.removeItem('_cv_email_change');
         setShowLanding(false);
         setPage('profile');
         loadUserProfile(session.user);
@@ -334,6 +340,7 @@ export default function SongPitch() {
         // Also kick off profile creation immediately so it's ready before the user clicks.
         if (event === 'SIGNED_IN' && isEmailConfirmRef.current) {
           isEmailConfirmRef.current = false;
+          sessionStorage.removeItem('_cv_email_confirm');
           setShowEmailConfirmed(true);
           setLoading(false);
           loadUserProfile(session.user); // create profile from sp_pending_profile in background
