@@ -1080,6 +1080,7 @@ export default function SongPitch() {
       setShowEmailConfirmed(false);
       setShowLanding(false);
       if (!userProfile && session?.user) {
+        setLoading(true); // show spinner while profile loads, prevents AccountSetupPage flash
         loadUserProfile(session.user);
       }
     };
