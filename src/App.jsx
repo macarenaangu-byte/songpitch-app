@@ -79,7 +79,12 @@ export default function SongPitch() {
   const [savingRole, setSavingRole] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showLanding, setShowLanding] = useState(true);
-  const [showEmailConfirmed, setShowEmailConfirmed] = useState(false);
+  // Initialize directly from sessionStorage — supabase.js writes '_cv_email_confirm'
+  // before createClient clears the hash, so this is true on the very first render
+  // when the user lands from a confirmation link, with no async delay.
+  const [showEmailConfirmed, setShowEmailConfirmed] = useState(
+    () => sessionStorage.getItem('_cv_email_confirm') === '1'
+  );
   const [legalPage, setLegalPage] = useState(() => getLegalPageFromHash()); // 'terms', 'privacy', 'dmca', or null
   const [page, setPage] = useState(() => getPageFromHash() || "dashboard");
   const [deleteAccountModal, setDeleteAccountModal] = useState({ open: false, typed: '', loading: false });
@@ -338,7 +343,7 @@ export default function SongPitch() {
       if (session && (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
         // Email confirmation redirect — show success page instead of loading the app.
         // Also kick off profile creation immediately so it's ready before the user clicks.
-        if (event === 'SIGNED_IN' && isEmailConfirmRef.current) {
+        if (isEmailConfirmRef.current && (event === 'INITIAL_SESSION' || event === 'SIGNED_IN')) {
           isEmailConfirmRef.current = false;
           sessionStorage.removeItem('_cv_email_confirm');
           setShowEmailConfirmed(true);
@@ -1084,6 +1089,7 @@ export default function SongPitch() {
     // By the time the user clicks, userProfile may already be set.
     // Only reload if it's still missing (e.g. creation hasn't finished yet).
     const handleContinue = () => {
+      sessionStorage.removeItem('_cv_email_confirm'); // always clean up the flag
       setShowEmailConfirmed(false);
       setShowLanding(false);
       if (!userProfile && session?.user) {
