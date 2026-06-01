@@ -47,17 +47,19 @@ const uploadWithProgress = (file, storagePath, onProgress) => {
   });
 };
 
-export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
+export function PortfolioPage({ userProfile, audioPlayer, isMobile = false, onNavigate }) {
   const { withinLimit, upgradeMessage } = useTier(userProfile);
   const [upgradeModal, setUpgradeModal] = useState({ open: false, feature: '' });
   const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showBulk, setShowBulk] = useState(false);
-  const [bulkStep, setBulkStep] = useState(null); 
+  const [bulkStep, setBulkStep] = useState(null);
   const [editingSong, setEditingSong] = useState(null);
-  const [uploadProgress, setUploadProgress] = useState(null); 
+  const [uploadProgress, setUploadProgress] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const isFirstUploadRef = useRef(false);
   
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'grid'
   const [analyzing, setAnalyzing] = useState(false);
@@ -148,11 +150,11 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
 
     // 2. Pause for 100ms so the browser can paint the UI before the AI freezes it!
     setTimeout(async () => {
-      // 45-second timeout — if AI server hangs, don't trap the user forever
+      // 90-second timeout — Cloud Run may cold-start; give it time to warm up
       const timeoutId = setTimeout(() => {
         setAnalyzing(false);
         showToast.info("Analysis is taking too long. Fill in the details manually!");
-      }, 45000);
+      }, 90000);
 
       try {
         const analysis = await analyzeAudioFile(file);
@@ -165,7 +167,7 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
         }
         if (analysis.bpm) setBpm(Math.round(analysis.bpm));
         if (analysis.key) setKey(analysis.key);
-        if (analysis.genre !== undefined && analysis.genre !== null) setGenre(analysis.genre);
+        if (analysis.genre && songGenreOptions.includes(analysis.genre)) setGenre(analysis.genre);
         if (analysis.mood !== undefined && analysis.mood !== null) setMood(analysis.mood);
         if (analysis.secondaryGenre) setSecondaryGenre(analysis.secondaryGenre);
         if (analysis.lyrics) setDescription(analysis.lyrics);
@@ -213,6 +215,12 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
     if (!uploadCheck.allowed) {
       setUpgradeModal({ open: true, feature: upgradeMessage('upload') });
       return;
+    }
+
+    // Track if this is the first ever upload
+    const onboardingKey = `cv_onboarding_${userProfile.id}`;
+    if (songs.length === 0 && !localStorage.getItem(onboardingKey)) {
+      isFirstUploadRef.current = true;
     }
 
     setLoading(true);
@@ -269,9 +277,13 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
       resetForm();
       loadSongs();
       showToast.success(editingSong ? "Song updated!" : "Song added!");
-      // Increment weekly upload counter
       if (!editingSong) {
         await supabase.rpc('increment_usage', { p_user_id: userProfile.id, p_action: 'upload' });
+        if (isFirstUploadRef.current) {
+          isFirstUploadRef.current = false;
+          localStorage.setItem(`cv_onboarding_${userProfile.id}`, '1');
+          setTimeout(() => setShowOnboarding(true), 600);
+        }
       }
     } catch (err) {
       showToast.error(friendlyError(err));
@@ -373,6 +385,11 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
       showToast.error(`Row ${invalidRows[0].row} is missing: ${invalidRows[0].missing.join(', ')}`); return;
     }
 
+    const onboardingKey = `cv_onboarding_${userProfile.id}`;
+    if (songs.length === 0 && !localStorage.getItem(onboardingKey)) {
+      isFirstUploadRef.current = true;
+    }
+
     const analyzedData = bulkData.map(item => ({ ...item }));
     for (let idx = 0; idx < bulkData.length; idx++) {
       const item = bulkData[idx];
@@ -408,6 +425,11 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
       }
       showToast.success(`${analyzedData.length} songs uploaded successfully!`);
       setBulkData([]); setBulkFiles([]); setShowBulk(false); setBulkStep(null); loadSongs();
+      if (isFirstUploadRef.current) {
+        isFirstUploadRef.current = false;
+        localStorage.setItem(`cv_onboarding_${userProfile.id}`, '1');
+        setTimeout(() => setShowOnboarding(true), 600);
+      }
     } catch (err) { showToast.error(friendlyError(err)); } finally { setUploadProgress(null); setLoading(false); setBulkAnalyzing(''); }
   };
 
@@ -601,6 +623,130 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false }) {
         )}
       </div>
       <ConfirmModal open={confirmModal?.open} title={confirmModal?.title} message={confirmModal?.message} onConfirm={confirmModal?.onConfirm} onCancel={() => setConfirmModal(null)} />
+
+      {/* ── First Upload Onboarding Modal ── */}
+      {showOnboarding && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1000,
+          background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 20,
+        }}>
+          <div style={{
+            background: DESIGN_SYSTEM.colors.bg.card,
+            borderRadius: 20, width: '100%', maxWidth: 480,
+            border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
+            overflow: 'hidden',
+            boxShadow: '0 32px 80px rgba(0,0,0,0.6)',
+          }}>
+            {/* Gold top accent */}
+            <div style={{ height: 4, background: `linear-gradient(90deg, #C9A84C, #e8c96a, #C9A84C)` }} />
+
+            <div style={{ padding: '28px 28px 24px' }}>
+              {/* Header */}
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: 22, marginBottom: 6 }}>🎵</div>
+                <h2 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 20, fontWeight: 800, margin: '0 0 6px', fontFamily: DESIGN_SYSTEM.font.display, letterSpacing: '-0.02em' }}>
+                  Track received.
+                </h2>
+                <p style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 14, margin: 0, lineHeight: 1.6 }}>
+                  Now let's make it work for you. Three quick steps to get you in front of music supervisors.
+                </p>
+              </div>
+
+              {/* Steps */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {[
+                  {
+                    done: true,
+                    label: 'Upload your first track',
+                    desc: "It's in the vault.",
+                    action: null,
+                  },
+                  {
+                    done: false,
+                    label: 'Complete your profile',
+                    desc: 'Supervisors browse profiles before reaching out. Add your bio and photo.',
+                    action: () => { setShowOnboarding(false); onNavigate?.('profile'); },
+                  },
+                  {
+                    done: false,
+                    label: 'Browse open briefs',
+                    desc: "See what music supervisors are looking for right now.",
+                    action: () => { setShowOnboarding(false); onNavigate?.('opportunities'); },
+                  },
+                  {
+                    done: false,
+                    label: 'Share your vault',
+                    desc: 'Your catalog is live. Share your profile link with anyone.',
+                    action: () => { setShowOnboarding(false); onNavigate?.('profile'); },
+                  },
+                ].map((step, i) => (
+                  <div
+                    key={i}
+                    onClick={step.action || undefined}
+                    style={{
+                      display: 'flex', alignItems: 'flex-start', gap: 14,
+                      padding: '14px 12px', borderRadius: 12,
+                      background: step.done ? `${DESIGN_SYSTEM.colors.brand.primary}0a` : 'transparent',
+                      cursor: step.action ? 'pointer' : 'default',
+                      transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={e => { if (step.action) e.currentTarget.style.background = `${DESIGN_SYSTEM.colors.brand.primary}15`; }}
+                    onMouseLeave={e => { if (step.action) e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    {/* Step indicator */}
+                    <div style={{
+                      width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: step.done ? DESIGN_SYSTEM.colors.brand.primary : 'transparent',
+                      border: step.done ? 'none' : `2px solid ${DESIGN_SYSTEM.colors.border.medium}`,
+                      marginTop: 1,
+                    }}>
+                      {step.done ? (
+                        <svg width="13" height="10" viewBox="0 0 13 10" fill="none">
+                          <path d="M1 5L5 9L12 1" stroke="#0a0c14" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      ) : (
+                        <span style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 12, fontWeight: 700 }}>{i + 1}</span>
+                      )}
+                    </div>
+
+                    {/* Text */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        color: step.done ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.text.primary,
+                        fontSize: 14, fontWeight: 700, marginBottom: 2,
+                      }}>{step.label}</div>
+                      <div style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 12, lineHeight: 1.5 }}>{step.desc}</div>
+                    </div>
+
+                    {/* Arrow */}
+                    {step.action && (
+                      <div style={{ color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 16, flexShrink: 0, marginTop: 4 }}>→</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* CTA */}
+              <button
+                onClick={() => setShowOnboarding(false)}
+                style={{
+                  width: '100%', marginTop: 20,
+                  background: DESIGN_SYSTEM.colors.brand.primary,
+                  color: '#0a0c14', border: 'none', borderRadius: 12,
+                  padding: '14px', fontSize: 15, fontWeight: 700,
+                  cursor: 'pointer', fontFamily: DESIGN_SYSTEM.font.body,
+                  letterSpacing: '0.01em',
+                }}
+              >
+                Got it, let's go →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

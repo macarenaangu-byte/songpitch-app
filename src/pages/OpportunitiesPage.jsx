@@ -693,8 +693,11 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
 
   const filtered = opportunities
     .filter(opp => {
-      const matchesSearch = (opp.title || '').toLowerCase().includes(search.toLowerCase()) ||
-                           (opp.description || '').toLowerCase().includes(search.toLowerCase());
+      const posterName = `${opp.creator?.first_name || ''} ${opp.creator?.last_name || ''}`.toLowerCase();
+      const matchesSearch = !search.trim() ||
+        (opp.title || '').toLowerCase().includes(search.toLowerCase()) ||
+        (opp.description || '').toLowerCase().includes(search.toLowerCase()) ||
+        posterName.includes(search.toLowerCase());
       const matchesGenre = !filterGenre || opp.genres?.includes(filterGenre);
       return matchesSearch && matchesGenre;
     })
@@ -751,7 +754,7 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
       <div style={{ display: "flex", flexDirection: isMobile ? 'column' : 'row', gap: 12, marginBottom: 20 }}>
         <div style={{ position: "relative", flex: 1 }}>
           <Search size={16} color={DESIGN_SYSTEM.colors.text.muted} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }} />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search opportunities..." style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.card, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 10, padding: "10px 16px 10px 40px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }} />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by title, description, or poster name..." style={{ width: "100%", background: DESIGN_SYSTEM.colors.bg.card, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 10, padding: "10px 16px 10px 40px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }} />
         </div>
         <select value={filterGenre} onChange={e => setFilterGenre(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.card, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 10, padding: "10px 16px", color: filterGenre ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", minWidth: 150 }}>
           <option value="">All Genres</option>
@@ -885,8 +888,8 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
       {loading && opportunities.length === 0 ? (
         <OpportunityGridSkeleton count={4} />
       ) : filtered.length === 0 ? (
-        <div style={{ display: 'flex', gap: 24, alignItems: 'center', padding: 24 }}>
-          <div style={{ flex: '0 0 320px', background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 16, padding: 24, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, textAlign: 'left' }}>
+        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 24, alignItems: isMobile ? 'stretch' : 'center', padding: isMobile ? '12px 0' : 24 }}>
+          <div style={{ flex: isMobile ? '1 1 100%' : '0 0 320px', boxSizing: 'border-box', background: DESIGN_SYSTEM.colors.bg.card, borderRadius: 16, padding: 24, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, textAlign: 'left' }}>
             <Briefcase size={48} color={DESIGN_SYSTEM.colors.text.muted} style={{ marginBottom: 12 }} />
             <h3 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 18, fontWeight: 800, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", marginBottom: 8 }}>
               {(userProfile.account_type === 'music_executive' || userProfile.account_type === 'admin') ? 'Ready to find your sound?' : 'New opportunities are on the way!'}
@@ -903,11 +906,13 @@ export function OpportunitiesPage({ userProfile, onBadgeRefresh, isMobile = fals
               <button onClick={() => showToast('Try adjusting filters or clearing the search', 'info')} style={{ background: 'transparent', color: DESIGN_SYSTEM.colors.text.tertiary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: '8px 14px', cursor: 'pointer' }}>Help</button>
             </div>
           </div>
-          <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
-            {Array.from({ length: 3 }).map((_, i) => (
-              <OpportunityCardSkeleton key={i} />
-            ))}
-          </div>
+          {!isMobile && (
+            <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <OpportunityCardSkeleton key={i} />
+              ))}
+            </div>
+          )}
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>

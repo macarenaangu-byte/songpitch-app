@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
-import { Search, Users, Music, MessageCircle, User, ChevronRight, ChevronLeft, Briefcase, FileText, TrendingUp, Bell, Menu, Shield, BookOpen, Scale, AlertTriangle } from "lucide-react";
+import { Search, Users, Music, MessageCircle, User, ChevronRight, ChevronLeft, Briefcase, FileText, TrendingUp, Bell, Shield, BookOpen, Scale, AlertTriangle, CreditCard } from "lucide-react";
 // ─── Extracted modules ──────────────────────────────────────────────────────
 import { DESIGN_SYSTEM } from './constants/designSystem';
 import { supabase } from './lib/supabase';
@@ -21,6 +21,7 @@ import { Badge } from './components/Badge';
 import { NowPlayingBar } from './components/NowPlayingBar';
 import { NotificationPanel } from './components/NotificationPanel';
 import CommandPalette from './components/CommandPalette';
+import { BottomTabNav } from './components/BottomTabNav';
 
 // ─── Pages (eagerly loaded — needed immediately) ────────────────────────────
 import { AuthPage } from './pages/AuthPage';
@@ -44,6 +45,7 @@ const SplitGenerator = lazy(() => import('./pages/SplitGenerator/SplitGenerator'
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage').then(m => ({ default: m.AdminDashboardPage })));
 const DealAnalyzerPage = lazy(() => import('./pages/DealAnalyzerPage').then(m => ({ default: m.DealAnalyzerPage })));
 const ContractRevisionPage = lazy(() => import('./pages/ContractRevisionPage').then(m => ({ default: m.ContractRevisionPage })));
+const BillingPage = lazy(() => import('./pages/BillingPage').then(m => ({ default: m.BillingPage })));
 
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -54,7 +56,7 @@ const ContractRevisionPage = lazy(() => import('./pages/ContractRevisionPage').t
 const VALID_PAGES = new Set([
   'dashboard', 'roster', 'catalog', 'opportunities', 'responses',
   'messages', 'portfolio', 'profile', 'splits', 'admin-dashboard',
-  'deal-analyzer', 'contract-revision',
+  'deal-analyzer', 'contract-revision', 'billing',
 ]);
 const LEGAL_PAGES = new Set(['privacy', 'terms', 'dmca']);
 
@@ -77,7 +79,12 @@ export default function SongPitch() {
   const [savingRole, setSavingRole] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showLanding, setShowLanding] = useState(true);
-  const [showEmailConfirmed, setShowEmailConfirmed] = useState(false);
+  // Initialize directly from sessionStorage — supabase.js writes '_cv_email_confirm'
+  // before createClient clears the hash, so this is true on the very first render
+  // when the user lands from a confirmation link, with no async delay.
+  const [showEmailConfirmed, setShowEmailConfirmed] = useState(
+    () => sessionStorage.getItem('_cv_email_confirm') === '1'
+  );
   const [legalPage, setLegalPage] = useState(() => getLegalPageFromHash()); // 'terms', 'privacy', 'dmca', or null
   const [page, setPage] = useState(() => getPageFromHash() || "dashboard");
   const [deleteAccountModal, setDeleteAccountModal] = useState({ open: false, typed: '', loading: false });
@@ -88,7 +95,6 @@ export default function SongPitch() {
   const [viewingProfile, setViewingProfile] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobileView, setIsMobileView] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 768 : false));
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   // Notification system
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -107,12 +113,19 @@ export default function SongPitch() {
     window.location.hash.includes('access_token') ||
     new URLSearchParams(window.location.search).has('code')
   );
-  // Detect email confirmation — works for both legacy hash flow (#type=signup)
-  // and modern Supabase PKCE flow (?code=...). For PKCE we also require
-  // sp_pending_profile to exist so we don't misfire on OAuth logins.
+  // Detect email confirmation.
+  // For implicit flow Supabase clears the hash at module-load time (before React
+  // renders), so we read the flag from sessionStorage where supabase.js saved it.
+  // Fallback to the hash/query for edge-cases (e.g. PKCE flow with ?code=).
   const isEmailConfirmRef = useRef(
+    sessionStorage.getItem('_cv_email_confirm') === '1' ||
     window.location.hash.includes('type=signup') ||
     (new URLSearchParams(window.location.search).has('code') && !!localStorage.getItem('sp_pending_profile'))
+  );
+  // Detect email CHANGE confirmation — same sessionStorage approach for implicit flow.
+  const isEmailChangeRef = useRef(
+    sessionStorage.getItem('_cv_email_change') === '1' ||
+    window.location.hash.includes('type=email_change')
   );
   const legalPageFromHashRef = useRef(!!getLegalPageFromHash()); // true if legal page was loaded from URL
   const suppressLegalPushRef = useRef(false); // prevent double history push on popstate
@@ -288,7 +301,7 @@ export default function SongPitch() {
     const onResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobileView(mobile);
-      if (!mobile) setIsMobileMenuOpen(false);
+      
     };
 
     onResize();
@@ -298,21 +311,57 @@ export default function SongPitch() {
 
   useEffect(() => {
     if (isMobileView) {
-      setIsMobileMenuOpen(false);
+      
     }
   }, [page, viewingProfile, isMobileView]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
+      // ── Email change confirmation ─────────────────────────────────────────
+      // Fires as USER_UPDATED (same-device) or SIGNED_IN (fresh device/tab).
+      // isEmailChangeRef prevents duplicate handling and keeps the spinner
+      // alive so neither the landing page nor AccountSetupPage can flash.
+      if (event === 'USER_UPDATED' && session) {
+        isEmailChangeRef.current = false;
+        sessionStorage.removeItem('_cv_email_change');
+        setShowLanding(false);
+        setPage('profile');
+        loadUserProfile(session.user);
+        showToast.success('Email updated successfully!');
+        return;
+      }
+      if (session && event === 'SIGNED_IN' && isEmailChangeRef.current) {
+        isEmailChangeRef.current = false;
+        sessionStorage.removeItem('_cv_email_change');
+        setShowLanding(false);
+        setPage('profile');
+        loadUserProfile(session.user);
+        showToast.success('Email updated successfully!');
+        return;
+      }
       if (session && (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
-        // Email confirmation redirect — show success page instead of loading the app.
-        // Also kick off profile creation immediately so it's ready before the user clicks.
-        if (event === 'SIGNED_IN' && isEmailConfirmRef.current) {
+        // ── Email confirmation detection ───────────────────────────────────────
+        // Two independent signals — either one triggers the "Email Confirmed!" screen:
+        //   1. sessionStorage flag (set by supabase.js on fresh page load)
+        //   2. sp_pending_profile exists + email was confirmed within the last 15 min
+        //      (catches hash-navigation case where the tab was already open and
+        //       supabase.js module code didn't re-run)
+        const hasPendingProfile = !!localStorage.getItem('sp_pending_profile');
+        const confirmedAt = session.user?.email_confirmed_at;
+        const isRecentConfirm = !!confirmedAt &&
+          (Date.now() - new Date(confirmedAt).getTime()) < 15 * 60 * 1000;
+        const isEmailConfirm =
+          (isEmailConfirmRef.current && (event === 'INITIAL_SESSION' || event === 'SIGNED_IN')) ||
+          (event === 'SIGNED_IN' && hasPendingProfile && isRecentConfirm);
+
+        if (isEmailConfirm) {
           isEmailConfirmRef.current = false;
+          sessionStorage.removeItem('_cv_email_confirm');
           setShowEmailConfirmed(true);
+          setShowLanding(false);
           setLoading(false);
-          loadUserProfile(session.user); // create profile from sp_pending_profile in background
+          loadUserProfile(session.user); // auto-creates profile from sp_pending_profile in background
           return;
         }
         setShowLanding(false);
@@ -324,6 +373,9 @@ export default function SongPitch() {
           loadUserProfile(session.user);
         }
       } else if (!session) {
+        // If an email-change confirmation is pending (USER_UPDATED fires shortly),
+        // keep the spinner alive — don't show the landing page in between.
+        if (isEmailChangeRef.current) return;
         setUserProfile(null);
         setNeedsOnboarding(false);
         setLoading(false);
@@ -1046,15 +1098,16 @@ export default function SongPitch() {
 
   // ── Email confirmed success page ─────────────────────────────────────────
   if (showEmailConfirmed) {
-    // Profile creation was already kicked off in the SIGNED_IN handler.
-    // By the time the user clicks, userProfile may already be set.
-    // Only reload if it's still missing (e.g. creation hasn't finished yet).
+    // Sign out then show the sign-in form.
+    // If we left the session active and userProfile was still null, the app
+    // would fall through to AccountSetupPage. Signing out is cleaner:
+    // session=null → AuthPage (sign-in). When they sign in, loadUserProfile
+    // auto-creates their profile from sp_pending_profile → dashboard.
     const handleContinue = () => {
+      sessionStorage.removeItem('_cv_email_confirm');
       setShowEmailConfirmed(false);
-      setShowLanding(false);
-      if (!userProfile && session?.user) {
-        loadUserProfile(session.user);
-      }
+      stayOnAuthRef.current = true; // prevents !session effect from redirecting to landing
+      supabase.auth.signOut();      // clears session → AuthPage renders
     };
     return (
       <div className="hero-animated-bg" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
@@ -1067,10 +1120,10 @@ export default function SongPitch() {
           </div>
           <h1 style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 28, fontWeight: 800, marginBottom: 10 }}>Email Confirmed!</h1>
           <p style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 15, lineHeight: 1.6, marginBottom: 8 }}>
-            Your account is ready.
+            Thank you for confirming your email.
           </p>
           <p style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, lineHeight: 1.6, marginBottom: 36 }}>
-            You're signed in — tap below to start using Coda-Vault.
+            Your account is all set. Sign in below to start using Coda-Vault.
           </p>
           <button
             onClick={handleContinue}
@@ -1078,7 +1131,7 @@ export default function SongPitch() {
             onMouseEnter={e => { e.currentTarget.style.background = DESIGN_SYSTEM.colors.brand.light; e.currentTarget.style.transform = 'translateY(-1px)'; }}
             onMouseLeave={e => { e.currentTarget.style.background = DESIGN_SYSTEM.colors.brand.primary; e.currentTarget.style.transform = 'translateY(0)'; }}
           >
-            Start Using Coda-Vault →
+            Sign In to Coda-Vault →
           </button>
         </div>
       </div>
@@ -1123,6 +1176,7 @@ export default function SongPitch() {
     { id: "messages", label: "Messages", icon: <MessageCircle size={17} />, forAll: true, badge: badgeCounts.messages },
     { id: "portfolio", label: "My Portfolio", icon: <Music size={17} />, forComposer: true },
     { id: "profile", label: "My Profile", icon: <User size={17} />, forAll: true },
+    { id: "billing", label: "Billing", icon: <CreditCard size={17} />, forAll: true },
     { id: "splits", label: "Split Sheets", icon: <FileText size={17} />, forComposer: true },
     { id: "deal-analyzer", label: "Deal Analyzer", icon: <Scale size={17} />, forComposer: true },
     { id: "contract-revision", label: "Contract Review", icon: <BookOpen size={17} />, forExecutive: true },
@@ -1163,11 +1217,12 @@ export default function SongPitch() {
       case "responses": return (isExecutive || isAdmin) ? <ResponsesPage userProfile={userProfile} onNavigate={setPage} onViewProfile={setViewingProfile} audioPlayer={audioPlayer} isMobile={isMobileView} /> : fallback;
       case "messages": return <MessagesPage userProfile={userProfile} supportTargetUserId={supportTargetUserId} supportOpenToken={supportOpenToken} onBadgeRefresh={loadSidebarBadges} onActiveConversationChange={setActiveMessageConversationId} isMobile={isMobileView} audioPlayer={audioPlayer} />;
       case "portfolio": return (isComposer || isAdmin) ? <PortfolioPage userProfile={userProfile} audioPlayer={audioPlayer} isMobile={isMobileView} onNavigate={setPage} /> : fallback;
-      case "profile": return <ProfilePage user={{ ...userProfile, email: session.user.email }} onSignOut={handleSignOut} onProfileUpdate={() => loadUserProfile(session.user)} onDeleteAccount={handleDeleteAccount} />;
-      case "splits": return (isComposer || isAdmin) ? <SplitGenerator userProfile={userProfile} /> : fallback;
+      case "profile": return <ProfilePage user={{ ...userProfile, email: session.user.email }} onSignOut={handleSignOut} onProfileUpdate={() => loadUserProfile(session.user)} onDeleteAccount={handleDeleteAccount} isMobile={isMobileView} />;
+      case "splits": return (isComposer || isAdmin) ? <SplitGenerator userProfile={userProfile} isMobile={isMobileView} /> : fallback;
       case "deal-analyzer": return (isComposer || isAdmin) ? <DealAnalyzerPage userProfile={userProfile} /> : fallback;
-      case "contract-revision": return (isExecutive || isAdmin) ? <ContractRevisionPage userProfile={userProfile} /> : fallback;
+      case "contract-revision": return (isExecutive || isAdmin) ? <ContractRevisionPage userProfile={userProfile} isMobile={isMobileView} /> : fallback;
       case "admin-dashboard": return isAdmin ? <AdminDashboardPage stats={stats} userProfile={userProfile} onNavigate={setPage} onViewProfile={setViewingProfile} isMobile={isMobileView} analytics={analytics} /> : fallback;
+      case "billing": return <BillingPage userProfile={{ ...userProfile, email: session.user.email }} isMobile={isMobileView} />;
       default: return fallback;
     }
   };
@@ -1179,83 +1234,23 @@ export default function SongPitch() {
     <div className="app-root w-full min-h-screen flex flex-col md:flex-row" style={{ display: "flex", width: '100%', minHeight: '100vh', height: "100vh", background: DESIGN_SYSTEM.colors.bg.secondary, fontFamily: DESIGN_SYSTEM.font.body, color: DESIGN_SYSTEM.colors.text.primary, overflow: "hidden", position: 'relative' }}>
       {/* Skip to content link for keyboard/screen reader users */}
       <a href="#main-content" style={{ position: 'absolute', left: '-9999px', top: 'auto', width: '1px', height: '1px', overflow: 'hidden', zIndex: 9999 }} onFocus={e => { e.currentTarget.style.left = '16px'; e.currentTarget.style.top = '16px'; e.currentTarget.style.width = 'auto'; e.currentTarget.style.height = 'auto'; e.currentTarget.style.overflow = 'visible'; e.currentTarget.style.background = DESIGN_SYSTEM.colors.brand.primary; e.currentTarget.style.color = '#fff'; e.currentTarget.style.padding = '8px 16px'; e.currentTarget.style.borderRadius = '8px'; e.currentTarget.style.fontSize = '14px'; e.currentTarget.style.fontWeight = '600'; e.currentTarget.style.textDecoration = 'none'; }} onBlur={e => { e.currentTarget.style.left = '-9999px'; e.currentTarget.style.width = '1px'; e.currentTarget.style.height = '1px'; e.currentTarget.style.overflow = 'hidden'; }}>Skip to content</a>
-      {isMobileView && (
-        <header style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 56,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0 14px',
-          background: 'rgba(8,10,18,0.88)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
-          zIndex: 1300,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <img
-              src="/songpitch-logo.png"
-              alt="Coda-Vault"
-              style={{ width: 24, height: 24, objectFit: 'contain', filter: undefined }}
-              onError={(e) => { e.target.style.display = 'none'; }}
-            />
-            <span style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 16, fontWeight: 700, fontFamily: DESIGN_SYSTEM.font.body }}>Coda-Vault</span>
-          </div>
-          <button
-            aria-label="Toggle menu"
-            onClick={() => setIsMobileMenuOpen(v => !v)}
-            style={{
-              background: 'transparent',
-              border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
-              borderRadius: 8,
-              color: DESIGN_SYSTEM.colors.text.secondary,
-              padding: 8,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-            }}
-          >
-            <Menu size={18} />
-          </button>
-        </header>
-      )}
 
-      {isMobileView && isMobileMenuOpen && (
-        <div
-          onClick={() => setIsMobileMenuOpen(false)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            top: 56,
-            background: 'rgba(4,5,14,0.80)',
-            zIndex: 1190,
-          }}
-        />
-      )}
-
-      <nav aria-label="Main navigation" className={isSidebarCollapsed ? 'sidebar-collapsed' : ''} style={{
-        width: isMobileView ? 280 : desktopSidebarWidth,
-        minWidth: isMobileView ? 280 : desktopSidebarWidth,
+      {!isMobileView && <nav aria-label="Main navigation" className={isSidebarCollapsed ? 'sidebar-collapsed' : ''} style={{
+        width: desktopSidebarWidth,
+        minWidth: desktopSidebarWidth,
         background: DESIGN_SYSTEM.colors.bg.secondary,
         borderRight: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
         display: "flex",
         flexDirection: "column",
         flexShrink: 0,
-        position: isMobileView ? 'fixed' : 'relative',
-        top: isMobileView ? 56 : 0,
+        position: 'relative',
+        top: 0,
         left: 0,
         bottom: 0,
         zIndex: 1200,
         overflow: 'hidden',
-        transform: isMobileView ? (isMobileMenuOpen ? 'translateX(0)' : 'translateX(-100%)') : 'none',
-        transition: isMobileView
-          ? 'transform 0.25s ease'
-          : 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        transform: 'none',
+        transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
       }}>
         <div style={{ padding: "22px 20px", borderBottom: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -1290,7 +1285,7 @@ export default function SongPitch() {
 
         <nav style={{ flex: 1, padding: "12px 10px", overflowY: "auto", display: 'flex', flexDirection: 'column', gap: 2 }}>
           {nav.map(item => (
-            <button key={item.id} aria-label={item.label} onClick={() => { setPage(item.id); setViewingProfile(null); if (isMobileView) setIsMobileMenuOpen(false); }} style={{
+            <button key={item.id} aria-label={item.label} onClick={() => { setPage(item.id); setViewingProfile(null); }} style={{
               width: "100%", display: "flex", alignItems: "center", gap: isSidebarCollapsed ? 0 : 10, padding: isSidebarCollapsed ? "10px 6px" : "10px 12px", borderRadius: 8, border: "none", cursor: "pointer", textAlign: "left", fontFamily: DESIGN_SYSTEM.font.body, fontSize: 14, fontWeight: page === item.id ? 600 : 400, transition: "all 0.15s", position: 'relative',
               background: page === item.id ? 'rgba(201,168,76,0.10)' : "transparent",
               color: page === item.id ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.text.secondary,
@@ -1466,7 +1461,7 @@ export default function SongPitch() {
 
         <div style={{ padding: "14px 14px", borderTop: `1px solid ${DESIGN_SYSTEM.colors.border.light}` }}>
           <div
-            onClick={() => { setPage('profile'); setViewingProfile(null); if (isMobileView) setIsMobileMenuOpen(false); }}
+            onClick={() => { setPage('profile'); setViewingProfile(null); }}
             style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: isSidebarCollapsed ? 'center' : 'flex-start', cursor: 'pointer', padding: '6px 4px', borderRadius: 8, transition: 'background 0.15s' }}
             onMouseEnter={e => e.currentTarget.style.background = DESIGN_SYSTEM.colors.bg.card}
             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
@@ -1514,7 +1509,7 @@ export default function SongPitch() {
             );
           })()}
         </div>
-      </nav>
+      </nav>}
 
       {!isMobileView && isSidebarCollapsed && (
         <button
@@ -1539,11 +1534,23 @@ export default function SongPitch() {
         </button>
       )}
 
-      <main id="main-content" className="page-fade-in flex-1 w-full min-w-0" key={viewingProfile ? `profile-${viewingProfile.id}` : page} style={{ flex: 1, width: '100%', minWidth: 0, overflowY: "auto", background: DESIGN_SYSTEM.colors.bg.primary, paddingBottom: audioPlayer.playingSong ? 70 : 0, position: 'relative', paddingTop: isMobileView ? 56 : 0 }}>
+      <main id="main-content" className="page-fade-in flex-1 w-full min-w-0" key={viewingProfile ? `profile-${viewingProfile.id}` : page} style={{ flex: 1, width: '100%', minWidth: 0, overflowY: "auto", background: DESIGN_SYSTEM.colors.bg.primary, paddingBottom: isMobileView ? `calc(60px + env(safe-area-inset-bottom, 0px) + ${audioPlayer.playingSong ? 70 : 0}px)` : (audioPlayer.playingSong ? 70 : 0), position: 'relative', paddingTop: 0 }}>
         <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh' }}><div style={{ width: 32, height: 32, border: `3px solid ${DESIGN_SYSTEM.colors.border.light}`, borderTopColor: DESIGN_SYSTEM.colors.brand.primary, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /></div>}>
           {renderPage()}
         </Suspense>
       </main>
+
+      {/* Bottom Tab Navigation — mobile only */}
+      {isMobileView && (
+        <BottomTabNav
+          page={viewingProfile ? 'profile' : page}
+          accountType={userProfile.account_type}
+          badgeCounts={badgeCounts}
+          onNavigate={(id) => { setPage(id); setViewingProfile(null); }}
+          audioPlayerActive={!!audioPlayer.playingSong}
+          onSupportOpen={handleOpenFounderSupport}
+        />
+      )}
 
       {/* Now Playing Bar */}
       <NowPlayingBar

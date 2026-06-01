@@ -209,11 +209,12 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
           unreadCount,
         };
       });
-      const sorted = formatted.slice().sort((a,b)=> {
-        const aTime =a.lastMessageTime ? new Date(a.lastMessageTime) : new Date(a.created_at);
-        const bTime = b.lastMessageTime ? new Date (b.lastMessageTime) : new Date(b.created_at);
-      return bTime - aTime;
-      })
+
+      // Always show most recently active conversation first
+      const sorted = formatted.slice().sort((a, b) =>
+        new Date(b.lastMessageTime || b.updated_at || b.created_at) -
+        new Date(a.lastMessageTime || a.updated_at || a.created_at)
+      );
       setConversations(sorted);
       return sorted;
     } catch (err) {
@@ -373,6 +374,12 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
         }]);
 
       if (error) throw error;
+
+      // Bump conversation updated_at so it sorts to the top
+      await supabase
+        .from('conversations')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', selectedConversation.id);
 
       const sentText = messageText.trim();
       setMessageText("");

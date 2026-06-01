@@ -347,7 +347,7 @@ function SplitSection({ label, icon, accentColor, splits, onUpdate, onRemove, on
 }
 
 // ─── Main Component ──────────────────────────────────────────────────────────
-export default function SplitGenerator({ userProfile }) {
+export default function SplitGenerator({ userProfile, isMobile = false }) {
   // Tier gates
   const { can, upgradeMessage } = useTier(userProfile);
   const [upgradeModal, setUpgradeModal] = useState({ open: false, feature: '' });
@@ -568,6 +568,48 @@ export default function SplitGenerator({ userProfile }) {
     }
   };
 
+  // ─── 6b. Download PDF from history ───────────────────────────────────────
+  const handleDownloadHistoryPdf = async (e, sheet) => {
+    e.stopPropagation();
+    try {
+      const legacy     = isLegacyFormat(sheet.splits);
+      const compSplits = legacy ? sheet.splits : (sheet.splits?.composition || []);
+      const mastSplits = legacy ? [] : (sheet.splits?.master || []);
+
+      // Reconstruct writers array from stored composition/master splits
+      const writerMap = {};
+      compSplits.forEach(s => {
+        const key = s.name;
+        if (!writerMap[key]) writerMap[key] = { legal_name: s.name, role: s.role || '', pro: s.pro || 'None', ipi: s.ipi || '', composition_percentage: 0, master_percentage: 0 };
+        writerMap[key].composition_percentage = s.percentage;
+      });
+      mastSplits.forEach(s => {
+        const key = s.name;
+        if (!writerMap[key]) writerMap[key] = { legal_name: s.name, role: s.role || '', pro: s.pro || 'None', ipi: s.ipi || '', composition_percentage: 0, master_percentage: 0 };
+        writerMap[key].master_percentage = s.percentage;
+      });
+
+      const payload = {
+        song_title:  sheet.song_title || 'Untitled',
+        date:        sheet.created_at ? new Date(sheet.created_at).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+        split_type:  legacy ? 'composition' : (compSplits.length > 0 && mastSplits.length > 0 ? 'both' : mastSplits.length > 0 ? 'master' : 'composition'),
+        has_samples: false,
+        writers:     Object.values(writerMap),
+      };
+
+      const blob = await generateSplitSheetPdf(payload);
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `split-sheet-${(sheet.song_title || 'untitled').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 50)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast.success('PDF downloaded!');
+    } catch (err) {
+      showToast.error(err.message || 'PDF generation failed.');
+    }
+  };
+
   // ─── 6. Delete ─────────────────────────────────────────────────────────────
   const handleDeleteSheet = async (id) => {
     try {
@@ -735,6 +777,7 @@ export default function SplitGenerator({ userProfile }) {
         song_title: genSongTitle.trim(),
         splits: { composition: compSplits, master: mastSplits },
         input_method: 'pdf_generated',
+        signature: genWriters[0]?.legal_name || genWriters[0]?.stage_name || userProfile.first_name + ' ' + userProfile.last_name,
       }]);
       if (error) throw error;
       showToast.success('Split sheet saved to dashboard!');
@@ -766,7 +809,7 @@ export default function SplitGenerator({ userProfile }) {
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
-    <div style={styles.page}>
+    <div style={{ ...styles.page, padding: isMobile ? '16px' : DESIGN_SYSTEM.spacing.xl }}>
       <UpgradeModal
         isOpen={upgradeModal.open}
         onClose={() => setUpgradeModal({ open: false, feature: '' })}
@@ -782,7 +825,7 @@ export default function SplitGenerator({ userProfile }) {
       </div>
 
       {/* Tabs */}
-      <div style={styles.tabs}>
+      <div style={{ ...styles.tabs, display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: 4 }}>
         <button style={styles.tab(activeTab === 'new')} onClick={() => setActiveTab('new')}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
             <Plus size={15} /> New Split
@@ -1299,7 +1342,7 @@ export default function SplitGenerator({ userProfile }) {
             <div style={{ background: doc.card, borderRadius: 10, border: `1px solid ${doc.border}`, overflow: 'hidden', fontFamily: doc.sans }}>
 
               {/* ── Document header ── */}
-              <div style={{ padding: '28px 32px 20px', borderBottom: `2px solid ${doc.textDark}` }}>
+              <div style={{ padding: isMobile ? '16px' : '28px 32px 20px', borderBottom: `2px solid ${doc.textDark}` }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <h1 style={{ fontFamily: doc.serif, fontSize: 28, fontWeight: 700, color: doc.textDark, letterSpacing: '0.15em', margin: 0, textTransform: 'uppercase' }}>Split Sheet</h1>
                   <div style={{ textAlign: 'right' }}>
@@ -1328,8 +1371,8 @@ export default function SplitGenerator({ userProfile }) {
               </div>
 
               {/* ── Date / ISRC / UPC ── */}
-              <div style={{ padding: '20px 32px', borderBottom: `1px solid ${doc.borderLight}` }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 24 }}>
+              <div style={{ padding: isMobile ? '12px 16px' : '20px 32px', borderBottom: `1px solid ${doc.borderLight}` }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: isMobile ? 12 : 24 }}>
                   <div>
                     <label style={docLabel}>Agreement Date *</label>
                     <input style={docInput} type="date" value={genDate} onChange={e => setGenDate(e.target.value)} />
@@ -1346,8 +1389,8 @@ export default function SplitGenerator({ userProfile }) {
               </div>
 
               {/* ── Label / Notes ── */}
-              <div style={{ padding: '20px 32px', borderBottom: `1px solid ${doc.borderLight}` }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+              <div style={{ padding: isMobile ? '12px 16px' : '20px 32px', borderBottom: `1px solid ${doc.borderLight}` }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 12 : 24 }}>
                   <div>
                     <label style={docLabel}>Record Label</label>
                     <input style={docInput} value={genLabel} onChange={e => setGenLabel(e.target.value)} placeholder="Unsigned" />
@@ -1418,7 +1461,7 @@ export default function SplitGenerator({ userProfile }) {
                     {w._expanded && (
                       <div style={{ padding: '18px 16px' }}>
                         {/* Row 1: Legal name / Stage name / Email */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20, marginBottom: 18 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: isMobile ? 10 : 20, marginBottom: 18 }}>
                           <div>
                             <label style={docLabel}>Legal Name *</label>
                             <input style={docInput} value={w.legal_name} onChange={e => updateGenWriter(i, 'legal_name', e.target.value)} placeholder="Full legal name" />
@@ -1434,7 +1477,7 @@ export default function SplitGenerator({ userProfile }) {
                         </div>
 
                         {/* Row 2: Role / PRO / IPI */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20, marginBottom: 18 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: isMobile ? 10 : 20, marginBottom: 18 }}>
                           <div>
                             <label style={docLabel}>Role / Contribution *</label>
                             <select style={{ ...docInput, cursor: 'pointer' }} value={w.role} onChange={e => updateGenWriter(i, 'role', e.target.value)}>
@@ -1640,6 +1683,10 @@ export default function SplitGenerator({ userProfile }) {
                       </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <button onClick={(e) => handleDownloadHistoryPdf(e, sheet)}
+                        style={{ ...styles.removeBtn, color: DESIGN_SYSTEM.colors.brand.primary }} title="Download PDF">
+                        <Download size={16} />
+                      </button>
                       <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(sheet); }}
                         style={{ ...styles.removeBtn, color: DESIGN_SYSTEM.colors.accent.red }} title="Delete">
                         <Trash2 size={16} />

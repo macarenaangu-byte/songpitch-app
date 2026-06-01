@@ -146,22 +146,19 @@ function ResultsPanel({ result, onSave, saving, canVault }) {
       {result.market_comparison?.length > 0 && (
         <Section title="📊 Market Comparison" defaultOpen={false}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 90px', gap: 8, padding: '5px 0 8px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-              {['Term', 'Your Deal', 'Industry Std', 'Status'].map(h => (
-                <span key={h} style={{ fontSize: 10, color: '#7A7468', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.6px' }}>{h}</span>
-              ))}
-            </div>
             {result.market_comparison.map((row, i) => (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 90px', gap: 8, padding: '9px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', alignItems: 'start' }}>
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.primary }}>{row.term}</div>
-                  {row.explanation && <div style={{ fontSize: 11, color: '#7A7468', marginTop: 2, lineHeight: 1.4 }}>{row.explanation}</div>}
+              <div key={i} style={{ padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 4 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.primary, flex: 1 }}>{row.term}</div>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: ASSESSMENT_COLORS[row.assessment] ?? '#94a3b8', textTransform: 'capitalize', flexShrink: 0 }}>
+                    {row.assessment === 'below' ? '⬇ Below' : row.assessment === 'above' ? '⬆ Above' : '— Standard'}
+                  </span>
                 </div>
-                <span style={{ fontSize: 12, color: DESIGN_SYSTEM.colors.text.secondary }}>{row.value}</span>
-                <span style={{ fontSize: 12, color: '#7A7468' }}>{row.industry_standard}</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: ASSESSMENT_COLORS[row.assessment] ?? '#94a3b8', textTransform: 'capitalize' }}>
-                  {row.assessment === 'below' ? '⬇ Below' : row.assessment === 'above' ? '⬆ Above' : '— Standard'}
-                </span>
+                {row.explanation && <div style={{ fontSize: 11, color: '#7A7468', marginBottom: 4, lineHeight: 1.4 }}>{row.explanation}</div>}
+                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 11, color: '#7A7468' }}>Your deal: <span style={{ color: DESIGN_SYSTEM.colors.text.secondary }}>{row.value}</span></span>
+                  <span style={{ fontSize: 11, color: '#7A7468' }}>Industry: <span style={{ color: '#7A7468' }}>{row.industry_standard}</span></span>
+                </div>
               </div>
             ))}
           </div>
@@ -183,7 +180,7 @@ function ResultsPanel({ result, onSave, saving, canVault }) {
   );
 }
 
-export function ContractRevisionPage({ userProfile }) {
+export function ContractRevisionPage({ userProfile, isMobile = false }) {
   const { can, withinLimit, upgradeMessage } = useTier(userProfile);
   const canUse = can('contractRevision');
   const canVault = can('contractVault');
@@ -319,7 +316,7 @@ export function ContractRevisionPage({ userProfile }) {
   const revUsage = withinLimit('contractRevision');
 
   return (
-    <div className="page-enter" style={{ padding: '32px 36px', minHeight: '100%', overflowY: 'auto' }}>
+    <div className="page-enter" style={{ padding: isMobile ? '16px' : '32px 36px', minHeight: '100%', overflowY: 'auto' }}>
 
       <UpgradeModal
         isOpen={upgradeModal}
@@ -364,7 +361,7 @@ export function ContractRevisionPage({ userProfile }) {
 
       {/* ── Analyze tab ──────────────────────────────────────────────────── */}
       {tab === 'analyze' && (
-        <div style={{ display: 'grid', gridTemplateColumns: result ? '1fr 1fr' : '1fr', gap: 24, maxWidth: result ? '100%' : 640 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: (result && !isMobile) ? '1fr 1fr' : '1fr', gap: 24, maxWidth: (result || isMobile) ? '100%' : 640 }}>
           <div>
             {/* Lock banner */}
             {!canUse && (

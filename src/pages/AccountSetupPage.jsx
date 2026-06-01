@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { GENRE_OPTIONS } from '../constants/genres';
 import { supabase } from '../lib/supabase';
@@ -40,6 +40,22 @@ export function AccountSetupPage({ user, onComplete }) {
 
   const [loading, setLoading] = useState(false);
 
+  // Pre-populate from pending signup data if available (e.g. email confirmation on same device)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('sp_pending_profile');
+      if (!raw) return;
+      const p = JSON.parse(raw);
+      if (p.firstName) setFirstName(p.firstName);
+      if (p.lastName)  setLastName(p.lastName);
+      if (p.location)  setLocation(p.location);
+      if (p.bio)       setBio(p.bio);
+      if (p.genres?.length > 0) setGenres(p.genres);
+      if (p.role === 'executive') setAccountType('music_executive');
+      else if (p.role === 'composer') setAccountType('composer');
+    } catch (_) {}
+  }, []);
+
   const composerRoles = ['Producer', 'Film Composer', 'Songwriter', 'Multi-Instrumentalist', 'Beatmaker', 'Session Musician', 'Other'];
   const executiveRoles = ['A&R Manager', 'Sync A&R', 'Music Supervisor', 'Creative Director', 'Music Publisher', 'Label Executive', 'Sync Agent', 'Other'];
 
@@ -71,15 +87,29 @@ export function AccountSetupPage({ user, onComplete }) {
         profilePayload.job_title = jobTitle || null;
       }
 
-      // UPSERT is crucial here: it updates the row if Supabase Auth already created a blank one, 
-      // or inserts it if it doesn't exist. This prevents hidden database errors.
-      const { error: profileError } = await supabase
+      // Try INSERT first. If a profile already exists (23505 unique_violation),
+      // UPDATE the existing row instead. This is safer than upsert which requires
+      // a DB-level unique constraint that may not exist on older deployments.
+      const { error: insertError } = await supabase
         .from('user_profiles')
-        .upsert(profilePayload, { onConflict: 'user_id' })
-        .select()
-        .single();
+        .insert([profilePayload]);
 
-      if (profileError) throw profileError;
+      if (insertError) {
+        if (insertError.code === '23505') {
+          // Profile already exists — update it
+          const { error: updateError } = await supabase
+            .from('user_profiles')
+            .update(profilePayload)
+            .eq('user_id', user.id);
+          if (updateError) throw updateError;
+        } else {
+          throw insertError;
+        }
+      }
+
+      // Clear pending data now that profile is saved
+      localStorage.removeItem('sp_pending_profile');
+      localStorage.removeItem('sp_pending_signup_email');
 
       onComplete();
     } catch (err) {

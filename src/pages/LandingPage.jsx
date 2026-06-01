@@ -564,7 +564,12 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
   const [howTab, setHowTab] = useState('composer');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', onResize, { passive: true });
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
   const { canInstall, install } = useInstallPrompt();
 
   useScrollReveal();
@@ -585,7 +590,7 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
   }, []);
 
   return (
-    <div className="hero-animated-bg" style={{ minHeight: "100vh", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", color: DESIGN_SYSTEM.colors.text.primary, overflow: "auto" }}>
+    <div className="hero-animated-bg" style={{ minHeight: "100vh", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", color: DESIGN_SYSTEM.colors.text.primary, overflowX: "hidden" }}>
 
       {/* ── Animated gradient orbs ─────────────────────────────────────── */}
       <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: -1 }}>
@@ -595,8 +600,8 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
       </div>
 
       {/* ── Nav ─────────────────────────────────────────────────────────── */}
-      <div style={{ height: 64, flexShrink: 0 }} />
-      <nav style={{ padding: isMobile ? "0 20px" : "0 48px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: scrolled ? `1px solid ${DESIGN_SYSTEM.colors.border.light}` : '1px solid transparent', position: 'fixed', top: 0, left: 0, right: 0, height: 64, background: scrolled ? 'rgba(8,10,18,0.92)' : 'rgba(8,10,18,0.7)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', transition: 'all 0.3s ease', zIndex: 1000 }}>
+      <div style={{ height: 'calc(64px + env(safe-area-inset-top, 0px))', flexShrink: 0 }} />
+      <nav style={{ padding: isMobile ? "0 20px" : "0 48px", paddingTop: 'env(safe-area-inset-top, 0px)', display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: scrolled ? `1px solid ${DESIGN_SYSTEM.colors.border.light}` : '1px solid transparent', position: 'fixed', top: 0, left: 0, right: 0, height: 'calc(64px + env(safe-area-inset-top, 0px))', background: scrolled ? 'rgba(8,10,18,0.92)' : 'rgba(8,10,18,0.7)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', transition: 'all 0.3s ease', zIndex: 1000 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
           <img src="/songpitch-logo.png" alt="Coda-Vault" style={{ width: 32, height: 32, objectFit: 'contain' }} onError={(e) => e.target.style.display = 'none'} />
           <div style={{ fontSize: isMobile ? 16 : 20, fontWeight: 800, background: DESIGN_SYSTEM.colors.gradient.main, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '-0.3px' }}>Coda-Vault</div>
@@ -630,7 +635,7 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
       </nav>
 
       {isMobile && mobileNavOpen && (
-        <div style={{ position: 'fixed', top: 64, left: 0, right: 0, background: 'rgba(8,10,18,0.97)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderBottom: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, zIndex: 999, display: 'flex', flexDirection: 'column', padding: '12px 0 20px' }}>
+        <div style={{ position: 'fixed', top: 'calc(64px + env(safe-area-inset-top, 0px))', left: 0, right: 0, background: 'rgba(8,10,18,0.97)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderBottom: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, zIndex: 999, display: 'flex', flexDirection: 'column', padding: '12px 0 20px' }}>
           {NAV_LINKS.map(({ label, id }) => (
             <button key={id} onClick={() => { scrollTo(id); setMobileNavOpen(false); }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '14px 24px', textAlign: 'left', fontSize: 16, fontWeight: 500, color: activeSection === id ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.text.secondary, fontFamily: DESIGN_SYSTEM.font.body }}
@@ -659,16 +664,16 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
           A sync licensing platform built for both sides of the deal. Composers get their music placed. Executives find exactly what they need. Everyone closes faster.
         </p>
 
-        <div className="reveal reveal-delay-1" style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'center', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginBottom: 48 }}>
+        <div className="reveal reveal-delay-1" style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'center', alignItems: isMobile ? 'stretch' : 'center', gap: 16, flexWrap: 'wrap', marginBottom: 48 }}>
           <button onClick={onGetStarted} className="cta-primary"
-            style={{ background: DESIGN_SYSTEM.colors.gradient.main, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 12, padding: "16px 40px", fontSize: 17, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", boxShadow: '0 8px 28px rgba(201,168,76,0.4)', transition: 'all 0.3s ease', width: isMobile ? '100%' : 'auto' }}
+            style={{ background: DESIGN_SYSTEM.colors.gradient.main, color: DESIGN_SYSTEM.colors.text.primary, border: "none", borderRadius: 12, padding: "16px 40px", fontSize: 17, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", boxShadow: '0 8px 28px rgba(201,168,76,0.4)', transition: 'all 0.3s ease', width: isMobile ? '100%' : 'auto', boxSizing: 'border-box' }}
             onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 12px 36px rgba(201,168,76,0.5)'; }}
             onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(201,168,76,0.4)'; }}
           >
             Get Started Free →
           </button>
           <a href="#demo" onClick={(e) => { e.preventDefault(); document.getElementById('demo-section')?.scrollIntoView({ behavior: 'smooth' }); }} className="cta-secondary"
-            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'transparent', color: DESIGN_SYSTEM.colors.text.secondary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 12, padding: "16px 32px", fontSize: 16, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", textDecoration: 'none', transition: 'all 0.2s ease', width: isMobile ? '100%' : 'auto' }}
+            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'transparent', color: DESIGN_SYSTEM.colors.text.secondary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 12, padding: "16px 32px", fontSize: 16, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", textDecoration: 'none', transition: 'all 0.2s ease', width: isMobile ? '100%' : 'auto', boxSizing: 'border-box' }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.brand.primary + '60'; e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.primary; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.border.light; e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.secondary; }}
           >
@@ -676,7 +681,7 @@ export function LandingPage({ onGetStarted, onLegalPage }) {
           </a>
           {canInstall && (
             <button onClick={install}
-              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'transparent', color: DESIGN_SYSTEM.colors.text.secondary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 12, padding: '16px 32px', fontSize: 16, fontWeight: 600, cursor: 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", transition: 'all 0.2s ease', width: isMobile ? '100%' : 'auto' }}
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'transparent', color: DESIGN_SYSTEM.colors.text.secondary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 12, padding: '16px 32px', fontSize: 16, fontWeight: 600, cursor: 'pointer', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", transition: 'all 0.2s ease', width: isMobile ? '100%' : 'auto', boxSizing: 'border-box' }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.brand.primary + '60'; e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.primary; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.border.light; e.currentTarget.style.color = DESIGN_SYSTEM.colors.text.secondary; }}
             >

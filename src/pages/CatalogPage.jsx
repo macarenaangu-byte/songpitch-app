@@ -232,7 +232,7 @@ export function CatalogPage({ audioPlayer, isMobile = false, userProfile }) {
     if (selectedVerification === 'verified') query = query.eq('verification_status', 'verified');
     if (selectedVerification === 'pending') query = query.neq('verification_status', 'verified');
     if (debouncedSearch.trim()) {
-      query = query.or(`title.ilike.%${debouncedSearch.trim()}%,genre.ilike.%${debouncedSearch.trim()}%`);
+      query = query.or(`title.ilike.%${debouncedSearch.trim()}%,genre.ilike.%${debouncedSearch.trim()}%,mood.ilike.%${debouncedSearch.trim()}%`);
     }
 
     return query.range(from, to);
@@ -305,6 +305,17 @@ export function CatalogPage({ audioPlayer, isMobile = false, userProfile }) {
 
   const hasActiveFilters = selectedGenre !== "all" || selectedMood !== "all" || selectedVerification !== "all" || search !== "";
 
+  // Client-side filter for composer name (server can't filter on joined fields)
+  const displaySongs = debouncedSearch.trim()
+    ? songs.filter(song => {
+        const composerName = (song.composer_name || '').toLowerCase();
+        return composerName.includes(debouncedSearch.toLowerCase()) ||
+          (song.title || '').toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+          (song.genre || '').toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+          (song.mood || '').toLowerCase().includes(debouncedSearch.toLowerCase());
+      })
+    : songs;
+
   const clearFilters = () => {
     setSelectedGenre("all");
     setSelectedMood("all");
@@ -332,7 +343,7 @@ export function CatalogPage({ audioPlayer, isMobile = false, userProfile }) {
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Search songs, genres, moods..."
+          placeholder="Search by song title, composer name, genre, mood..."
           style={{
             width: "100%",
             background: DESIGN_SYSTEM.colors.bg.card,
@@ -639,7 +650,7 @@ export function CatalogPage({ audioPlayer, isMobile = false, userProfile }) {
                 : 'repeat(auto-fill, minmax(180px, 1fr))',
               gap: 14,
             }}>
-              {songs.map(song => (
+              {displaySongs.map(song => (
                 <SongCardGrid
                   key={song.id}
                   song={song}
@@ -652,7 +663,7 @@ export function CatalogPage({ audioPlayer, isMobile = false, userProfile }) {
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {songs.map(song => (
+              {displaySongs.map(song => (
                 <SongCard key={song.id} song={song} isPlaying={playingSong?.id === song.id && isPlaying} onPlay={playAudio} onViewRights={(song) => setRightsModalSong(song)} isMobile={isMobile} />
               ))}
             </div>
