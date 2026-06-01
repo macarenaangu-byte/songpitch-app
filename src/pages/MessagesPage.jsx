@@ -209,9 +209,13 @@ export function MessagesPage({ userProfile, supportTargetUserId, supportOpenToke
           unreadCount,
         };
       });
-
-      setConversations(formatted);
-      return formatted;
+      const sorted = formatted.slice().sort((a,b)=> {
+        const aTime =a.lastMessageTime ? new Date(a.lastMessageTime) : new Date(a.created_at);
+        const bTime = b.lastMessageTime ? new Date (b.lastMessageTime) : new Date(b.created_at);
+      return bTime - aTime;
+      })
+      setConversations(sorted);
+      return sorted;
     } catch (err) {
       console.error("Error loading conversations:", err);
       return [];
