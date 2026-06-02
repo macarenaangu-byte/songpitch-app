@@ -9,7 +9,7 @@
  *   REACT_APP_LEGALSPLITS_API_KEY  — API key starting with lsai_
  */
 
-const BASE_URL = process.env.REACT_APP_LEGALSPLITS_API_URL ?? 'https://legalsplits-ai.onrender.com'
+const BASE_URL = process.env.REACT_APP_LEGALSPLITS_API_URL ?? 'https://legalsplits-api-146111464859.us-central1.run.app'
 const API_KEY  = process.env.REACT_APP_LEGALSPLITS_API_KEY ?? ''
 
 /**

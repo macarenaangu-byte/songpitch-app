@@ -14,7 +14,7 @@ const GOLD = '#C9A84C';
 const RED  = '#f87171';
 const GREEN = '#4ade80';
 
-const API_URL = process.env.REACT_APP_LEGALSPLITS_API_URL ?? 'https://legalsplits-ai.onrender.com';
+const API_URL = process.env.REACT_APP_LEGALSPLITS_API_URL ?? 'https://legalsplits-api-146111464859.us-central1.run.app';
 const API_KEY = process.env.REACT_APP_LEGALSPLITS_API_KEY ?? '';
 
 const FAIRNESS_CONFIG = {
