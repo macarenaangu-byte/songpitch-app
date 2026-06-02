@@ -523,20 +523,48 @@ export function DealAnalyzerPage({ userProfile }) {
           )}
 
           {/* Key Terms */}
-          {(result.advance != null || result.royalty_rate != null || result.deal_term_years != null) && (
+          {(result.advance != null || result.royalty_rate != null || result.deal_term_years != null || result.max_term_years != null || result.territory != null) && (
             <Section title="📊 Key Terms">
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
                 {[
-                  { label: 'Advance',      value: result.advance != null ? `$${result.advance.toLocaleString()}` : '—' },
-                  { label: 'Royalty Rate', value: result.royalty_rate != null ? `${result.royalty_rate}%` : '—' },
-                  { label: 'Net Royalty',  value: result.net_royalty_rate != null ? `${result.net_royalty_rate}%` : '—' },
-                  { label: 'Term',         value: result.deal_term_years != null ? `${result.deal_term_years} yr${result.deal_term_years !== 1 ? 's' : ''}` : '—' },
-                  { label: 'Territory',    value: result.territory ?? '—' },
+                  { label: 'Advance',       value: result.advance != null ? `$${result.advance.toLocaleString()}` : '—' },
+                  { label: 'Royalty Rate',  value: result.royalty_rate != null ? `${result.royalty_rate}%` : '—' },
+                  { label: 'Net Royalty',   value: result.net_royalty_rate != null ? `${result.net_royalty_rate}%` : '—' },
+                  { label: 'Term',          value: result.deal_term_years != null ? `${result.deal_term_years} yr${result.deal_term_years !== 1 ? 's' : ''}` : '—' },
+                  { label: 'Max Term',      value: result.max_term_years != null ? `${result.max_term_years} yr${result.max_term_years !== 1 ? 's' : ''}` : '—' },
+                  { label: 'Territory',     value: result.territory ?? '—' },
                 ].map(({ label, value }) => (
                   <div key={label} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '12px 14px' }}>
                     <div style={{ fontSize: 11, color: '#7A7468', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>{label}</div>
                     <div style={{ fontSize: 18, fontWeight: 800, color: DESIGN_SYSTEM.colors.text.primary, fontFamily: "'Space Grotesk', sans-serif" }}>{value}</div>
                   </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {/* Key Concerns */}
+          {result.key_concerns?.length > 0 && (
+            <Section title="⚠️ Key Concerns">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {result.key_concerns.map((concern, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                    <AlertTriangle size={13} color='#fbbf24' style={{ marginTop: 2, flexShrink: 0 }} />
+                    <span style={{ fontSize: 13, color: DESIGN_SYSTEM.colors.text.secondary, lineHeight: 1.5 }}>{concern}</span>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {/* Revenue Streams Taken */}
+          {result.revenue_streams_taken?.length > 0 && (
+            <Section title="💰 Revenue Streams Taken">
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {result.revenue_streams_taken.map((stream, i) => (
+                  <span key={i} style={{ background: 'rgba(248,113,113,0.10)', border: '1px solid rgba(248,113,113,0.2)', color: RED, fontSize: 12, fontWeight: 600, padding: '5px 12px', borderRadius: 20 }}>
+                    {stream}
+                  </span>
                 ))}
               </div>
             </Section>
@@ -751,7 +779,7 @@ function VaultResultsPanel({ result, userProfile }) {
       )}
 
       {/* Key Terms */}
-      {(result.advance != null || result.royalty_rate != null || result.deal_term_years != null) && (
+      {(result.advance != null || result.royalty_rate != null || result.deal_term_years != null || result.max_term_years != null || result.territory != null) && (
         <Section title="📊 Key Terms">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10 }}>
             {[
@@ -759,12 +787,40 @@ function VaultResultsPanel({ result, userProfile }) {
               { label: 'Royalty Rate', value: result.royalty_rate != null ? `${result.royalty_rate}%` : '—' },
               { label: 'Net Royalty',  value: result.net_royalty_rate != null ? `${result.net_royalty_rate}%` : '—' },
               { label: 'Term',         value: result.deal_term_years != null ? `${result.deal_term_years} yr${result.deal_term_years !== 1 ? 's' : ''}` : '—' },
+              { label: 'Max Term',     value: result.max_term_years != null ? `${result.max_term_years} yr${result.max_term_years !== 1 ? 's' : ''}` : '—' },
               { label: 'Territory',    value: result.territory ?? '—' },
             ].map(({ label, value }) => (
               <div key={label} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '10px 12px' }}>
                 <div style={{ fontSize: 10, color: '#7A7468', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 5 }}>{label}</div>
                 <div style={{ fontSize: 15, fontWeight: 800, color: DESIGN_SYSTEM.colors.text.primary, fontFamily: "'Space Grotesk', sans-serif" }}>{value}</div>
               </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {/* Key Concerns */}
+      {result.key_concerns?.length > 0 && (
+        <Section title="⚠️ Key Concerns">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {result.key_concerns.map((concern, i) => (
+              <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                <AlertTriangle size={12} color='#fbbf24' style={{ marginTop: 2, flexShrink: 0 }} />
+                <span style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.5 }}>{concern}</span>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {/* Revenue Streams Taken */}
+      {result.revenue_streams_taken?.length > 0 && (
+        <Section title="💰 Revenue Streams Taken">
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {result.revenue_streams_taken.map((stream, i) => (
+              <span key={i} style={{ background: 'rgba(248,113,113,0.10)', border: '1px solid rgba(248,113,113,0.2)', color: RED, fontSize: 12, fontWeight: 600, padding: '5px 12px', borderRadius: 20 }}>
+                {stream}
+              </span>
             ))}
           </div>
         </Section>
