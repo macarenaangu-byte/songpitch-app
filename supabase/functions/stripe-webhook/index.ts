@@ -205,29 +205,70 @@ async function sendInvoiceEmail(
   await sendEmail(toEmail, `Invoice from Coda-Vault — ${amount} ${currency}`, html);
 }
 
-async function sendUserConfirmationEmail(toEmail: string, tier: string): Promise<void> {
-  const tierLabel = tier === 'pro' ? 'Pro' : 'Basic';
+async function sendUserConfirmationEmail(toEmail: string, tier: string, promoEndsAt?: Date): Promise<void> {
+  const tierLabel  = tier === 'pro' ? 'Pro' : 'Basic';
+  const isPromo    = !!promoEndsAt;
+  const promoEnd   = promoEndsAt ? promoEndsAt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
+
+  const subject = isPromo
+    ? `Your 6 months free on Coda-Vault ${tierLabel} have started 🎉`
+    : `Your Coda-Vault ${tierLabel} plan is active ✓`;
+
   const html = `
-    <div style="background:#0F0F13;padding:40px;font-family:'Helvetica Neue',sans-serif;max-width:540px;margin:auto;border-radius:16px;border:1px solid rgba(201,168,76,0.2);">
-      <div style="margin-bottom:24px;text-align:center;">
-        <span style="color:#C9A84C;font-size:22px;font-weight:800;letter-spacing:-0.5px;">Coda-Vault</span>
-      </div>
-      <h2 style="color:#f1f5f9;font-size:20px;font-weight:700;margin:0 0 12px;text-align:center;">
-        You're on ${tierLabel}! 🎉
-      </h2>
-      <p style="color:#94a3b8;font-size:15px;line-height:1.7;margin:0 0 24px;text-align:center;">
-        Your subscription is now active. Head back to Coda-Vault to start using all your ${tierLabel} features.
-      </p>
-      <div style="text-align:center;margin-bottom:28px;">
-        <a href="${APP_URL}" style="display:inline-block;background:#C9A84C;color:#0F0F13;font-weight:700;font-size:15px;padding:12px 32px;border-radius:10px;text-decoration:none;">
-          Go to Coda-Vault →
-        </a>
-      </div>
-      <p style="color:#4A4640;font-size:12px;text-align:center;margin:0;">
-        Questions? Reply to this email — we read every one.
-      </p>
-    </div>`;
-  await sendEmail(toEmail, `Your Coda-Vault ${tierLabel} plan is active ✓`, html);
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:0;background:#08080C;font-family:'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#08080C;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#0F0F13;border-radius:16px;border:1px solid rgba(201,168,76,0.18);overflow:hidden;max-width:560px;width:100%;">
+
+        <!-- Header -->
+        <tr>
+          <td style="background:linear-gradient(135deg,#1A1710,#0F0F13);padding:32px 40px 28px;border-bottom:1px solid rgba(201,168,76,0.12);text-align:center;">
+            <span style="color:#C9A84C;font-size:22px;font-weight:800;letter-spacing:-0.5px;font-family:Georgia,serif;">Coda-Vault</span>
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="padding:40px 40px 32px;text-align:center;">
+            <div style="font-size:42px;margin-bottom:16px;">${isPromo ? '🎁' : '🎉'}</div>
+            <h2 style="color:#F1F5F9;font-size:22px;font-weight:800;margin:0 0 14px;line-height:1.3;">
+              ${isPromo ? `Your 6 months free<br/>on ${tierLabel} have started!` : `You're on ${tierLabel}!`}
+            </h2>
+            <p style="color:#94a3b8;font-size:15px;line-height:1.7;margin:0 0 10px;">
+              ${isPromo
+                ? `Enjoy full access to all ${tierLabel} features completely free until <strong style="color:#C9A84C;">${promoEnd}</strong>.`
+                : `Your ${tierLabel} subscription is now active. Head back to start using all your features.`
+              }
+            </p>
+            ${isPromo ? `<p style="color:#7A7468;font-size:13px;line-height:1.6;margin:0 0 28px;">After your free period ends, you'll be charged the standard ${tierLabel} rate. You can cancel anytime from your billing page.</p>` : '<div style="margin-bottom:28px;"></div>'}
+            <div style="display:inline-block;margin-bottom:28px;background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.25);color:#C9A84C;font-size:12px;font-weight:700;padding:5px 16px;border-radius:20px;text-transform:uppercase;letter-spacing:0.5px;">
+              ${tierLabel} Plan ${isPromo ? '· Free until ' + promoEnd : '· Active'}
+            </div>
+            <br/>
+            <a href="${APP_URL}" style="display:inline-block;background:#C9A84C;color:#0F0F13;font-weight:700;font-size:15px;padding:13px 32px;border-radius:10px;text-decoration:none;">
+              Go to Coda-Vault →
+            </a>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="padding:20px 40px;border-top:1px solid rgba(255,255,255,0.06);text-align:center;">
+            <p style="color:#4A4640;font-size:12px;margin:0 0 6px;">Questions? Reply to this email — we read every one.</p>
+            <p style="color:#2A2A2A;font-size:11px;margin:0;">© ${new Date().getFullYear()} Coda-Vault · <a href="${APP_URL}" style="color:#4A4640;text-decoration:none;">coda-vault.com</a></p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  await sendEmail(toEmail, subject, html);
 }
 
 // ── Database helpers ──────────────────────────────────────────────────────────
@@ -299,9 +340,9 @@ Deno.serve(async (req) => {
             await setTier(customerId, tier, sub.id, endsAt, getPromoEndsAt(sub));
             console.log(`[stripe-webhook] checkout.session.completed: tier=${tier} customer=${customerId}`);
 
-            // Send confirmation email to user
+            // Send confirmation email to user (promo-aware)
             if (customerEmail) {
-              await sendUserConfirmationEmail(customerEmail, tier);
+              await sendUserConfirmationEmail(customerEmail, tier, getPromoEndsAt(sub));
             }
 
             await sendAdminEmail(
