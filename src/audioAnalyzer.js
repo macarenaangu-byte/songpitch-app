@@ -104,30 +104,51 @@ async function predictGenreMood(file) {
         let genre = null;
         let mood = null;
         let secondaryGenre = null;
+        let tertiaryGenre = null;
 
-        // Parse genre from new response format: { genre: "HIP-HOP", secondary_genre: "R&B", mood: "HAPPY", ... }
-        if (data.genre) {
-            genre = GENRE_LABEL_MAP[data.genre.toLowerCase()] || data.genre;
-        }
-        if (data.mood) {
-            mood = MOOD_LABEL_MAP[data.mood.toLowerCase()] || data.mood;
-        }
-        if (data.secondary_genre) {
-            secondaryGenre = GENRE_LABEL_MAP[data.secondary_genre.toLowerCase()] || data.secondary_genre;
-        }
+        // Parse genres
+        if (data.genre)           genre          = GENRE_LABEL_MAP[data.genre.toLowerCase()] || data.genre;
+        if (data.secondary_genre) secondaryGenre = GENRE_LABEL_MAP[data.secondary_genre.toLowerCase()] || data.secondary_genre;
+        if (data.tertiary_genre)  tertiaryGenre  = GENRE_LABEL_MAP[data.tertiary_genre.toLowerCase()] || data.tertiary_genre;
+
+        // Legacy single mood field
+        if (data.mood) mood = MOOD_LABEL_MAP[data.mood.toLowerCase()] || data.mood;
 
         // Fallback: check predictions array (backward compat with old server)
         if (!genre && data.predictions) {
             for (const pred of data.predictions) {
                 const clean = pred.toLowerCase();
                 if (!genre) genre = GENRE_LABEL_MAP[clean] || null;
-                if (!mood) mood = MOOD_LABEL_MAP[clean] || null;
+                if (!mood)  mood  = MOOD_LABEL_MAP[clean] || null;
             }
         }
 
+        // New structured moods array [{ mood, confidence }, ...]
+        const moods = Array.isArray(data.moods) ? data.moods : (mood ? [{ mood, confidence: 1 }] : []);
+
         const conf = data.genre_confidence ? (data.genre_confidence * 100).toFixed(1) : '?';
-        logger.debug(`ML prediction: genre=${genre} (${conf}%), secondary=${secondaryGenre}, mood=${mood}`);
-        return { genre, mood, secondaryGenre, confidence: data.genre_confidence || 0 };
+        logger.debug(`ML prediction: genre=${genre} (${conf}%), secondary=${secondaryGenre}, tertiary=${tertiaryGenre}, moods=${moods.length}`);
+
+        return {
+            genre,
+            mood: moods[0]?.mood || mood,
+            secondaryGenre,
+            tertiaryGenre,
+            moods,
+            confidence:     data.genre_confidence || 0,
+            // New fields — pass through as-is
+            key:            data.key            ?? null,
+            bpm:            data.bpm            ?? null,
+            tempo:          data.tempo          ?? null,
+            timeSignature:  data.time_signature ?? null,
+            energy:         data.energy         ?? null,
+            loudnessLufs:   data.loudness_lufs  ?? null,
+            loudnessNote:   data.loudness_note  ?? null,
+            vocals:         data.vocals         ?? null,
+            vocalsConfidence: data.vocals_confidence ?? null,
+            instruments:    Array.isArray(data.instruments) ? data.instruments.filter(i => i.confidence > 0.35) : [],
+            useCases:       Array.isArray(data.use_cases) ? data.use_cases : [],
+        };
     } catch (err) {
         logger.debug('ML server unreachable, using rule-based fallback');
         return null;
@@ -391,28 +412,43 @@ export async function analyzeAudioFile(file) {
     let genre;
     let mood;
     let secondaryGenre = null;
+    let tertiaryGenre  = null;
+    let moods          = [];
     let genreSource = 'rule-based';
-    let moodSource = 'rule-based';
+    let moodSource  = 'rule-based';
+
+    // New extended fields from ML server
+    let mlTempo = null, mlTimeSignature = null, mlEnergy = null;
+    let mlLoudnessLufs = null, mlLoudnessNote = null;
+    let mlVocals = null, mlVocalsConfidence = null;
+    let mlInstruments = [], mlUseCases = [];
+    let mlKey = null, mlBpm = null;
 
     // Try ML prediction for genre AND mood (retrained models are more accurate)
     const mlResult = await predictGenreMood(file);
     if (mlResult) {
-        if (mlResult.genre) {
-            genre = mlResult.genre;
-            genreSource = 'ML';
-        }
-        if (mlResult.secondaryGenre) {
-            secondaryGenre = mlResult.secondaryGenre;
-        }
-        if (mlResult.mood) {
-            mood = mlResult.mood;
-            moodSource = 'ML';
-        }
+        if (mlResult.genre)          { genre = mlResult.genre; genreSource = 'ML'; }
+        if (mlResult.secondaryGenre)   secondaryGenre    = mlResult.secondaryGenre;
+        if (mlResult.tertiaryGenre)    tertiaryGenre     = mlResult.tertiaryGenre;
+        if (mlResult.moods?.length)  { moods = mlResult.moods; moodSource = 'ML'; }
+        if (mlResult.mood)           { mood = mlResult.mood; }
+        // Extended fields
+        if (mlResult.key)              mlKey             = mlResult.key;
+        if (mlResult.bpm)              mlBpm             = mlResult.bpm;
+        if (mlResult.tempo)            mlTempo           = mlResult.tempo;
+        if (mlResult.timeSignature)    mlTimeSignature   = mlResult.timeSignature;
+        if (mlResult.energy != null)   mlEnergy          = mlResult.energy;
+        if (mlResult.loudnessLufs != null) mlLoudnessLufs = mlResult.loudnessLufs;
+        if (mlResult.loudnessNote)     mlLoudnessNote    = mlResult.loudnessNote;
+        if (mlResult.vocals)           mlVocals          = mlResult.vocals;
+        if (mlResult.vocalsConfidence != null) mlVocalsConfidence = mlResult.vocalsConfidence;
+        if (mlResult.instruments?.length)  mlInstruments = mlResult.instruments;
+        if (mlResult.useCases?.length)     mlUseCases    = mlResult.useCases;
     }
 
     // Fallback to rule-based if ML didn't provide results
     if (!genre) genre = classifyGenre(featureBundle);
-    if (!mood) mood = classifyMood(featureBundle);
+    if (!mood)  mood  = classifyMood(featureBundle);
 
     // Try lyrics transcription (runs in parallel conceptually, but sequentially here)
     let lyrics = null;
@@ -422,7 +458,31 @@ export async function analyzeAudioFile(file) {
         logger.debug('Lyrics transcription skipped');
     }
 
-    logger.debug(`Analysis complete: Duration=${duration.toFixed(1)}s BPM=${bpm} Key=${key} Genre=${genre}(${genreSource}) Mood=${mood}(${moodSource})`);
+    // Prefer ML values for key/bpm when available (more accurate than Essentia rule-based)
+    const finalKey = mlKey || key;
+    const finalBpm = mlBpm || bpm;
 
-    return { duration, bpm, key, genre, mood, secondaryGenre, lyrics };
+    logger.debug(`Analysis complete: Duration=${duration.toFixed(1)}s BPM=${finalBpm} Key=${finalKey} Genre=${genre}(${genreSource}) Mood=${mood}(${moodSource})`);
+
+    return {
+        duration,
+        bpm:             finalBpm,
+        key:             finalKey,
+        genre,
+        mood,
+        secondaryGenre,
+        tertiaryGenre,
+        moods,
+        lyrics,
+        // Extended ML fields
+        tempo:           mlTempo,
+        timeSignature:   mlTimeSignature,
+        energy:          mlEnergy,
+        loudnessLufs:    mlLoudnessLufs,
+        loudnessNote:    mlLoudnessNote,
+        vocals:          mlVocals,
+        vocalsConfidence: mlVocalsConfidence,
+        instruments:     mlInstruments,
+        useCases:        mlUseCases,
+    };
 }

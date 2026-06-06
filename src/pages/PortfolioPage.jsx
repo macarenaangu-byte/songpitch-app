@@ -73,6 +73,22 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false, onNa
   const songGenreOptions = GENRE_OPTIONS;
   const moodOptions = ['Uplifting', 'Melancholic', 'Energetic', 'Calm', 'Dark', 'Romantic', 'Epic', 'Playful', 'Aggressive', 'Dreamy', 'Nostalgic', 'Mysterious', 'Triumphant', 'Tense'];
 
+  // AI analysis badge helpers
+  const aiBadge = (level) => ({
+    fontSize: level === 'primary' ? 13 : level === 'secondary' ? 12 : 11,
+    fontWeight: level === 'primary' ? 700 : 600,
+    padding: level === 'primary' ? '5px 12px' : '4px 10px',
+    borderRadius: 20,
+    background: level === 'primary' ? `${DESIGN_SYSTEM.colors.brand.primary}18` : 'rgba(255,255,255,0.06)',
+    border: `1px solid ${level === 'primary' ? DESIGN_SYSTEM.colors.brand.primary + '40' : 'rgba(255,255,255,0.12)'}`,
+    color: level === 'primary' ? DESIGN_SYSTEM.colors.brand.primary : DESIGN_SYSTEM.colors.text.secondary,
+  });
+  const aiChip = {
+    fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 20,
+    background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+    color: DESIGN_SYSTEM.colors.text.secondary,
+  };
+
   const [title, setTitle] = useState("");
   const [genre, setGenre] = useState("");
   const [duration, setDuration] = useState("");
@@ -83,6 +99,16 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false, onNa
   const [year, setYear] = useState(new Date().getFullYear());
   const [audioFile, setAudioFile] = useState(null);
   const [secondaryGenre, setSecondaryGenre] = useState("");
+  const [tertiaryGenre, setTertiaryGenre] = useState("");
+  const [aiMoods, setAiMoods] = useState([]); // [{ mood, confidence }]
+  const [aiVocals, setAiVocals] = useState(null);
+  const [aiInstruments, setAiInstruments] = useState([]);
+  const [aiUseCases, setAiUseCases] = useState([]);
+  const [aiTempo, setAiTempo] = useState(null);
+  const [aiTimeSignature, setAiTimeSignature] = useState(null);
+  const [aiEnergy, setAiEnergy] = useState(null);
+  const [aiLoudnessLufs, setAiLoudnessLufs] = useState(null);
+  const [aiLoudnessNote, setAiLoudnessNote] = useState(null);
   const [instrumentType, setInstrumentType] = useState("");
   const [licensingStatus, setLicensingStatus] = useState("");
   const ONE_STOP_LABEL = 'One-Stop (100% Master & Publishing)';
@@ -159,6 +185,17 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false, onNa
       try {
         const analysis = await analyzeAudioFile(file);
         clearTimeout(timeoutId);
+        if (analysis.tertiaryGenre)         setTertiaryGenre(analysis.tertiaryGenre);
+        if (analysis.moods?.length)         setAiMoods(analysis.moods);
+        if (analysis.vocals)                setAiVocals(analysis.vocals);
+        if (analysis.instruments?.length)   setAiInstruments(analysis.instruments.slice(0, 3));
+        if (analysis.useCases?.length)      setAiUseCases(analysis.useCases.slice(0, 4));
+        if (analysis.tempo)                 setAiTempo(analysis.tempo);
+        if (analysis.timeSignature)         setAiTimeSignature(analysis.timeSignature);
+        if (analysis.energy != null)        setAiEnergy(analysis.energy);
+        if (analysis.loudnessLufs != null)  setAiLoudnessLufs(analysis.loudnessLufs);
+        if (analysis.loudnessNote)          setAiLoudnessNote(analysis.loudnessNote);
+
         if (analysis.duration) {
           const totalSec = Math.round(analysis.duration);
           const mins = Math.floor(totalSec / 60);
@@ -325,8 +362,10 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false, onNa
   };
 
   const resetForm = () => {
-    setEditingSong(null); setTitle(""); setGenre(""); setSecondaryGenre(""); setDuration(""); setBpm("");
+    setEditingSong(null); setTitle(""); setGenre(""); setSecondaryGenre(""); setTertiaryGenre(""); setDuration(""); setBpm("");
     setInstrumentType(""); setLicensingStatus(""); setKey(""); setMood(""); setDescription("");
+    setAiMoods([]); setAiVocals(null); setAiInstruments([]); setAiUseCases([]);
+    setAiTempo(null); setAiTimeSignature(null); setAiEnergy(null); setAiLoudnessLufs(null); setAiLoudnessNote(null);
     setYear(new Date().getFullYear()); setAudioFile(null); setShowForm(false);
   };
 
@@ -504,6 +543,80 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false, onNa
               <select value={mood} onChange={e => setMood(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: mood ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}><option value="">Select Mood...</option>{moodOptions.map(m => <option key={m} value={m}>{m}</option>)}</select>
             </div>
             
+            {/* AI Analysis Preview — shown after audio is analyzed */}
+            {(aiMoods.length > 0 || aiVocals || aiInstruments.length > 0 || aiUseCases.length > 0 || aiTempo || aiTimeSignature || aiEnergy != null || aiLoudnessLufs != null || tertiaryGenre) && (
+              <div style={{ background: `${DESIGN_SYSTEM.colors.brand.primary}08`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}25`, borderRadius: 12, padding: '14px 16px', marginBottom: 12 }}>
+                <div style={{ fontSize: 11, color: DESIGN_SYSTEM.colors.brand.primary, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 12 }}>✨ AI Analysis</div>
+
+                {/* Genres row */}
+                {(secondaryGenre || tertiaryGenre) && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                    {genre && <span style={aiBadge('primary')}>{genre}</span>}
+                    {secondaryGenre && <span style={aiBadge('secondary')}>{secondaryGenre}</span>}
+                    {tertiaryGenre && <span style={aiBadge('tertiary')}>{tertiaryGenre}</span>}
+                  </div>
+                )}
+
+                {/* Moods row — sized by confidence */}
+                {aiMoods.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                    {aiMoods.slice(0, 3).map((m, i) => (
+                      <span key={i} style={{
+                        background: `rgba(139,92,246,${0.18 - i * 0.04})`,
+                        border: `1px solid rgba(139,92,246,${0.4 - i * 0.1})`,
+                        color: `rgba(196,181,253,${1 - i * 0.2})`,
+                        fontSize: 13 - i,
+                        fontWeight: i === 0 ? 700 : 600,
+                        padding: `${5 - i}px ${12 - i * 2}px`,
+                        borderRadius: 20,
+                      }}>{m.mood}</span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Musical metadata row */}
+                {(aiTempo || aiTimeSignature || aiEnergy != null) && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+                    {aiTempo && <span style={aiChip}>{aiTempo}</span>}
+                    {aiTimeSignature && <span style={aiChip}>{aiTimeSignature}</span>}
+                    {aiEnergy != null && <span style={aiChip}>Energy {aiEnergy}/10</span>}
+                  </div>
+                )}
+
+                {/* Vocals + Loudness */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: aiInstruments.length > 0 || aiUseCases.length > 0 ? 10 : 0 }}>
+                  {aiVocals && (
+                    <span style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', color: '#6ee7b7', fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 20 }}>
+                      {aiVocals}
+                    </span>
+                  )}
+                  {aiLoudnessLufs != null && (
+                    <span style={aiChip}>
+                      {aiLoudnessLufs.toFixed(1)} LUFS{aiLoudnessNote ? ` · ${aiLoudnessNote}` : ''}
+                    </span>
+                  )}
+                </div>
+
+                {/* Instruments */}
+                {aiInstruments.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: aiUseCases.length > 0 ? 10 : 0 }}>
+                    {aiInstruments.map((inst, i) => (
+                      <span key={i} style={aiChip}>{inst.instrument}</span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Use cases */}
+                {aiUseCases.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {aiUseCases.map((uc, i) => (
+                      <span key={i} style={{ background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.25)', color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 20 }}>{uc}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div style={{ marginBottom: 12 }}>
               <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 13, fontWeight: 600, display: "block", marginBottom: 8 }}>Ownership Type (required)</label>
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 10 }}>
