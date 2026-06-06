@@ -8,7 +8,7 @@
 //   URL: https://zjbsmxgccmtatrbjlvep.supabase.co/functions/v1/stripe-webhook
 //   Events: customer.subscription.created, customer.subscription.updated,
 //            customer.subscription.deleted, checkout.session.completed,
-//            invoice.payment_failed
+//            invoice.payment_failed, invoice.payment_succeeded
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import Stripe from 'https://esm.sh/stripe@14.21.0?target=deno';
@@ -62,6 +62,147 @@ async function sendAdminEmail(subject: string, body: string): Promise<void> {
       </div>
     </div>`;
   await sendEmail(ADMIN_EMAIL, subject, html);
+}
+
+async function sendInvoiceEmail(
+  toEmail: string,
+  invoice: Stripe.Invoice,
+  tier: string,
+  cardBrand: string | null,
+  cardLast4: string | null,
+): Promise<void> {
+  const tierLabel   = tier === 'pro' ? 'Pro' : 'Basic';
+  const amount      = invoice.amount_paid != null ? `$${(invoice.amount_paid / 100).toFixed(2)}` : '—';
+  const currency    = (invoice.currency ?? 'usd').toUpperCase();
+  const invoiceNum  = invoice.number ?? `INV-${invoice.id?.slice(-8).toUpperCase()}`;
+  const billedDate  = invoice.created ? new Date(invoice.created * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '—';
+  const nextDate    = invoice.period_end ? new Date(invoice.period_end * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '—';
+  const pdfUrl      = invoice.invoice_pdf ?? '';
+  const cardLine    = cardBrand && cardLast4
+    ? `${cardBrand.charAt(0).toUpperCase() + cardBrand.slice(1)} ending in ${cardLast4}`
+    : 'Card on file';
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+</head>
+<body style="margin:0;padding:0;background:#08080C;font-family:'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#08080C;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#0F0F13;border-radius:16px;border:1px solid rgba(201,168,76,0.18);overflow:hidden;max-width:560px;width:100%;">
+
+        <!-- Header -->
+        <tr>
+          <td style="background:linear-gradient(135deg,#1A1710,#0F0F13);padding:32px 40px 28px;border-bottom:1px solid rgba(201,168,76,0.12);">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td>
+                  <span style="color:#C9A84C;font-size:22px;font-weight:800;letter-spacing:-0.5px;font-family:Georgia,serif;">Coda-Vault</span>
+                </td>
+                <td align="right">
+                  <span style="color:#4A4640;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Invoice</span>
+                  <div style="color:#C9A84C;font-size:13px;font-weight:700;margin-top:2px;">${invoiceNum}</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Amount hero -->
+        <tr>
+          <td style="padding:36px 40px 28px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.06);">
+            <div style="color:#7A7468;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Amount Paid</div>
+            <div style="color:#F1F5F9;font-size:42px;font-weight:800;letter-spacing:-1px;line-height:1;">${amount}</div>
+            <div style="color:#4A4640;font-size:13px;margin-top:6px;">${currency}</div>
+            <div style="display:inline-block;margin-top:16px;background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.25);color:#C9A84C;font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;text-transform:uppercase;letter-spacing:0.5px;">
+              ${tierLabel} Plan
+            </div>
+          </td>
+        </tr>
+
+        <!-- Details grid -->
+        <tr>
+          <td style="padding:28px 40px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.05);">
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td style="color:#7A7468;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;padding-bottom:4px;">Billed To</td>
+                    </tr>
+                    <tr>
+                      <td style="color:#E2E8F0;font-size:14px;">${toEmail}</td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:18px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td width="50%">
+                        <div style="color:#7A7468;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px;">Payment Method</div>
+                        <div style="color:#E2E8F0;font-size:14px;">${cardLine}</div>
+                      </td>
+                      <td width="50%" align="right">
+                        <div style="color:#7A7468;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px;">Date</div>
+                        <div style="color:#E2E8F0;font-size:14px;">${billedDate}</div>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding-top:18px;">
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td>
+                        <div style="color:#7A7468;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px;">Next Billing Date</div>
+                        <div style="color:#E2E8F0;font-size:14px;">${nextDate}</div>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- CTAs -->
+        <tr>
+          <td style="padding:0 40px 36px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td width="48%">
+                  ${pdfUrl ? `<a href="${pdfUrl}" style="display:block;text-align:center;background:#C9A84C;color:#0F0F13;font-weight:700;font-size:14px;padding:13px 20px;border-radius:10px;text-decoration:none;">Download Invoice PDF</a>` : ''}
+                </td>
+                <td width="4%"></td>
+                <td width="48%">
+                  <a href="${APP_URL}/#billing" style="display:block;text-align:center;background:rgba(255,255,255,0.05);color:#E2E8F0;font-weight:600;font-size:14px;padding:13px 20px;border-radius:10px;text-decoration:none;border:1px solid rgba(255,255,255,0.08);">Manage Billing</a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="padding:20px 40px;border-top:1px solid rgba(255,255,255,0.06);text-align:center;">
+            <p style="color:#4A4640;font-size:12px;margin:0 0 6px;">Questions about this invoice? Reply to this email.</p>
+            <p style="color:#2A2A2A;font-size:11px;margin:0;">© ${new Date().getFullYear()} Coda-Vault · <a href="${APP_URL}" style="color:#4A4640;text-decoration:none;">coda-vault.com</a></p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  await sendEmail(toEmail, `Invoice from Coda-Vault — ${amount} ${currency}`, html);
 }
 
 async function sendUserConfirmationEmail(toEmail: string, tier: string): Promise<void> {
@@ -206,6 +347,39 @@ Deno.serve(async (req) => {
         '😢 Cancellation on Coda-Vault',
         `Tier cancelled: <strong>${tier}</strong><br>Stripe customer: ${sub.customer}`,
       );
+      break;
+    }
+
+    // ── Invoice paid — send branded invoice email to customer ──────────────────
+    case 'invoice.payment_succeeded': {
+      const invoice = event.data.object as Stripe.Invoice;
+
+      // Only send for subscription renewals/payments, not for $0 trials
+      if (!invoice.customer_email || !invoice.amount_paid || invoice.amount_paid === 0) break;
+
+      // Determine tier from the invoice line items
+      const priceId  = invoice.lines?.data?.[0]?.price?.id ?? '';
+      const tier     = PRICE_TO_TIER[priceId] ?? 'basic';
+
+      // Fetch card details from the payment intent
+      let cardBrand: string | null = null;
+      let cardLast4: string | null = null;
+      try {
+        if (invoice.payment_intent) {
+          const pi = await stripe.paymentIntents.retrieve(
+            typeof invoice.payment_intent === 'string' ? invoice.payment_intent : invoice.payment_intent.id,
+            { expand: ['payment_method'] }
+          );
+          const pm = pi.payment_method as Stripe.PaymentMethod | null;
+          cardBrand = pm?.card?.brand ?? null;
+          cardLast4 = pm?.card?.last4 ?? null;
+        }
+      } catch (err) {
+        console.warn('[stripe-webhook] Could not fetch card details:', err);
+      }
+
+      await sendInvoiceEmail(invoice.customer_email, invoice, tier, cardBrand, cardLast4);
+      console.log(`[stripe-webhook] invoice.payment_succeeded: sent invoice to ${invoice.customer_email}`);
       break;
     }
 
