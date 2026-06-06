@@ -72,12 +72,36 @@ Deno.serve(async (req) => {
       // Non-fatal — card info just won't show
     }
 
+    // ── Fetch invoice history ─────────────────────────────────────────────────
+    let invoices: object[] = [];
+    try {
+      const invoiceList = await stripe.invoices.list({
+        customer: profile.stripe_customer_id,
+        limit: 12,
+        status: 'paid',
+      });
+      invoices = invoiceList.data.map((inv) => ({
+        id:          inv.id,
+        number:      inv.number,
+        amount_paid: inv.amount_paid,
+        currency:    inv.currency,
+        created:     inv.created,
+        period_end:  inv.period_end,
+        invoice_pdf: inv.invoice_pdf,
+        status:      inv.status,
+        description: inv.lines?.data?.[0]?.description ?? null,
+      }));
+    } catch (_) {
+      // Non-fatal — invoice list just won't show
+    }
+
     return new Response(
       JSON.stringify({
         tier: profile.subscription_tier || 'free',
         status: profile.subscription_status || 'active',
         ends_at: profile.subscription_ends_at || null,
         paymentMethod,
+        invoices,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CreditCard, Calendar, RefreshCw, AlertTriangle, CheckCircle, Crown, Zap, Shield } from 'lucide-react';
+import { CreditCard, Calendar, RefreshCw, AlertTriangle, CheckCircle, Crown, Zap, Shield, Download, FileText } from 'lucide-react';
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { supabase } from '../lib/supabase';
 import { showToast } from '../utils/toast';
@@ -268,6 +268,82 @@ export function BillingPage({ userProfile, isMobile = false }) {
               >
                 View Plans
               </button>
+            </div>
+          )}
+
+          {/* Invoice History */}
+          {billingInfo?.invoices?.length > 0 && (
+            <div style={cardStyle}>
+              <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: DESIGN_SYSTEM.colors.text.muted, marginBottom: 16, fontFamily: DESIGN_SYSTEM.font.body }}>
+                Invoice History
+              </div>
+              {billingInfo.invoices.map((inv, i) => {
+                const amount    = inv.amount_paid != null ? `$${(inv.amount_paid / 100).toFixed(2)}` : '—';
+                const currency  = (inv.currency ?? 'usd').toUpperCase();
+                const invNum    = inv.number ?? `INV-${inv.id?.slice(-8).toUpperCase()}`;
+                const date      = inv.created ? new Date(inv.created * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+                const isLast    = i === billingInfo.invoices.length - 1;
+                return (
+                  <div key={inv.id} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '14px 0',
+                    borderBottom: isLast ? 'none' : `1px solid ${DESIGN_SYSTEM.colors.border.subtle}`,
+                    gap: 12,
+                  }}>
+                    {/* Left: icon + invoice info */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        width: 36, height: 36, borderRadius: 8, flexShrink: 0,
+                        background: `${DESIGN_SYSTEM.colors.brand.primary}12`,
+                        border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}25`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        <FileText size={15} color={DESIGN_SYSTEM.colors.brand.primary} />
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 13, fontWeight: 600, fontFamily: DESIGN_SYSTEM.font.body }}>
+                          {invNum}
+                        </div>
+                        <div style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 12, fontFamily: DESIGN_SYSTEM.font.body }}>
+                          {date}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Center: amount + currency */}
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, fontWeight: 700, fontFamily: DESIGN_SYSTEM.font.body }}>
+                        {amount}
+                      </div>
+                      <div style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 11, fontFamily: DESIGN_SYSTEM.font.body }}>
+                        {currency}
+                      </div>
+                    </div>
+
+                    {/* Right: download */}
+                    {inv.invoice_pdf && (
+                      <a
+                        href={inv.invoice_pdf}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 5,
+                          padding: '6px 12px', borderRadius: 8, flexShrink: 0,
+                          background: DESIGN_SYSTEM.colors.bg.elevated,
+                          border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
+                          color: DESIGN_SYSTEM.colors.text.secondary,
+                          fontSize: 12, fontWeight: 600,
+                          textDecoration: 'none', fontFamily: DESIGN_SYSTEM.font.body,
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        <Download size={12} />
+                        PDF
+                      </a>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 
