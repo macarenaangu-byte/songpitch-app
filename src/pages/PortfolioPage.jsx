@@ -288,10 +288,21 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false, onNa
         composer_id: userProfile.id, title: songTitle, primary_genre: genre || null,
         secondary_genre: secondaryGenre || null, genre: genre || null, duration: duration || null,
         bpm: bpm ? parseInt(bpm) : null, key: key || null, mood: mood || null,
-        mood_tags: mood ? [mood] : null, instrument_type: instrumentType || null,
+        mood_tags: aiMoods.length > 0 ? aiMoods.map(m => m.mood) : (mood ? [mood] : null),
+        instrument_type: instrumentType || null,
         licensing_status: licensingStatus || null, is_one_stop: isOneStop,
         verification_status: isOneStop ? 'verified' : 'pending_splits', description: description || null,
-        year: year || null, audio_url: audioUrl || (editingSong ? editingSong.audio_url : null)
+        year: year || null, audio_url: audioUrl || (editingSong ? editingSong.audio_url : null),
+        // New AI metadata fields
+        tertiary_genre: tertiaryGenre || null,
+        vocals: aiVocals || null,
+        use_cases: aiUseCases.length > 0 ? aiUseCases : null,
+        instruments: aiInstruments.length > 0 ? aiInstruments.map(i => i.instrument) : null,
+        tempo: aiTempo || null,
+        time_signature: aiTimeSignature || null,
+        energy: aiEnergy != null ? aiEnergy : null,
+        loudness_lufs: aiLoudnessLufs != null ? aiLoudnessLufs : null,
+        loudness_note: aiLoudnessNote || null
       };
 
       if (editingSong) {
@@ -352,8 +363,18 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false, onNa
   const handleEdit = (song) => {
     const rawLicensingStatus = song.licensing_status || "";
     setEditingSong(song); setTitle(song.title); setGenre(song.primary_genre || song.genre || "");
-    setSecondaryGenre(song.secondary_genre || ""); setDuration(song.duration || ""); setBpm(song.bpm || "");
+    setSecondaryGenre(song.secondary_genre || ""); setTertiaryGenre(song.tertiary_genre || "");
+    setDuration(song.duration || ""); setBpm(song.bpm || "");
     setInstrumentType(song.instrument_type || "");
+    setAiVocals(song.vocals || null);
+    setAiUseCases(song.use_cases || []);
+    setAiInstruments((song.instruments || []).map(i => ({ instrument: i, confidence: 1 })));
+    setAiTempo(song.tempo || null);
+    setAiTimeSignature(song.time_signature || null);
+    setAiEnergy(song.energy ?? null);
+    setAiLoudnessLufs(song.loudness_lufs ?? null);
+    setAiLoudnessNote(song.loudness_note || null);
+    setAiMoods((song.mood_tags || []).map(m => ({ mood: m, confidence: 1 })));
     if (rawLicensingStatus.startsWith('One-Stop')) setLicensingStatus(ONE_STOP_LABEL);
     else if (rawLicensingStatus.startsWith('Admin/Co-Owned') || rawLicensingStatus.startsWith('Co-Owned')) setLicensingStatus(ADMIN_CO_OWNED_LABEL);
     else setLicensingStatus(rawLicensingStatus || "");
@@ -536,13 +557,55 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false, onNa
               <input type="text" placeholder="Title (optional)" value={title} onChange={e => setTitle(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }} />
               <select value={genre} onChange={e => setGenre(e.target.value)} required style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: genre ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}><option value="">Primary Genre (required)...</option>{songGenreOptions.map(g => <option key={g} value={g}>{g}</option>)}</select>
               <input type="text" placeholder="Secondary Genre (optional)" value={secondaryGenre} onChange={e => setSecondaryGenre(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }} />
+              <input type="text" placeholder="Tertiary Genre (optional)" value={tertiaryGenre} onChange={e => setTertiaryGenre(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }} />
               <select value={instrumentType} onChange={e => setInstrumentType(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: instrumentType ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}><option value="">Instrument Type...</option><option value="Vocal">Vocal</option><option value="Instrumental">Instrumental</option></select>
+              <select value={aiVocals || ''} onChange={e => setAiVocals(e.target.value || null)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: aiVocals ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+                <option value="">Vocals...</option>
+                {['Instrumental', 'Vocals', 'Choir', 'Rap', 'Spoken Word'].map(v => <option key={v} value={v}>{v}</option>)}
+              </select>
               <input type="text" placeholder="Duration (e.g., 3:45)" value={duration} onChange={e => setDuration(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }} />
               <input type="number" placeholder="BPM (required)" min={20} max={300} required value={bpm} onChange={e => setBpm(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: DESIGN_SYSTEM.colors.text.primary, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }} />
               <select value={key} onChange={e => setKey(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: key ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}><option value="">Select Key...</option>{['C Major', 'C Minor', 'C# Major', 'C# Minor', 'D Major', 'D Minor', 'Eb Major', 'Eb Minor', 'E Major', 'E Minor', 'F Major', 'F Minor', 'F# Major', 'F# Minor', 'G Major', 'G Minor', 'Ab Major', 'Ab Minor', 'A Major', 'A Minor', 'Bb Major', 'Bb Minor', 'B Major', 'B Minor'].map(k => <option key={k} value={k}>{k}</option>)}</select>
               <select value={mood} onChange={e => setMood(e.target.value)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: mood ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}><option value="">Select Mood...</option>{moodOptions.map(m => <option key={m} value={m}>{m}</option>)}</select>
+              <select value={aiTimeSignature || ''} onChange={e => setAiTimeSignature(e.target.value || null)} style={{ background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px", color: aiTimeSignature ? DESIGN_SYSTEM.colors.text.primary : DESIGN_SYSTEM.colors.text.muted, fontSize: 14, outline: "none", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+                <option value="">Time Signature...</option>
+                {['4/4', '3/4', '6/8', '2/4', '5/4', '7/8', '12/8'].map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: DESIGN_SYSTEM.colors.bg.primary, border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, borderRadius: 8, padding: "10px 14px" }}>
+                <span style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 13, whiteSpace: 'nowrap' }}>Energy</span>
+                <input type="range" min={1} max={10} value={aiEnergy ?? 5} onChange={e => setAiEnergy(parseInt(e.target.value))} style={{ flex: 1, accentColor: DESIGN_SYSTEM.colors.brand.primary }} />
+                <span style={{ color: DESIGN_SYSTEM.colors.brand.primary, fontWeight: 700, fontSize: 13, minWidth: 20 }}>{aiEnergy ?? '—'}</span>
+              </div>
             </div>
             
+            {/* Use Cases — editable tag chips */}
+            {aiUseCases.length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.6px', display: 'block', marginBottom: 8 }}>Use Cases</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {aiUseCases.map((uc, i) => (
+                    <button key={i} type="button" onClick={() => setAiUseCases(prev => prev.filter((_, j) => j !== i))} style={{ display: 'flex', alignItems: 'center', gap: 5, background: `${DESIGN_SYSTEM.colors.brand.primary}12`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}30`, color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 20, cursor: 'pointer' }}>
+                      {uc} <X size={10} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Instruments — editable tag chips */}
+            {aiInstruments.length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.6px', display: 'block', marginBottom: 8 }}>Detected Instruments</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {aiInstruments.map((inst, i) => (
+                    <button key={i} type="button" onClick={() => setAiInstruments(prev => prev.filter((_, j) => j !== i))} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: DESIGN_SYSTEM.colors.text.secondary, fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 20, cursor: 'pointer' }}>
+                      {inst.instrument} <X size={10} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* AI Analysis Preview — shown after audio is analyzed */}
             {(aiMoods.length > 0 || aiVocals || aiInstruments.length > 0 || aiUseCases.length > 0 || aiTempo || aiTimeSignature || aiEnergy != null || aiLoudnessLufs != null || tertiaryGenre) && (
               <div style={{ background: `${DESIGN_SYSTEM.colors.brand.primary}08`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}25`, borderRadius: 12, padding: '14px 16px', marginBottom: 12 }}>

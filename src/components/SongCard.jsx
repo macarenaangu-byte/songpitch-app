@@ -3,10 +3,14 @@ import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { Badge } from './Badge';
 
 export function SongCard({ song, onPlay, isPlaying, showActions, onEdit, onDelete, hideComposerName, onViewRights, isMobile = false, viewMode = 'list' }) {
-  const primaryGenre = song.primary_genre || song.genre;
+  const primaryGenre   = song.primary_genre || song.genre;
   const secondaryGenre = song.secondary_genre;
-  // const instrumentType = isMobile ? null : song.instrument_type; // reserved for future display
+  const tertiaryGenre  = song.tertiary_genre;
   const licensingStatus = song.licensing_status;
+  const useCases       = song.use_cases || [];
+  const instruments    = song.instruments || [];
+  const vocals         = song.vocals;
+  const energy         = song.energy;
   const isOneStopTrack = !!song.is_one_stop || (typeof licensingStatus === 'string' && licensingStatus.startsWith('One-Stop'));
   const primaryGenreColor = DESIGN_SYSTEM.colors.brand.purple;
 
@@ -202,12 +206,13 @@ export function SongCard({ song, onPlay, isPlaying, showActions, onEdit, onDelet
         </div>
       </div>
 
-      {/* Metadata pills — 2-row layout, breathable spacing */}
+      {/* Metadata pills — 3-row layout */}
       <div style={{ display: "flex", flexDirection: "column", gap: 5, flex: "1 1 auto", minWidth: 0, overflow: 'hidden' }}>
-        {/* Row 1: genre tags */}
+        {/* Row 1: genres + key + mood */}
         <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
           {primaryGenre && <Badge color={DESIGN_SYSTEM.colors.brand.purple}>{primaryGenre}</Badge>}
           {secondaryGenre && !isMobile && <Badge color={DESIGN_SYSTEM.colors.brand.blue}>{secondaryGenre}</Badge>}
+          {tertiaryGenre && !isMobile && <Badge color={DESIGN_SYSTEM.colors.text.muted}>{tertiaryGenre}</Badge>}
           {song.mood && !isMobile && <Badge color={DESIGN_SYSTEM.colors.brand.accent}>{song.mood}</Badge>}
           {song.key && !isMobile && (
             <Badge color={DESIGN_SYSTEM.colors.brand.secondary}>
@@ -215,7 +220,32 @@ export function SongCard({ song, onPlay, isPlaying, showActions, onEdit, onDelet
             </Badge>
           )}
         </div>
-        {/* Row 2: status badges */}
+        {/* Row 2: production info — vocals, energy, instruments, use cases */}
+        {!isMobile && (vocals || energy != null || instruments.length > 0 || useCases.length > 0) && (
+          <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+            {vocals && (
+              <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 5, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', color: '#6ee7b7', whiteSpace: 'nowrap' }}>
+                {vocals}
+              </span>
+            )}
+            {energy != null && (
+              <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 5, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: DESIGN_SYSTEM.colors.text.muted, whiteSpace: 'nowrap' }}>
+                Energy {energy}/10
+              </span>
+            )}
+            {instruments.slice(0, 2).map((inst, i) => (
+              <span key={i} style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 5, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: DESIGN_SYSTEM.colors.text.muted, whiteSpace: 'nowrap' }}>
+                {inst}
+              </span>
+            ))}
+            {useCases.slice(0, 2).map((uc, i) => (
+              <span key={i} style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 5, background: `${DESIGN_SYSTEM.colors.brand.primary}10`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}25`, color: DESIGN_SYSTEM.colors.brand.primary, whiteSpace: 'nowrap' }}>
+                {uc}
+              </span>
+            ))}
+          </div>
+        )}
+        {/* Row 3: status badges */}
         <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
           {isOneStopTrack && (
             <span style={{
