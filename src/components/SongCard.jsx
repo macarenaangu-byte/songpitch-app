@@ -82,6 +82,8 @@ export function SongCard({ song, onPlay, isPlaying, showActions, onEdit, onDelet
   const instruments    = song.instruments || [];
   const vocals         = song.vocals;
   const energy         = song.energy;
+  // mood_tags is the full array [primary, secondary, tertiary]; fall back to single mood string
+  const moodTags       = (song.mood_tags?.length > 0) ? song.mood_tags : (song.mood ? [song.mood] : []);
 
   // ── GRID CARD ──────────────────────────────────────────────────────────────
   if (viewMode === 'grid') {
@@ -237,13 +239,16 @@ export function SongCard({ song, onPlay, isPlaying, showActions, onEdit, onDelet
             {secondaryGenre && <Pill variant="blue">{secondaryGenre}</Pill>}
             {tertiaryGenre  && <Pill variant="slate">{tertiaryGenre}</Pill>}
 
-            {/* Mood */}
-            {song.mood && <><Divider /><Pill variant="gold">{song.mood}</Pill></>}
+            {/* Moods — up to 3, all gold */}
+            {moodTags.length > 0 && <Divider />}
+            {moodTags.slice(0, 3).map((m, i) => (
+              <Pill key={i} variant="gold" style={{ opacity: 1 - i * 0.2 }}>{m}</Pill>
+            ))}
 
-            {/* Vocals + instruments + use cases */}
+            {/* Vocals + all instruments + use cases */}
             {(vocals || instruments.length > 0 || useCases.length > 0) && <Divider />}
             {vocals && <Pill variant="green">{vocals}</Pill>}
-            {instruments.slice(0, 2).map((inst, i) => <Pill key={i} variant="ghost">{inst}</Pill>)}
+            {instruments.map((inst, i) => <Pill key={i} variant="ghost">{inst}</Pill>)}
             {useCases.slice(0, 2).map((uc, i) => <Pill key={i} variant="ghost">{uc}</Pill>)}
           </div>
         )}
@@ -252,7 +257,7 @@ export function SongCard({ song, onPlay, isPlaying, showActions, onEdit, onDelet
         {isMobile && (
           <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
             {primaryGenre && <Pill variant="purple">{primaryGenre}</Pill>}
-            {song.mood && <Pill variant="gold">{song.mood}</Pill>}
+            {moodTags.slice(0, 2).map((m, i) => <Pill key={i} variant="gold">{m}</Pill>)}
           </div>
         )}
       </div>
