@@ -2,17 +2,86 @@ import { Play, Pause, Music, Edit, Trash2, Shield, CheckCircle, AlertTriangle } 
 import { DESIGN_SYSTEM } from '../constants/designSystem';
 import { Badge } from './Badge';
 
+// Decorative waveform bars — static, purely visual
+const WAVEFORM_HEIGHTS = [8,14,18,22,16,20,10,16,20,24,18,12,16,22,18,14,20,16,10,14,8];
+
+function Waveform() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 2, height: 24, opacity: 0.3, flexShrink: 0 }} aria-hidden="true">
+      {WAVEFORM_HEIGHTS.map((h, i) => (
+        <span key={i} style={{ display: 'block', width: 2, height: h, borderRadius: 2, background: '#C9A84C' }} />
+      ))}
+    </div>
+  );
+}
+
+function EnergyPips({ value }) {
+  if (value == null) return null;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+      <span style={{ fontSize: 10, fontWeight: 600, color: '#7A7468', fontFamily: "'Space Grotesk', sans-serif", marginRight: 2, letterSpacing: '0.3px' }}>ENERGY</span>
+      <div style={{ display: 'flex', gap: 2 }}>
+        {Array.from({ length: 10 }, (_, i) => (
+          <span key={i} style={{
+            display: 'block', width: 6, height: 6, borderRadius: 1,
+            background: i < value ? '#C9A84C' : 'rgba(255,255,255,0.08)',
+          }} />
+        ))}
+      </div>
+      <span style={{ fontSize: 10, fontWeight: 600, color: '#7A7468', fontFamily: "'Space Grotesk', sans-serif", marginLeft: 2 }}>{value}/10</span>
+    </div>
+  );
+}
+
+function StatPill({ children }) {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 5,
+      background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
+      borderRadius: 20, padding: '3px 10px',
+      fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, fontWeight: 500,
+      color: '#B8C0CC', whiteSpace: 'nowrap', flexShrink: 0,
+    }}>
+      {children}
+    </span>
+  );
+}
+
+function Pill({ children, variant = 'ghost' }) {
+  const styles = {
+    purple: { background: 'rgba(139,92,246,0.15)', color: '#C4B5FD', border: '1px solid rgba(139,92,246,0.25)' },
+    blue:   { background: 'rgba(59,130,246,0.15)',  color: '#93C5FD', border: '1px solid rgba(59,130,246,0.22)' },
+    slate:  { background: 'rgba(100,116,139,0.15)', color: '#94A3B8', border: '1px solid rgba(100,116,139,0.22)' },
+    gold:   { background: 'rgba(201,168,76,0.15)',  color: '#E2B96A', border: '1px solid rgba(201,168,76,0.28)' },
+    green:  { background: 'rgba(16,185,129,0.15)',  color: '#6EE7B7', border: '1px solid rgba(16,185,129,0.25)' },
+    ghost:  { background: 'rgba(255,255,255,0.04)', color: '#7A7468', border: '1px solid rgba(255,255,255,0.08)' },
+  };
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      fontSize: 11, fontWeight: 500, padding: '3px 10px', borderRadius: 20,
+      whiteSpace: 'nowrap', fontFamily: "'Inter', sans-serif",
+      ...styles[variant],
+    }}>
+      {children}
+    </span>
+  );
+}
+
+function Divider() {
+  return <span style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.1)', flexShrink: 0, margin: '0 2px' }} />;
+}
+
 export function SongCard({ song, onPlay, isPlaying, showActions, onEdit, onDelete, hideComposerName, onViewRights, isMobile = false, viewMode = 'list' }) {
   const primaryGenre   = song.primary_genre || song.genre;
   const secondaryGenre = song.secondary_genre;
   const tertiaryGenre  = song.tertiary_genre;
   const licensingStatus = song.licensing_status;
+  const isOneStopTrack = !!song.is_one_stop || (typeof licensingStatus === 'string' && licensingStatus.startsWith('One-Stop'));
   const useCases       = song.use_cases || [];
   const instruments    = song.instruments || [];
   const vocals         = song.vocals;
   const energy         = song.energy;
-  const isOneStopTrack = !!song.is_one_stop || (typeof licensingStatus === 'string' && licensingStatus.startsWith('One-Stop'));
-  const primaryGenreColor = DESIGN_SYSTEM.colors.brand.purple;
 
   // ── GRID CARD ──────────────────────────────────────────────────────────────
   if (viewMode === 'grid') {
@@ -21,12 +90,9 @@ export function SongCard({ song, onPlay, isPlaying, showActions, onEdit, onDelet
         background: DESIGN_SYSTEM.colors.bg.card,
         borderRadius: DESIGN_SYSTEM.radius.lg,
         border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
-        display: 'flex',
-        flexDirection: 'column',
+        display: 'flex', flexDirection: 'column',
         transition: `all ${DESIGN_SYSTEM.transition.normal}`,
-        cursor: 'pointer',
-        boxShadow: DESIGN_SYSTEM.shadow.sm,
-        overflow: 'hidden',
+        cursor: 'pointer', boxShadow: DESIGN_SYSTEM.shadow.sm, overflow: 'hidden',
       }}
         onMouseEnter={e => { e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.border.accent; e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = DESIGN_SYSTEM.shadow.hover; }}
         onMouseLeave={e => { e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.border.light; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = DESIGN_SYSTEM.shadow.sm; }}
@@ -36,13 +102,8 @@ export function SongCard({ song, onPlay, isPlaying, showActions, onEdit, onDelet
         {/* Play area */}
         <div onClick={() => onPlay && onPlay(song)} style={{
           background: `linear-gradient(135deg, ${DESIGN_SYSTEM.colors.bg.elevated} 0%, ${DESIGN_SYSTEM.colors.bg.secondary} 100%)`,
-          height: 96,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative',
-          borderBottom: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
-          flexShrink: 0,
+          height: 96, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          position: 'relative', borderBottom: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, flexShrink: 0,
         }}>
           <div style={{
             width: 48, height: 48, borderRadius: '50%',
@@ -52,63 +113,27 @@ export function SongCard({ song, onPlay, isPlaying, showActions, onEdit, onDelet
             transition: 'all 0.2s ease',
             boxShadow: isPlaying ? '0 0 20px rgba(201,168,76,0.3)' : 'none',
           }}>
-            {isPlaying
-              ? <Pause size={18} color={DESIGN_SYSTEM.colors.bg.primary} />
-              : <Play size={18} color={DESIGN_SYSTEM.colors.brand.primary} fill={DESIGN_SYSTEM.colors.brand.primary} />
-            }
+            {isPlaying ? <Pause size={18} color={DESIGN_SYSTEM.colors.bg.primary} /> : <Play size={18} color={DESIGN_SYSTEM.colors.brand.primary} fill={DESIGN_SYSTEM.colors.brand.primary} />}
           </div>
-          {/* Duration chip top-right */}
-          {song.duration && (
-            <span style={{ position: 'absolute', top: 8, right: 10, fontSize: 10, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.muted, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(6px)', padding: '2px 7px', borderRadius: 5 }}>
-              {song.duration}
-            </span>
-          )}
-          {/* BPM chip top-left */}
-          {song.bpm && (
-            <span style={{ position: 'absolute', top: 8, left: 10, fontSize: 10, fontWeight: 600, color: DESIGN_SYSTEM.colors.accent.amber, background: `${DESIGN_SYSTEM.colors.accent.amber}18`, border: `1px solid ${DESIGN_SYSTEM.colors.accent.amber}30`, backdropFilter: 'blur(6px)', padding: '2px 7px', borderRadius: 5 }}>
-              ⚡ {song.bpm}
-            </span>
-          )}
+          {song.duration && <span style={{ position: 'absolute', top: 8, right: 10, fontSize: 10, fontWeight: 600, color: DESIGN_SYSTEM.colors.text.muted, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(6px)', padding: '2px 7px', borderRadius: 5 }}>{song.duration}</span>}
+          {song.bpm && <span style={{ position: 'absolute', top: 8, left: 10, fontSize: 10, fontWeight: 600, color: DESIGN_SYSTEM.colors.accent.amber, background: `${DESIGN_SYSTEM.colors.accent.amber}18`, border: `1px solid ${DESIGN_SYSTEM.colors.accent.amber}30`, backdropFilter: 'blur(6px)', padding: '2px 7px', borderRadius: 5 }}>⚡ {song.bpm}</span>}
         </div>
 
         {/* Card body */}
         <div style={{ padding: '14px 16px', flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {/* Title */}
-          <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontWeight: 700, fontSize: 14, fontFamily: "'Space Grotesk', sans-serif", whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', letterSpacing: '-0.1px' }}>
-            {song.title}
-          </div>
-
-          {/* Badge row */}
+          <div style={{ color: DESIGN_SYSTEM.colors.text.primary, fontWeight: 700, fontSize: 14, fontFamily: "'Space Grotesk', sans-serif", whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', letterSpacing: '-0.1px' }}>{song.title}</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-            {primaryGenre && <Badge color={primaryGenreColor}>{primaryGenre}</Badge>}
+            {primaryGenre && <Badge color={DESIGN_SYSTEM.colors.brand.purple}>{primaryGenre}</Badge>}
             {song.mood && <Badge color={DESIGN_SYSTEM.colors.brand.primary}>{song.mood}</Badge>}
-            {song.key && <Badge color={DESIGN_SYSTEM.colors.brand.secondary}>{song.key}</Badge>}
-            {song.verification_status === 'verified' && (
-              <span className="badge-verified-shimmer" style={{ color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 3, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}40`, whiteSpace: 'nowrap' }}>
-                <CheckCircle size={10} /> Verified
-              </span>
-            )}
-            {isOneStopTrack && (
-              <span style={{ background: `${DESIGN_SYSTEM.colors.brand.primary}12`, color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 3, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}35`, whiteSpace: 'nowrap' }}>
-                <Shield size={9} /> One-Stop
-              </span>
-            )}
+            {song.key && <Badge color={DESIGN_SYSTEM.colors.brand.secondary}><Music size={10} style={{ marginRight: 3, verticalAlign: "middle" }} />{song.key}</Badge>}
+            {song.verification_status === 'verified' && <span className="badge-verified-shimmer" style={{ color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 3, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}40`, whiteSpace: 'nowrap' }}><CheckCircle size={10} /> Verified</span>}
+            {isOneStopTrack && <span style={{ background: `${DESIGN_SYSTEM.colors.brand.primary}12`, color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 3, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}35`, whiteSpace: 'nowrap' }}><Shield size={9} /> One-Stop</span>}
           </div>
-
-          {/* Footer actions */}
           {showActions && (
             <div style={{ display: 'flex', gap: 6, paddingTop: 6, borderTop: `1px solid ${DESIGN_SYSTEM.colors.border.light}`, marginTop: 'auto' }}>
-              {onViewRights && song.verification_status === 'verified' && (
-                <button onClick={(e) => { e.stopPropagation(); onViewRights(song); }} style={{ flex: 1, background: `${DESIGN_SYSTEM.colors.brand.primary}12`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}30`, borderRadius: 6, padding: '6px 0', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: DESIGN_SYSTEM.colors.brand.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, transition: 'all 0.15s' }}>
-                  <Shield size={11} /> Rights
-                </button>
-              )}
-              <button onClick={(e) => { e.stopPropagation(); onEdit(song); }} style={{ flex: 1, background: `${DESIGN_SYSTEM.colors.brand.primary}12`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}30`, borderRadius: 6, padding: '6px 0', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: DESIGN_SYSTEM.colors.brand.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, transition: 'all 0.15s' }}>
-                <Edit size={11} /> Edit
-              </button>
-              <button onClick={(e) => { e.stopPropagation(); onDelete(song); }} style={{ background: `${DESIGN_SYSTEM.colors.accent.red}12`, border: `1px solid ${DESIGN_SYSTEM.colors.accent.red}30`, borderRadius: 6, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'all 0.15s' }}>
-                <Trash2 size={13} color={DESIGN_SYSTEM.colors.accent.red} />
-              </button>
+              {onViewRights && song.verification_status === 'verified' && <button onClick={(e) => { e.stopPropagation(); onViewRights(song); }} style={{ flex: 1, background: `${DESIGN_SYSTEM.colors.brand.primary}12`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}30`, borderRadius: 6, padding: '6px 0', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: DESIGN_SYSTEM.colors.brand.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><Shield size={11} /> Rights</button>}
+              <button onClick={(e) => { e.stopPropagation(); onEdit(song); }} style={{ flex: 1, background: `${DESIGN_SYSTEM.colors.brand.primary}12`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}30`, borderRadius: 6, padding: '6px 0', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: DESIGN_SYSTEM.colors.brand.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><Edit size={11} /> Edit</button>
+              <button onClick={(e) => { e.stopPropagation(); onDelete(song); }} style={{ background: `${DESIGN_SYSTEM.colors.accent.red}12`, border: `1px solid ${DESIGN_SYSTEM.colors.accent.red}30`, borderRadius: 6, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Trash2 size={13} color={DESIGN_SYSTEM.colors.accent.red} /></button>
             </div>
           )}
         </div>
@@ -116,257 +141,163 @@ export function SongCard({ song, onPlay, isPlaying, showActions, onEdit, onDelet
     );
   }
 
-  // ── LIST CARD (default) ────────────────────────────────────────────────────
+  // ── LIST CARD — Variant C (Flux) + energy pips ────────────────────────────
   return (
-    <div className="card-hover" style={{
-      background: DESIGN_SYSTEM.colors.bg.card,
-      borderRadius: DESIGN_SYSTEM.radius.lg,
-      padding: `${DESIGN_SYSTEM.spacing.md} ${DESIGN_SYSTEM.spacing.lg}`,
-      border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
-      display: "flex",
-      alignItems: "center",
-      gap: DESIGN_SYSTEM.spacing.md,
-      transition: `all ${DESIGN_SYSTEM.transition.normal}`,
-      cursor: 'pointer',
-      boxShadow: DESIGN_SYSTEM.shadow.sm,
-    }}
+    <div
+      className="song-card-flux"
+      style={{
+        background: '#16161C',
+        borderRadius: 14,
+        padding: '16px 20px',
+        border: '1px solid rgba(255,255,255,0.07)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 16,
+        transition: 'background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease',
+        cursor: 'pointer',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
       onMouseEnter={e => {
-        e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.border.accent;
-        e.currentTarget.style.background = DESIGN_SYSTEM.colors.bg.hover;
-        e.currentTarget.style.transform = 'translateY(-2px)';
-        e.currentTarget.style.boxShadow = DESIGN_SYSTEM.shadow.hover;
+        e.currentTarget.style.background = '#1C1C24';
+        e.currentTarget.style.borderColor = 'rgba(139,92,246,0.25)';
+        e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(139,92,246,0.10)';
+        const overlay = e.currentTarget.querySelector('.flux-overlay');
+        if (overlay) overlay.style.opacity = '1';
+        const actions = e.currentTarget.querySelector('.flux-actions');
+        if (actions) actions.style.opacity = '1';
       }}
       onMouseLeave={e => {
-        e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.border.light;
-        e.currentTarget.style.background = DESIGN_SYSTEM.colors.bg.card;
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = DESIGN_SYSTEM.shadow.sm;
+        e.currentTarget.style.background = '#16161C';
+        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)';
+        e.currentTarget.style.boxShadow = 'none';
+        const overlay = e.currentTarget.querySelector('.flux-overlay');
+        if (overlay) overlay.style.opacity = '0';
+        const actions = e.currentTarget.querySelector('.flux-actions');
+        if (actions) actions.style.opacity = '0';
       }}
       tabIndex={0}
       onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && onPlay) { e.preventDefault(); onPlay(song); } }}
     >
-      {/* Play Button - Professional size */}
-      <div onClick={() => onPlay && onPlay(song)} style={{
-        width: 52,
-        height: 52,
-        borderRadius: DESIGN_SYSTEM.radius.md,
-        background: DESIGN_SYSTEM.colors.gradient.subtle,
-        border: `1.5px solid ${DESIGN_SYSTEM.colors.brand.accent}40`,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        cursor: "pointer",
-        flexShrink: 0,
-        transition: `all ${DESIGN_SYSTEM.transition.fast}`,
-        boxShadow: '0 2px 8px rgba(6,182,212,0.15)',
-      }}
-        onMouseEnter={e => {
-          e.currentTarget.style.background = DESIGN_SYSTEM.colors.gradient.hover;
-          e.currentTarget.style.transform = 'scale(1.08)';
-          e.currentTarget.style.boxShadow = '0 4px 12px rgba(6,182,212,0.25)';
-          e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.brand.accent + '60';
-        }}
-        onMouseLeave={e => {
-          e.currentTarget.style.background = DESIGN_SYSTEM.colors.gradient.subtle;
-          e.currentTarget.style.transform = 'scale(1)';
-          e.currentTarget.style.boxShadow = '0 2px 8px rgba(6,182,212,0.15)';
-          e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.brand.accent + '40';
-        }}
-      >
-        {isPlaying ?
-          <Pause size={20} color={DESIGN_SYSTEM.colors.text.primary} /> :
-          <Play size={20} color={DESIGN_SYSTEM.colors.text.primary} fill={DESIGN_SYSTEM.colors.text.primary} />
-        }
-      </div>
+      {/* Subtle purple gradient overlay on hover */}
+      <div className="flux-overlay" style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0, transition: 'opacity 0.25s ease',
+        background: 'linear-gradient(135deg, rgba(139,92,246,0.04) 0%, transparent 60%)',
+      }} />
 
-      {/* Song Info - Clear hierarchy */}
-      <div style={{ flex: '0 0 auto', minWidth: 120, maxWidth: 220 }}>
+      {/* Play button */}
+      <div onClick={() => onPlay && onPlay(song)} style={{ flexShrink: 0, zIndex: 1 }}>
         <div style={{
-          color: DESIGN_SYSTEM.colors.text.primary,
-          fontWeight: DESIGN_SYSTEM.fontWeight.semibold,
-          fontSize: DESIGN_SYSTEM.fontSize.md,
-          fontFamily: "'Space Grotesk', sans-serif",
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          marginBottom: '2px',
-          letterSpacing: '-0.1px',
+          width: 44, height: 44, borderRadius: '50%',
+          background: isPlaying ? 'linear-gradient(135deg, #C9A84C, #A8832A)' : 'rgba(201,168,76,0.10)',
+          border: `1.5px solid rgba(201,168,76,${isPlaying ? '0.8' : '0.35'})`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer', transition: 'all 0.18s ease', flexShrink: 0,
+          boxShadow: isPlaying ? '0 0 18px rgba(201,168,76,0.35)' : 'none',
         }}>
-          {song.title}
-        </div>
-        {!hideComposerName && song.composer_name && (
-          <div style={{ color: DESIGN_SYSTEM.colors.text.tertiary, fontSize: DESIGN_SYSTEM.fontSize.sm, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {song.composer_name}
-          </div>
-        )}
-        {/* BPM + duration sub-line in list mode */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
-          {song.bpm && <span style={{ color: DESIGN_SYSTEM.colors.accent.amber, fontSize: 11, fontWeight: 600 }}>⚡ {song.bpm}</span>}
-          {song.duration && <span style={{ color: DESIGN_SYSTEM.colors.text.muted, fontSize: 11 }}>{song.duration}</span>}
+          {isPlaying
+            ? <Pause size={16} color="#0F0F13" />
+            : <Play size={16} color="#C9A84C" fill="#C9A84C" style={{ marginLeft: 2 }} />}
         </div>
       </div>
 
-      {/* Metadata pills — 3-row layout */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 5, flex: "1 1 auto", minWidth: 0, overflow: 'hidden' }}>
-        {/* Row 1: genres + key + mood */}
-        <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
-          {primaryGenre && <Badge color={DESIGN_SYSTEM.colors.brand.purple}>{primaryGenre}</Badge>}
-          {secondaryGenre && !isMobile && <Badge color={DESIGN_SYSTEM.colors.brand.blue}>{secondaryGenre}</Badge>}
-          {tertiaryGenre && !isMobile && <Badge color={DESIGN_SYSTEM.colors.text.muted}>{tertiaryGenre}</Badge>}
-          {song.mood && !isMobile && <Badge color={DESIGN_SYSTEM.colors.brand.accent}>{song.mood}</Badge>}
-          {song.key && !isMobile && (
-            <Badge color={DESIGN_SYSTEM.colors.brand.secondary}>
-              <Music size={10} style={{ marginRight: 3, verticalAlign: "middle" }} />{song.key}
-            </Badge>
+      {/* Body */}
+      <div style={{ flex: 1, minWidth: 0, zIndex: 1 }}>
+
+        {/* Title + composer */}
+        <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, fontWeight: 700, color: '#F1F5F9', letterSpacing: '-0.01em', marginBottom: 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {song.title}
+          {!hideComposerName && song.composer_name && (
+            <span style={{ color: '#7A7468', fontWeight: 400, fontSize: 13, marginLeft: 8 }}>{song.composer_name}</span>
           )}
         </div>
-        {/* Row 2: production info — vocals, energy, instruments, use cases */}
-        {!isMobile && (vocals || energy != null || instruments.length > 0 || useCases.length > 0) && (
-          <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
-            {vocals && (
-              <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 5, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', color: '#6ee7b7', whiteSpace: 'nowrap' }}>
-                {vocals}
-              </span>
+
+        {/* Stats row: BPM · Duration · Key · waveform */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap', marginBottom: 8, overflow: 'hidden' }}>
+          {song.bpm && (
+            <StatPill>
+              <span style={{ color: '#C9A84C', fontWeight: 700 }}>{song.bpm}</span> BPM
+            </StatPill>
+          )}
+          {song.duration && <StatPill>{song.duration}</StatPill>}
+          {song.key && <StatPill><Music size={9} style={{ marginRight: 2 }} />{song.key}</StatPill>}
+          {!isMobile && <Waveform />}
+        </div>
+
+        {/* Tag row */}
+        {!isMobile && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+            {/* Genres */}
+            {primaryGenre && (
+              <Pill variant="purple">
+                <svg width="6" height="6" viewBox="0 0 6 6"><circle cx="3" cy="3" r="2.5" fill="#8B5CF6"/></svg>
+                {primaryGenre}
+              </Pill>
             )}
-            {energy != null && (
-              <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 5, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: DESIGN_SYSTEM.colors.text.muted, whiteSpace: 'nowrap' }}>
-                Energy {energy}/10
-              </span>
-            )}
-            {instruments.slice(0, 2).map((inst, i) => (
-              <span key={i} style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 5, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: DESIGN_SYSTEM.colors.text.muted, whiteSpace: 'nowrap' }}>
-                {inst}
-              </span>
-            ))}
-            {useCases.slice(0, 2).map((uc, i) => (
-              <span key={i} style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 5, background: `${DESIGN_SYSTEM.colors.brand.primary}10`, border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}25`, color: DESIGN_SYSTEM.colors.brand.primary, whiteSpace: 'nowrap' }}>
-                {uc}
-              </span>
-            ))}
+            {secondaryGenre && <Pill variant="blue">{secondaryGenre}</Pill>}
+            {tertiaryGenre  && <Pill variant="slate">{tertiaryGenre}</Pill>}
+
+            {/* Mood */}
+            {song.mood && <><Divider /><Pill variant="gold">{song.mood}</Pill></>}
+
+            {/* Vocals + instruments + use cases */}
+            {(vocals || instruments.length > 0 || useCases.length > 0) && <Divider />}
+            {vocals && <Pill variant="green">{vocals}</Pill>}
+            {instruments.slice(0, 2).map((inst, i) => <Pill key={i} variant="ghost">{inst}</Pill>)}
+            {useCases.slice(0, 2).map((uc, i) => <Pill key={i} variant="ghost">{uc}</Pill>)}
           </div>
         )}
-        {/* Row 3: status badges */}
-        <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+
+        {/* Mobile: just primary genre + mood */}
+        {isMobile && (
+          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+            {primaryGenre && <Pill variant="purple">{primaryGenre}</Pill>}
+            {song.mood && <Pill variant="gold">{song.mood}</Pill>}
+          </div>
+        )}
+      </div>
+
+      {/* Right column: energy + status badges + actions */}
+      <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, zIndex: 1 }}>
+
+        {/* Energy pips */}
+        {!isMobile && <EnergyPips value={energy} />}
+
+        {/* Status badges */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5 }}>
           {isOneStopTrack && (
-            <span style={{
-              background: `${DESIGN_SYSTEM.colors.brand.primary}18`,
-              color: DESIGN_SYSTEM.colors.brand.primary,
-              fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
-              display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap",
-              border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}40`,
-            }} title="One-Stop — no split negotiations needed">
-              <Shield size={10} /> One-Stop
-            </span>
-          )}
-          {!isOneStopTrack && licensingStatus && (
-            <span style={{
-              background: DESIGN_SYSTEM.colors.bg.elevated,
-              color: DESIGN_SYSTEM.colors.text.secondary,
-              fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 6,
-              display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap",
-              border: `1px solid ${DESIGN_SYSTEM.colors.border.light}`,
-            }}>
-              <Shield size={10} /> {licensingStatus}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 6, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.28)', color: '#6EE7B7', whiteSpace: 'nowrap' }}>
+              <Shield size={9} /> One-Stop
             </span>
           )}
           {song.verification_status === 'verified' && (
-            <span className="badge-verified-shimmer" style={{
-              color: DESIGN_SYSTEM.colors.brand.primary, fontSize: 11, fontWeight: 700,
-              padding: "3px 10px", borderRadius: 6, display: "inline-flex", alignItems: "center",
-              gap: 3, whiteSpace: "nowrap", border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}40`,
-            }} title="Rights have been verified">
-              <CheckCircle size={10} /> Verified
+            <span className="badge-verified-shimmer" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 6, color: '#C9A84C', border: '1px solid rgba(201,168,76,0.35)', whiteSpace: 'nowrap' }}>
+              <CheckCircle size={9} /> Verified
             </span>
           )}
           {song.verification_status === 'pending_splits' && !isOneStopTrack && (
-            <span style={{
-              background: `${DESIGN_SYSTEM.colors.accent.amber}15`, color: DESIGN_SYSTEM.colors.accent.amber,
-              fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
-              display: "inline-flex", alignItems: "center", gap: 3, whiteSpace: "nowrap",
-              border: `1px solid ${DESIGN_SYSTEM.colors.accent.amber}30`,
-            }} title="Ownership splits need verification">
-              <AlertTriangle size={10} /> Pending Verification
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.28)', color: '#FCD34D', whiteSpace: 'nowrap' }}>
+              <AlertTriangle size={9} /> Pending
             </span>
           )}
         </div>
-      </div>
 
-      {/* Actions */}
-      <div style={{ display: "flex", alignItems: "center", gap: DESIGN_SYSTEM.spacing.md }}>
-        {onViewRights && song.verification_status === 'verified' && (
-          <button onClick={(e) => { e.stopPropagation(); onViewRights(song); }}
-            style={{
-              background: `${DESIGN_SYSTEM.colors.brand.primary}15`,
-              border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}30`,
-              borderRadius: DESIGN_SYSTEM.radius.sm,
-              padding: `${DESIGN_SYSTEM.spacing.xs} 12px`,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 5,
-              fontSize: 12,
-              fontWeight: 600,
-              color: DESIGN_SYSTEM.colors.brand.primary,
-              fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-              transition: DESIGN_SYSTEM.transition.fast,
-              whiteSpace: "nowrap",
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = `${DESIGN_SYSTEM.colors.brand.primary}25`;
-              e.currentTarget.style.borderColor = `${DESIGN_SYSTEM.colors.brand.primary}50`;
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = `${DESIGN_SYSTEM.colors.brand.primary}15`;
-              e.currentTarget.style.borderColor = `${DESIGN_SYSTEM.colors.brand.primary}30`;
-            }}
-            title="View ownership splits"
-          >
-            <Shield size={12} /> View Rights
-          </button>
-        )}
+        {/* Actions — fade in on hover */}
         {showActions && (
-          <div style={{ display: "flex", gap: DESIGN_SYSTEM.spacing.xs }}>
-            <button aria-label={`Edit ${song.title}`} className="song-action edit" onClick={() => onEdit(song)} style={{
-              background: DESIGN_SYSTEM.colors.brand.primary + "15",
-              border: `1px solid ${DESIGN_SYSTEM.colors.brand.primary}30`,
-              borderRadius: DESIGN_SYSTEM.radius.sm,
-              padding: `${DESIGN_SYSTEM.spacing.xs} 10px`,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              transition: DESIGN_SYSTEM.transition.fast,
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = DESIGN_SYSTEM.colors.brand.primary + "25";
-              e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.brand.primary + "50";
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = DESIGN_SYSTEM.colors.brand.primary + "15";
-              e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.brand.primary + "30";
-            }}
-            >
-              <Edit size={14} color={DESIGN_SYSTEM.colors.brand.primary} />
+          <div className="flux-actions" style={{ display: 'flex', gap: 6, opacity: 0, transition: 'opacity 0.15s ease' }}>
+            {onViewRights && song.verification_status === 'verified' && (
+              <button onClick={(e) => { e.stopPropagation(); onViewRights(song); }}
+                style={{ background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.25)', borderRadius: 7, padding: '5px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, color: '#C9A84C', transition: 'all 0.15s' }}>
+                <Shield size={11} /> Rights
+              </button>
+            )}
+            <button onClick={(e) => { e.stopPropagation(); onEdit(song); }}
+              style={{ background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.25)', borderRadius: 7, padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'all 0.15s' }}>
+              <Edit size={13} color="#C9A84C" />
             </button>
-            <button aria-label={`Delete ${song.title}`} className="song-action delete" onClick={() => onDelete(song)} style={{
-              background: DESIGN_SYSTEM.colors.accent.red + "15",
-              border: `1px solid ${DESIGN_SYSTEM.colors.accent.red}30`,
-              borderRadius: DESIGN_SYSTEM.radius.sm,
-              padding: `${DESIGN_SYSTEM.spacing.xs} 10px`,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              transition: DESIGN_SYSTEM.transition.fast,
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = DESIGN_SYSTEM.colors.accent.red + "25";
-              e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.accent.red + "50";
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = DESIGN_SYSTEM.colors.accent.red + "15";
-              e.currentTarget.style.borderColor = DESIGN_SYSTEM.colors.accent.red + "30";
-            }}
-            >
-              <Trash2 size={14} color={DESIGN_SYSTEM.colors.accent.red} />
+            <button onClick={(e) => { e.stopPropagation(); onDelete(song); }}
+              style={{ background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.22)', borderRadius: 7, padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'all 0.15s' }}>
+              <Trash2 size={13} color="#F87171" />
             </button>
           </div>
         )}
