@@ -753,7 +753,10 @@ export default function SongPitch() {
         setUserProfile(data);
         if (hasValidRole) {
           setNeedsOnboarding(false);
-          if (!getPageFromHash()) {
+          // Use pageRef (captured at init from the hash) rather than re-reading
+          // window.location.hash, which was already stripped by replaceState before
+          // this runs — otherwise every refresh resets to dashboard.
+          if (!VALID_PAGES.has(pageRef.current)) {
             setPage('dashboard');
           }
         } else {
