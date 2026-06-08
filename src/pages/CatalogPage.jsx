@@ -227,12 +227,20 @@ export function CatalogPage({ audioPlayer, isMobile = false, userProfile }) {
     else if (sortBy === 'title_za') query = query.order('title', { ascending: false });
     else query = query.order('created_at', { ascending: false }); // newest (default)
 
-    if (selectedGenre !== 'all') query = query.ilike('genre', selectedGenre);
+    if (selectedGenre !== 'all') {
+      // Match against primary, secondary, or tertiary genre
+      query = query.or(
+        `genre.ilike.%${selectedGenre}%,primary_genre.ilike.%${selectedGenre}%,secondary_genre.ilike.%${selectedGenre}%,tertiary_genre.ilike.%${selectedGenre}%`
+      );
+    }
     if (selectedMood !== 'all') query = query.ilike('mood', selectedMood);
     if (selectedVerification === 'verified') query = query.eq('verification_status', 'verified');
     if (selectedVerification === 'pending') query = query.neq('verification_status', 'verified');
     if (debouncedSearch.trim()) {
-      query = query.or(`title.ilike.%${debouncedSearch.trim()}%,genre.ilike.%${debouncedSearch.trim()}%,mood.ilike.%${debouncedSearch.trim()}%`);
+      const s = debouncedSearch.trim();
+      query = query.or(
+        `title.ilike.%${s}%,genre.ilike.%${s}%,primary_genre.ilike.%${s}%,secondary_genre.ilike.%${s}%,tertiary_genre.ilike.%${s}%,mood.ilike.%${s}%`
+      );
     }
 
     return query.range(from, to);

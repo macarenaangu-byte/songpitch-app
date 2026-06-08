@@ -7,6 +7,7 @@ import { Toaster } from 'react-hot-toast';
 import { showToast } from './utils/toast';
 import { friendlyError } from './lib/utils';
 import { useAudioPlayer } from './hooks/useAudioPlayer';
+import { useNotifications } from './hooks/useNotifications';
 import {
   isPushSupported,
   registerServiceWorker,
@@ -96,8 +97,6 @@ export default function SongPitch() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobileView, setIsMobileView] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 768 : false));
   // Notification system
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const notifPanelRef = useRef(null);
   const [supportTargetUserId, setSupportTargetUserId] = useState(null);
@@ -135,6 +134,17 @@ export default function SongPitch() {
 
   // Global audio player - shared across all pages
   const audioPlayer = useAudioPlayer();
+
+  // Notifications + sidebar badge counts — extracted to custom hook
+  const {
+    notifications, unreadCount, badgeCounts: notifBadgeCounts,
+    loadSidebarBadges, handleMarkRead, handleMarkAllRead, handleDismiss,
+  } = useNotifications({ userProfile, pageRef, activeConversationRef });
+
+  // Keep the useState badgeCounts in sync with the hook's computed value
+  useEffect(() => {
+    setBadgeCounts(notifBadgeCounts);
+  }, [notifBadgeCounts]);
 
   useEffect(() => {
     if (!session || !userProfile) {
@@ -447,123 +457,6 @@ export default function SongPitch() {
     })();
   }, [userProfile?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ─── Notification system: load + realtime subscription ─────────────────────
-  const loadNotifications = async () => {
-    if (!userProfile) return;
-    try {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', userProfile.id)
-        .order('created_at', { ascending: false })
-        .limit(50);
-      if (error) throw error;
-      setNotifications(data || []);
-      setUnreadCount((data || []).filter(n => !n.is_read).length);
-    } catch (err) {
-      console.error('Error loading notifications:', err);
-    }
-  };
-
-  useEffect(() => {
-    if (!userProfile) return;
-    loadNotifications();
-
-    const channel = supabase
-      .channel(`notifications:${userProfile.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${userProfile.id}`
-        },
-        async (payload) => {
-          const incoming = payload.new;
-          const isNewMessageNotif = incoming?.type === 'new_message';
-          const isMessagesPage = pageRef.current === 'messages';
-          const incomingConversationId = incoming?.metadata?.conversation_id;
-          const sameActiveConversation = isNewMessageNotif &&
-            isMessagesPage &&
-            activeConversationRef.current &&
-            String(incomingConversationId) === String(activeConversationRef.current);
-
-          if (sameActiveConversation) {
-            setNotifications(prev => [{ ...incoming, is_read: true }, ...prev]);
-            try {
-              await supabase.from('notifications').update({ is_read: true }).eq('id', incoming.id);
-            } catch (_) {
-              // non-blocking
-            }
-            return;
-          }
-
-          setNotifications(prev => [incoming, ...prev]);
-          if (!incoming?.is_read) {
-            setUnreadCount(prev => prev + 1);
-          }
-
-          // While actively in the messaging area, skip noisy toast spam for new message notifications.
-          if (!(isMessagesPage && isNewMessageNotif)) {
-            showToast.info(incoming.title);
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userProfile]);
-
-  const handleMarkRead = async (notifId) => {
-    try {
-      await supabase.from('notifications').update({ is_read: true }).eq('id', notifId);
-      setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: true } : n));
-      setUnreadCount(prev => Math.max(0, prev - 1));
-    } catch (err) {
-      console.error('Failed to mark notification as read:', err);
-    }
-  };
-
-  const handleMarkAllRead = async () => {
-    try {
-      await supabase.from('notifications').update({ is_read: true }).eq('user_id', userProfile.id).eq('is_read', false);
-      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-      setUnreadCount(0);
-    } catch (err) {
-      console.error('Failed to mark all as read:', err);
-    }
-  };
-
-  const handleDismiss = async (notificationId) => {
-    const target = notifications.find(n => n.id === notificationId);
-    setNotifications(prev => prev.filter(n => n.id !== notificationId));
-    if (target && !target.is_read) {
-      setUnreadCount(prev => Math.max(0, prev - 1));
-    }
-
-    try {
-      const { error } = await supabase
-        .from('notifications')
-        .delete()
-        .eq('id', notificationId)
-        .eq('user_id', userProfile.id);
-      if (error) throw error;
-    } catch (err) {
-      // Revert local state if DB delete fails
-      if (target) {
-        setNotifications(prev => [target, ...prev]);
-        if (!target.is_read) {
-          setUnreadCount(prev => prev + 1);
-        }
-      }
-      showToast.error(friendlyError(err));
-    }
-  };
-
   const handleNotifClick = (notification, targetPage) => {
     if (!notification.is_read) handleMarkRead(notification.id);
     setPage(targetPage);
@@ -770,61 +663,7 @@ export default function SongPitch() {
     }
   };
 
-  const loadSidebarBadges = async () => {
-    if (!userProfile) return;
-    try {
-      // Unread messages for current user: messages in user's conversations from other senders where is_read=false
-      const { data: conversationRows, error: convError } = await supabase
-        .from('conversations')
-        .select('id')
-        .or(`user1_id.eq.${userProfile.id},user2_id.eq.${userProfile.id}`);
-      if (convError) throw convError;
-
-      const conversationIds = (conversationRows || []).map(c => c.id);
-      let unreadMessages = 0;
-      if (conversationIds.length > 0) {
-        const { count: unreadCount, error: unreadError } = await supabase
-          .from('messages')
-          .select('id', { count: 'exact', head: true })
-          .in('conversation_id', conversationIds)
-          .neq('sender_id', userProfile.id)
-          .eq('is_read', false);
-        if (unreadError) throw unreadError;
-        unreadMessages = unreadCount || 0;
-      }
-
-      // Unread opportunities for composers: open opportunities minus viewed opportunities
-      let unreadOpportunities = 0;
-      if (userProfile.account_type === 'composer') {
-        const { data: openOpps, error: oppError } = await supabase
-          .from('opportunities')
-          .select('id')
-          .eq('status', 'Open');
-        if (oppError) throw oppError;
-
-        const openIds = (openOpps || []).map(o => o.id);
-        if (openIds.length > 0) {
-          const { data: viewedRows, error: viewedError } = await supabase
-            .from('viewed_opportunities')
-            .select('opportunity_id')
-            .eq('user_id', userProfile.id)
-            .in('opportunity_id', openIds);
-          if (viewedError) throw viewedError;
-
-          const viewedSet = new Set((viewedRows || []).map(v => v.opportunity_id));
-          unreadOpportunities = Math.max(0, openIds.length - viewedSet.size);
-        }
-      }
-
-      setBadgeCounts(prev => ({
-        ...prev,
-        messages: unreadMessages,
-        opportunities: unreadOpportunities,
-      }));
-    } catch (err) {
-      console.error('Error loading sidebar badges:', err);
-    }
-  };
+  // loadSidebarBadges now comes from useNotifications hook above
 
   const loadStats = async () => {
     try {

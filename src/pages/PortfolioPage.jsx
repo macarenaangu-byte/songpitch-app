@@ -313,12 +313,19 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false, onNa
         if (error) throw error;
 
         if (isOneStop && insertedSong?.id) {
-          const composerName = `${userProfile.first_name} ${userProfile.last_name}`;
-          await supabase.from('split_sheets').insert([{
-            user_id: userProfile.id, song_id: insertedSong.id, song_title: songTitle,
-            splits: { composition: [{ name: composerName, role: 'Songwriter/Composer', percentage: 100 }], master: [{ name: composerName, role: 'Owner', percentage: 100 }] },
-            signature: composerName, attested: true, input_method: 'auto_one_stop'
-          }]);
+          // Only auto-create if no split sheet exists yet for this song
+          const { count } = await supabase
+            .from('split_sheets')
+            .select('id', { count: 'exact', head: true })
+            .eq('song_id', insertedSong.id);
+          if (!count || count === 0) {
+            const composerName = `${userProfile.first_name} ${userProfile.last_name}`;
+            await supabase.from('split_sheets').insert([{
+              user_id: userProfile.id, song_id: insertedSong.id, song_title: songTitle,
+              splits: { composition: [{ name: composerName, role: 'Songwriter/Composer', percentage: 100 }], master: [{ name: composerName, role: 'Owner', percentage: 100 }] },
+              signature: composerName, attested: true, input_method: 'auto_one_stop'
+            }]);
+          }
         }
       }
 
@@ -479,8 +486,12 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false, onNa
         const { data: insertedSong, error: insertError } = await supabase.from('songs').insert([{ composer_id: userProfile.id, title: item.title, primary_genre: item.genre || null, secondary_genre: item.secondary_genre || null, genre: item.genre || null, duration: item.duration || null, bpm: item.bpm ? parseInt(item.bpm) : null, instrument_type: item.instrument_type || null, licensing_status: item.licensing_status || null, is_one_stop: isOneStop, verification_status: isOneStop ? 'verified' : 'pending_splits', key: item.key || null, mood: item.mood || null, mood_tags: item.mood ? [item.mood] : null, description: item.description || null, year: item.year || null, audio_url: urlData.publicUrl }]).select('id').single();
         if (insertError) { console.error(`Insert failed for "${item.title}":`, insertError); continue; }
         if (isOneStop && insertedSong?.id) {
-          const composerName = `${userProfile.first_name} ${userProfile.last_name}`;
-          await supabase.from('split_sheets').insert([{ user_id: userProfile.id, song_id: insertedSong.id, song_title: item.title, splits: { composition: [{ name: composerName, role: 'Songwriter/Composer', percentage: 100 }], master: [{ name: composerName, role: 'Owner', percentage: 100 }] }, signature: composerName, attested: true, input_method: 'auto_one_stop' }]);
+          const { count: ssCount } = await supabase
+            .from('split_sheets').select('id', { count: 'exact', head: true }).eq('song_id', insertedSong.id);
+          if (!ssCount || ssCount === 0) {
+            const composerName = `${userProfile.first_name} ${userProfile.last_name}`;
+            await supabase.from('split_sheets').insert([{ user_id: userProfile.id, song_id: insertedSong.id, song_title: item.title, splits: { composition: [{ name: composerName, role: 'Songwriter/Composer', percentage: 100 }], master: [{ name: composerName, role: 'Owner', percentage: 100 }] }, signature: composerName, attested: true, input_method: 'auto_one_stop' }]);
+          }
         }
       }
       showToast.success(`${analyzedData.length} songs uploaded successfully!`);
