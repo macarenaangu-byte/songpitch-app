@@ -56,24 +56,28 @@ export async function analyzeSplitSheet(file) {
  * Returns a Blob (application/pdf).
  */
 export async function generateSplitSheetPdf(data) {
-  if (!API_KEY) throw new Error('LegalSplits API key not configured (REACT_APP_LEGALSPLITS_API_KEY)');
-  const res = await fetch(`${BASE_URL}/api/v1/generate-split-sheet-pdf`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${API_KEY}`,
-    },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) {
-    let message = `LegalSplits API error (${res.status})`;
-    try { const d = await res.json(); if (d.error) message = d.error; } catch { /* ignore */ }
-    throw new Error(message);
+  // Try the LegalSplits Cloud Run API first; fall back to local jsPDF if unavailable
+  if (API_KEY) {
+    try {
+      const res = await fetch(`${BASE_URL}/api/v1/generate-split-sheet-pdf`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${API_KEY}`,
+        },
+        body: JSON.stringify(data),
+      });
+      if (res.ok) return res.blob();
+      // Non-OK → fall through to local generation
+      console.warn(`LegalSplits API returned ${res.status} — falling back to local PDF generation`);
+    } catch (err) {
+      console.warn('LegalSplits API unreachable — falling back to local PDF generation:', err.message);
+    }
   }
-  return res.blob();
+  // Local fallback: generates a branded PDF entirely in the browser via jsPDF
+  return _generateSplitSheetPdfLocal(data);
 }
 
-// eslint-disable-next-line no-unused-vars
 async function _generateSplitSheetPdfLocal(data) {
   const { jsPDF } = await import('jspdf');
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
