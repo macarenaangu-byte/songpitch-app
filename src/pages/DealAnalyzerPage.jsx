@@ -824,12 +824,20 @@ function VaultResultsPanel({ result, userProfile }) {
       {/* Revenue Streams Taken */}
       {result.revenue_streams_taken?.length > 0 && (
         <Section title="💰 Revenue Streams Taken">
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {result.revenue_streams_taken.map((stream, i) => (
-              <span key={i} style={{ background: 'rgba(248,113,113,0.10)', border: '1px solid rgba(248,113,113,0.2)', color: RED, fontSize: 12, fontWeight: 600, padding: '5px 12px', borderRadius: 20 }}>
-                {stream}
-              </span>
-            ))}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {result.revenue_streams_taken.map((stream, i) => {
+              const name = typeof stream === 'string' ? stream : (stream.stream ?? stream.name ?? JSON.stringify(stream));
+              const pct  = typeof stream === 'object' && stream.percentage != null ? ` — ${stream.percentage}%` : '';
+              const note = typeof stream === 'object' && stream.notes ? stream.notes : '';
+              return (
+                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                  <span style={{ background: 'rgba(248,113,113,0.10)', border: '1px solid rgba(248,113,113,0.2)', color: RED, fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 20, whiteSpace: 'nowrap' }}>
+                    {name}{pct}
+                  </span>
+                  {note && <span style={{ fontSize: 12, color: '#7A7468', lineHeight: 1.5, paddingTop: 3 }}>{note}</span>}
+                </div>
+              );
+            })}
           </div>
         </Section>
       )}
