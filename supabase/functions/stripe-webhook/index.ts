@@ -274,17 +274,55 @@ async function sendUserConfirmationEmail(toEmail: string, tier: string, promoEnd
 // ── Database helpers ──────────────────────────────────────────────────────────
 
 async function setTier(stripeCustomerId: string, tier: 'free' | 'basic' | 'pro', subscriptionId?: string, endsAt?: Date, promoEndsAt?: Date) {
-  const { error } = await supabase
+  const payload = {
+    subscription_tier:      tier,
+    stripe_subscription_id: subscriptionId ?? null,
+    subscription_status:    tier === 'free' ? 'canceled' : 'active',
+    subscription_ends_at:   (endsAt && !isNaN(endsAt.getTime())) ? endsAt.toISOString() : null,
+    promo_ends_at:          (promoEndsAt && !isNaN(promoEndsAt.getTime())) ? promoEndsAt.toISOString() : null,
+  };
+
+  // Primary: match by stripe_customer_id
+  const { error, count } = await supabase
     .from('user_profiles')
-    .update({
-      subscription_tier:      tier,
-      stripe_subscription_id: subscriptionId ?? null,
-      subscription_status:    tier === 'free' ? 'canceled' : 'active',
-      subscription_ends_at:   (endsAt && !isNaN(endsAt.getTime())) ? endsAt.toISOString() : null,
-      promo_ends_at:          (promoEndsAt && !isNaN(promoEndsAt.getTime())) ? promoEndsAt.toISOString() : null,
-    })
-    .eq('stripe_customer_id', stripeCustomerId);
-  if (error) console.error('[stripe-webhook] setTier error:', error);
+    .update(payload)
+    .eq('stripe_customer_id', stripeCustomerId)
+    .select('id', { count: 'exact', head: true });
+
+  if (error) {
+    console.error('[stripe-webhook] setTier error (by customer ID):', error);
+  } else if ((count ?? 0) === 0) {
+    // Fallback: no profile has this stripe_customer_id yet.
+    // This can happen if the checkout-session customer-ID save raced or failed.
+    // Try to match by email via the Stripe customer record.
+    console.warn(`[stripe-webhook] setTier: no profile found for stripe_customer_id=${stripeCustomerId} — attempting email fallback`);
+    try {
+      const customer = await stripe.customers.retrieve(stripeCustomerId);
+      const email = (customer as Stripe.Customer).email;
+      if (email) {
+        // Also save the stripe_customer_id so future events resolve instantly
+        const { error: emailError, count: emailCount } = await supabase
+          .from('user_profiles')
+          .update({ ...payload, stripe_customer_id: stripeCustomerId })
+          .eq('email', email)
+          .select('id', { count: 'exact', head: true });
+
+        if (emailError) {
+          console.error('[stripe-webhook] setTier email fallback error:', emailError);
+        } else if ((emailCount ?? 0) === 0) {
+          console.error(`[stripe-webhook] setTier: FAILED — no profile found for email=${email} (customer=${stripeCustomerId}). Tier NOT updated.`);
+        } else {
+          console.log(`[stripe-webhook] setTier: email fallback succeeded for email=${email} tier=${tier}`);
+        }
+      } else {
+        console.error(`[stripe-webhook] setTier: FAILED — Stripe customer ${stripeCustomerId} has no email. Tier NOT updated.`);
+      }
+    } catch (stripeErr) {
+      console.error('[stripe-webhook] setTier: could not retrieve Stripe customer for fallback:', stripeErr);
+    }
+  } else {
+    console.log(`[stripe-webhook] setTier: updated ${count} profile(s) for customer=${stripeCustomerId} tier=${tier}`);
+  }
 }
 
 // Extract promo end date from a Stripe subscription's discount (if active)
