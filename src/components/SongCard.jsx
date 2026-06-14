@@ -143,6 +143,140 @@ export function SongCard({ song, onPlay, isPlaying, showActions, onEdit, onDelet
     );
   }
 
+  // ── MOBILE CARD ────────────────────────────────────────────────────────────
+  if (isMobile) {
+    return (
+      <div
+        className="song-card-flux"
+        style={{
+          background: '#16161C',
+          borderRadius: 14,
+          padding: '14px 14px',
+          border: '1px solid rgba(255,255,255,0.07)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10,
+          cursor: 'pointer',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+        tabIndex={0}
+        onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && onPlay) { e.preventDefault(); onPlay(song); } }}
+      >
+        {/* Top row: play button + title + badges */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div onClick={() => onPlay && onPlay(song)} style={{ flexShrink: 0 }}>
+            <div style={{
+              width: 40, height: 40, borderRadius: '50%',
+              background: isPlaying ? 'linear-gradient(135deg, #C9A84C, #A8832A)' : 'rgba(201,168,76,0.10)',
+              border: `1.5px solid rgba(201,168,76,${isPlaying ? '0.8' : '0.35'})`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', transition: 'all 0.18s ease',
+              boxShadow: isPlaying ? '0 0 14px rgba(201,168,76,0.35)' : 'none',
+            }}>
+              {isPlaying
+                ? <Pause size={14} color="#0F0F13" />
+                : <Play size={14} color="#C9A84C" fill="#C9A84C" style={{ marginLeft: 2 }} />}
+            </div>
+          </div>
+
+          {/* Title */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, fontWeight: 700, color: '#F1F5F9', letterSpacing: '-0.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {song.title}
+            </div>
+            {!hideComposerName && song.composer_name && (
+              <div style={{ color: '#7A7468', fontSize: 12, marginTop: 1 }}>{song.composer_name}</div>
+            )}
+          </div>
+
+          {/* Status badges */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+            {isOneStopTrack && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.28)', color: '#6EE7B7', whiteSpace: 'nowrap' }}>
+                <Shield size={9} /> One-Stop
+              </span>
+            )}
+            {song.verification_status === 'verified' && (
+              <span className="badge-verified-shimmer" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 6, color: '#C9A84C', border: '1px solid rgba(201,168,76,0.35)', whiteSpace: 'nowrap' }}>
+                <CheckCircle size={9} /> Verified
+              </span>
+            )}
+            {song.verification_status === 'pending_splits' && !isOneStopTrack && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.28)', color: '#FCD34D', whiteSpace: 'nowrap' }}>
+                <AlertTriangle size={9} /> Pending
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Stats row: BPM · Duration · Key */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+          {song.bpm && (
+            <StatPill>
+              <span style={{ color: '#C9A84C', fontWeight: 700 }}>{song.bpm}</span> BPM
+            </StatPill>
+          )}
+          {song.duration && <StatPill>{song.duration}</StatPill>}
+          {song.key && <StatPill><Music size={9} style={{ marginRight: 2 }} />{song.key}</StatPill>}
+          {energy != null && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginLeft: 2 }}>
+              <span style={{ fontSize: 9, fontWeight: 600, color: '#7A7468', letterSpacing: '0.3px' }}>ENERGY</span>
+              <div style={{ display: 'flex', gap: 2, marginLeft: 2 }}>
+                {Array.from({ length: 10 }, (_, i) => (
+                  <span key={i} style={{ display: 'block', width: 5, height: 5, borderRadius: 1, background: i < energy ? '#C9A84C' : 'rgba(255,255,255,0.08)' }} />
+                ))}
+              </div>
+              <span style={{ fontSize: 9, fontWeight: 600, color: '#7A7468', marginLeft: 2 }}>{energy}/10</span>
+            </div>
+          )}
+        </div>
+
+        {/* Full tag row — wrapping */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+          {primaryGenre && (
+            <Pill variant="purple">
+              <svg width="6" height="6" viewBox="0 0 6 6"><circle cx="3" cy="3" r="2.5" fill="#8B5CF6"/></svg>
+              {primaryGenre}
+            </Pill>
+          )}
+          {secondaryGenre && <Pill variant="blue">{secondaryGenre}</Pill>}
+          {tertiaryGenre  && <Pill variant="slate">{tertiaryGenre}</Pill>}
+
+          {moodTags.length > 0 && <Divider />}
+          {moodTags.slice(0, 3).map((m, i) => (
+            <Pill key={i} variant="gold">{m}</Pill>
+          ))}
+
+          {(vocals || instruments.length > 0 || useCases.length > 0) && <Divider />}
+          {vocals && <Pill variant="green">{vocals}</Pill>}
+          {instruments.slice(0, 3).map((inst, i) => <Pill key={i} variant="ghost">{inst}</Pill>)}
+          {useCases.slice(0, 2).map((uc, i) => <Pill key={i} variant="ghost">{uc}</Pill>)}
+        </div>
+
+        {/* Actions — always visible on mobile */}
+        {showActions && (
+          <div style={{ display: 'flex', gap: 6, paddingTop: 4, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            {onViewRights && song.verification_status === 'verified' && (
+              <button onClick={(e) => { e.stopPropagation(); onViewRights(song); }}
+                style={{ flex: 1, background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 8, padding: '7px 0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontSize: 11, fontWeight: 600, color: '#C9A84C' }}>
+                <Shield size={11} /> Rights
+              </button>
+            )}
+            <button onClick={(e) => { e.stopPropagation(); onEdit(song); }}
+              style={{ flex: 1, background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 8, padding: '7px 0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontSize: 11, fontWeight: 600, color: '#C9A84C' }}>
+              <Edit size={12} /> Edit
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); onDelete(song); }}
+              style={{ background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.2)', borderRadius: 8, padding: '7px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+              <Trash2 size={13} color="#F87171" />
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // ── LIST CARD — Variant C (Flux) + energy pips ────────────────────────────
   return (
     <div
@@ -223,50 +357,40 @@ export function SongCard({ song, onPlay, isPlaying, showActions, onEdit, onDelet
           )}
           {song.duration && <StatPill>{song.duration}</StatPill>}
           {song.key && <StatPill><Music size={9} style={{ marginRight: 2 }} />{song.key}</StatPill>}
-          {!isMobile && <Waveform />}
+          <Waveform />
         </div>
 
         {/* Tag row */}
-        {!isMobile && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-            {/* Genres */}
-            {primaryGenre && (
-              <Pill variant="purple">
-                <svg width="6" height="6" viewBox="0 0 6 6"><circle cx="3" cy="3" r="2.5" fill="#8B5CF6"/></svg>
-                {primaryGenre}
-              </Pill>
-            )}
-            {secondaryGenre && <Pill variant="blue">{secondaryGenre}</Pill>}
-            {tertiaryGenre  && <Pill variant="slate">{tertiaryGenre}</Pill>}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+          {/* Genres */}
+          {primaryGenre && (
+            <Pill variant="purple">
+              <svg width="6" height="6" viewBox="0 0 6 6"><circle cx="3" cy="3" r="2.5" fill="#8B5CF6"/></svg>
+              {primaryGenre}
+            </Pill>
+          )}
+          {secondaryGenre && <Pill variant="blue">{secondaryGenre}</Pill>}
+          {tertiaryGenre  && <Pill variant="slate">{tertiaryGenre}</Pill>}
 
-            {/* Moods — up to 3, all gold */}
-            {moodTags.length > 0 && <Divider />}
-            {moodTags.slice(0, 3).map((m, i) => (
-              <Pill key={i} variant="gold" style={{ opacity: 1 - i * 0.2 }}>{m}</Pill>
-            ))}
+          {/* Moods — up to 3, all gold */}
+          {moodTags.length > 0 && <Divider />}
+          {moodTags.slice(0, 3).map((m, i) => (
+            <Pill key={i} variant="gold" style={{ opacity: 1 - i * 0.2 }}>{m}</Pill>
+          ))}
 
-            {/* Vocals + all instruments + use cases */}
-            {(vocals || instruments.length > 0 || useCases.length > 0) && <Divider />}
-            {vocals && <Pill variant="green">{vocals}</Pill>}
-            {instruments.map((inst, i) => <Pill key={i} variant="ghost">{inst}</Pill>)}
-            {useCases.slice(0, 2).map((uc, i) => <Pill key={i} variant="ghost">{uc}</Pill>)}
-          </div>
-        )}
-
-        {/* Mobile: just primary genre + mood */}
-        {isMobile && (
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-            {primaryGenre && <Pill variant="purple">{primaryGenre}</Pill>}
-            {moodTags.slice(0, 2).map((m, i) => <Pill key={i} variant="gold">{m}</Pill>)}
-          </div>
-        )}
+          {/* Vocals + all instruments + use cases */}
+          {(vocals || instruments.length > 0 || useCases.length > 0) && <Divider />}
+          {vocals && <Pill variant="green">{vocals}</Pill>}
+          {instruments.map((inst, i) => <Pill key={i} variant="ghost">{inst}</Pill>)}
+          {useCases.slice(0, 2).map((uc, i) => <Pill key={i} variant="ghost">{uc}</Pill>)}
+        </div>
       </div>
 
       {/* Right column: energy + status badges + actions */}
       <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, zIndex: 1 }}>
 
         {/* Energy pips */}
-        {!isMobile && <EnergyPips value={energy} />}
+        <EnergyPips value={energy} />
 
         {/* Status badges */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5 }}>

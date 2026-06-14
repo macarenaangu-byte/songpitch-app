@@ -664,11 +664,6 @@ export function PortfolioPage({ userProfile, audioPlayer, isMobile = false, onNa
                       {aiVocals}
                     </span>
                   )}
-                  {aiLoudnessLufs != null && (
-                    <span style={aiChip}>
-                      {aiLoudnessLufs.toFixed(1)} LUFS{aiLoudnessNote ? ` · ${aiLoudnessNote}` : ''}
-                    </span>
-                  )}
                 </div>
 
                 {/* Instruments */}
